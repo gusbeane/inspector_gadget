@@ -161,7 +161,7 @@ class Format3:
                             pres = fields.isPresent(name,gr,self.sn,learn=True,shape=elem)
             self.close()
                                 
-                                
+        #now load the requested data                        
         for i in np.arange(filesA,filesB):
             filename = re.sub("\.[0-9]*\.hdf5",".%d.hdf5"%i, self.sn.filename)
             filename = re.sub("\.[0-9]*\.h5",".%d.h5"%i, filename)
@@ -212,32 +212,8 @@ class Format3:
             self.close()
         
     def load_data_subfind(self):
-        for (group,gr_name) in { (self.sn.group,'Group') , (self.sn.subhalo,'Subhalo') }:
-            datasets = set(self.file[gr_name].keys())
-
-            for item in datasets:
-                if not self.dict.has_key(item):
-                    print "warning: hdf5 key '%s' could not translated"%item
-                name  = self.dict.get(item,item)
-
-                if self.sn.__fields__==None or name in self.sn.__fields__:
-                    pres = np.array(fields.present.get(name,"default"))
-
-                    #det size of dataset
-                    if self.combineFiles:
-                        num = self.sn.nparticlesall[group.__num__]
-                    else:
-                        num = self.sn.nparticles[group.__num__]
-
-                    #get propertiers of dataset
-                    d = self.file[gr_name+"/"+item]
-                    datatype = d.dtype
-                    shape = np.array(d.shape)
-                    shape[0] = num
-                    if self.toDouble and datatype == np.dtype('float32'):
-                        datatype = np.dtype('float64')
-                    group.data[name] = np.empty(shape, dtype=datatype)
-
+        self.sn.data = {}
+        self.sn.numpart_loaded = np.zeros(6,dtype=np.longlong)
 
         if self.combineFiles:
             filesA = 0
@@ -246,33 +222,82 @@ class Format3:
             filesA = self.currFile
             filesB = self.currFile+1
             
+        #learn about present fields
         for i in np.arange(filesA,filesB):
-            if i != filesA:
-                self.file.close()
-                filename = re.sub("\.[0-9]*\.hdf5",".%d.hdf5"%i, self.sn.filename)
-                filename = re.sub("\.[0-9]*\.h5",".%d.h5"%i, filename)
-                self.sn.filename = filename
-                self.file = h5py.File(filename,'r')
-                self.currFile = i
+            filename = re.sub("\.[0-9]*\.hdf5",".%d.hdf5"%i, self.sn.filename)
+            filename = re.sub("\.[0-9]*\.h5",".%d.h5"%i, filename)
+            self.sn.filename = filename
+            self.file = h5py.File(filename,'r')
+            self.currFile = i
+           
+            self.load_header()
+            self.sn.header = loader.Header(self.sn)
+                
 
-                self.load_header()
-                self.sn.header = loader.Header(self.sn)
+            for gr in self.sn.__parttype__:
+                if gr in self.file.keys():
+                    for item in self.file[gr].keys():
+                        name  = self.dict.get(item,item)
+                        if self.sn.__fields__==None or name in self.sn.__fields__:
+                            d = self.file["%s/%s"%(gr,item)]
+                            shape = np.array(d.shape)
+                            elem = 1
+                            if shape.size == 2:
+                                elem=shape[1]
+                                
+                            pres = fields.isPresent(name,gr,self.sn,learn=True,shape=elem)
+            self.close()
+                                
+        #now load the requested data                    
+        for i in np.arange(filesA,filesB):
+            filename = re.sub("\.[0-9]*\.hdf5",".%d.hdf5"%i, self.sn.filename)
+            filename = re.sub("\.[0-9]*\.h5",".%d.h5"%i, filename)
+            self.sn.filename = filename
+            self.file = h5py.File(filename,'r')
+            self.currFile = i
+                
+            self.load_header()
+            self.sn.header = loader.Header(self.sn)
+                
 
-            for (group,gr_name) in { (self.sn.group,'Group') , (self.sn.subhalo,'Subhalo') }:
-                for item in self.file[gr_name].keys():
-                    name  = self.dict.get(item,item)
-                    if self.sn.__fields__==None or name in self.sn.__fields__:
-                        pres = np.array(fields.present.get(name,"default"))
-                        n1 = self.sn.numpart_loaded[group.__num__]
+            for gr in self.sn.__parttype__:
+                if gr in self.file.keys():
+                    for item in self.file[gr].keys():
+                        name  = self.dict.get(item,item)
+                        if self.sn.__fields__==None or name in self.sn.__fields__:
+                            pres = fields.isPresent(name,gr,self.sn)
+                                
+                            n1 = np.where(pres > 0, self.sn.numpart_loaded, np.zeros(6,dtype=np.longlong))
+                                
+                            if self.combineFiles:
+                                n2 = np.where(pres > 0, self.sn.nparticlesall, np.zeros(6,dtype=np.longlong))
+                            else:
+                                n2 = np.where(pres > 0, self.sn.nparticles, np.zeros(6,dtype=np.longlong))
+                            
+                            d = self.file["%s/%s"%(gr,item)]
+                            shape = np.array(d.shape)
+                                
+                            if not self.sn.data.has_key(name):
+                                if self.combineFiles:
+                                    num = np.where(pres > 0, self.sn.nparticlesall, np.zeros(6,dtype=np.longlong)).sum()
+                                else:
+                                    num = np.where(pres > 0, self.sn.nparticles, np.zeros(6,dtype=np.longlong)).sum()
+                
+                                #get propertiers of dataset
+                                datatype = d.dtype
+                                s = np.array(d.shape)
+                                s[0] = num
+                                if self.toDouble and datatype == np.dtype('float32'):
+                                    datatype = np.dtype('float64')
+                                        
+                                self.sn.data[name] = np.empty(s, dtype=datatype)
+                                    
+                            self.sn.data[name][n2[0:gr].sum()+n1[gr]:n2[0:gr].sum()+n1[gr]+shape[0]] = d
+            
+            self.sn.numpart_loaded[self.sn.__parttype__] += self.sn.nparticles[self.sn.__parttype__]
+       
+            self.close()
 
-                        d = self.file[gr_name+"/"+item]
-                        shape = np.array(d.shape)
-
-                        group.data[name][n1:n1+shape[0]] = d
-
-            self.sn.numpart_loaded += self.sn.nparticles
-
-        self.close()
 
     def next_chunk(self):
         if self.currFile < (self.sn.nfiles-1):
