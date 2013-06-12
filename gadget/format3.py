@@ -108,8 +108,6 @@ class Format3:
         #TODO read flags
         
 
-        
-
     def load_data_map(self, groups):      
         self.sn.data = {}
 

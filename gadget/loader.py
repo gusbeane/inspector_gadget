@@ -69,6 +69,14 @@ class Loader:
     
     def __convenience__():
         pass
+    
+    
+    def __repr__(self):
+        return self.__str__()
+    
+                
+    def __getitem__(self, item):
+        return self.data[item]
 
 class Snapshot(Loader):
     """
@@ -98,11 +106,8 @@ class Snapshot(Loader):
                 setattr(gr,i,gr.data[i])
                 if fields.shortnames.has_key(i):
                     setattr(gr,fields.shortnames[i],gr.data[i])
-                    gr.data[fields.shortnames[i]] = gr.data[i]
 
 
-    def __repr__(self):
-        return self.__str__()
 
     def __str__(self):
         tmp = self.header.__str__()
@@ -111,14 +116,27 @@ class Snapshot(Loader):
                 tmp += re.sub("[^\n]*\n","\n",self.groups[i].__str__(),count=1)
 
         return tmp
-            
-    def __getitem__(self, item):
-        return self.data[item]
+
 
 
 class Subfind(Loader):
-    def __init__(self,filename,base=None,num=None, format=None, fields=None, **param):
-        param['combineParticles'] = False     
+    def __init__(self,filename,base=None,num=None, format=None, fields=None, parttype=None, **param):
+        if parttype == None:
+            parttype = [0,1]
+
+        for i in parttype:
+            if i!=0 and i!=1:
+                print "ignoring part type %d for subfind output"%i
+                
+        self.__parttype__=[]
+        if 0 in parttype:
+            self.__parttype__.append("Group")
+        if 1 in parttype:
+            self.__parttype__.append("Subhalo")
+
+        self.__parttype__ = parttype
+        param['combineParticles'] = False  
+           
         Loader.__init__(self,filename,base,num, format, fields, **param)
 
 
@@ -129,11 +147,6 @@ class Subfind(Loader):
                 setattr(gr,i,gr.data[i])
                 if fields.shortnames.has_key(i):
                     setattr(gr,fields.shortnames[i],gr.data[i])
-                    gr.data[fields.shortnames[i]] = gr.data[i]
-
-
-    def __repr__(self):
-        return self.__str__()
 
     def __str__(self):
         tmp = self.header.__str__()
@@ -143,7 +156,7 @@ class Subfind(Loader):
         return tmp
 
     def __getitem__(self, item):
-        return self.data[item]
+        pass
 
 
 class Header:
