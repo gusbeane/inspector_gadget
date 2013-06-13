@@ -6,10 +6,11 @@ import struct
 import time
 
 import gadget.loader as loader
+import gadget.fields as fields
 
 class Format2:
 
-    def __init__( self, sn, filename, verbose=False, onlyHeader=False, nommap=False, tracer=False):
+    def __init__( self, sn, filename, verbose=False, onlyHeader=False, nommap=False, tracer=False, **param):
         self.sn = sn
         if type( sn.__fields__ ) == np.ndarray or type( sn.__fields__ ) == list:
             self.loadlist = sn.__fields__
@@ -40,8 +41,8 @@ class Format2:
         self.datablocks_int32 = ["ID  ","NONN"]
 
     def load(self):
-        self.get_blocks( 0, verbose=self.verbose )
         self.load_header( 0, verbose=self.verbose )
+        self.get_blocks( 0, verbose=self.verbose )
         self.sn.header = loader.Header(self.sn)
 
         if self.onlyHeader:
@@ -75,6 +76,11 @@ class Format2:
         while len(s) > 0:
             fheader, name, length, ffooter = struct.unpack( endian + "i4sii", s )
             self.blocks[ name ] = fpos
+            
+
+            for i in np.arange(0,6):
+                if self.parttype_has_block(i,name):
+                    fields.isPresent(name.strip().lower(), i, self.sn,learn=True, shape=self.get_block_dim_from_table(name))
 
             length = self.get_block_length( fileid, fpos + 16, name, length, endian, verbose=verbose )
             if length < 0:
@@ -105,7 +111,7 @@ class Format2:
 
         if name == "XNUC" or name == "PASS":
             bs, bsall = self.get_block_size_from_table( name )
-            if self.flag_doubleprecision:
+            if self.sn.flag_doubleprecision:
                 ele = 8
             else:
                 ele = 4
@@ -123,7 +129,7 @@ class Format2:
         else:
             bs, bsall = self.get_block_size_from_table( name )
             dim = self.get_block_dim_from_table( name )
-            if self.flag_doubleprecision:
+            if self.sn.flag_doubleprecision:
                 ele = 8
             else:
                 ele = 4
@@ -283,7 +289,7 @@ class Format2:
             else:
                 self.sn.data[ blockname ] = np.memmap( self.files[0], offset=offset, mode='c', dtype=endian+blocktype, shape=(nsum, dim) )
 
-        self.sn.numpart_loaded = s.nparticlesall
+        self.sn.numpart_loaded = self.sn.nparticlesall
         return
 
     def load_data( self ):
