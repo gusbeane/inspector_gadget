@@ -71,7 +71,7 @@ headerfields = [
     'nparticles', 
     'nparticlesall', 
     'nparticlesallhighword',
-    'nfiles',
+    'num_files',
     'masses',
     'time',
     'redshift',

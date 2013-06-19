@@ -127,17 +127,13 @@ class Subfind(Loader):
         for i in parttype:
             if i!=0 and i!=1:
                 print "ignoring part type %d for subfind output"%i
-                
-        self.__parttype__=[]
-        if 0 in parttype:
-            self.__parttype__.append("Group")
-        if 1 in parttype:
-            self.__parttype__.append("Subhalo")
+        
+        if parttype == None:
+            parttype = [0,1]       
 
-        self.__parttype__ = parttype
         param['combineParticles'] = False  
            
-        Loader.__init__(self,filename,base,num, format, fields, **param)
+        Loader.__init__(self,filename,base,num, format, fields, parttype, **param)
 
 
     def __convenience__(self):
@@ -192,24 +188,24 @@ class PartGroup:
         self.__num__ = num
         self.data = {}
         
-        if parent.nparticlesall[num]>0:
+        if parent.npart_loaded[num]>0:
             if hasattr(parent,"data"):
                 for key in parent.data.iterkeys():
                     pres = fields.isPresent(key,num, parent)
                     if pres[num]>0:
                         f = parent.data[key]
-                        n1 = np.where(pres>0, parent.nparticlesall,np.zeros(6,dtype=np.longlong))
+                        n1 = np.where(pres>0, parent.npart_loaded,np.zeros(6,dtype=np.longlong))
                         tmp = np.sum(n1[0:num])
-                        self.data[key] = f[tmp:tmp+parent.nparticlesall[num]]
+                        self.data[key] = f[tmp:tmp+parent.npart_loaded[num]]
 
     def __str__(self):
         if isinstance(self.__parent__, Snapshot):
-            tmp = "snapshot "+self.__parent__.filename+"\nparticle group %d contains %d particles:\n"%(self.__num__,self.__parent__.numpart_loaded[self.__num__])
+            tmp = "snapshot "+self.__parent__.filename+"\nparticle group %d contains %d particles:\n"%(self.__num__,self.__parent__.npart_loaded[self.__num__])
         else:
             if self.__num__ == 0:
-                tmp = "subfind output "+self.__parent__.filename+"\ncontains %d groups:\n"%(self.__parent__.numpart_loaded[self.__num__])
+                tmp = "subfind output "+self.__parent__.filename+"\ncontains %d groups:\n"%(self.__parent__.npart_loaded[self.__num__])
             else:
-                tmp = "subfind output "+self.__parent__.filename+"\ncontains %d subhalos:\n"%(self.__parent__.numpart_loaded[self.__num__])
+                tmp = "subfind output "+self.__parent__.filename+"\ncontains %d subhalos:\n"%(self.__parent__.npart_loaded[self.__num__])
             
         for i in self.data.keys():
             if fields.shortnames.has_key(i):

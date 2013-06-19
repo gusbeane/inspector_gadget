@@ -33,7 +33,7 @@ class Format3:
         self.combineFiles = combineFiles
         self.toDouble = toDouble
 
-        self.sn.numpart_loaded = np.zeros(6,dtype=np.longlong)
+        self.sn.npart_loaded = np.zeros(6,dtype=np.longlong)
 
     def load(self):
         self.file = h5py.File(self.sn.filename,'r')
@@ -41,7 +41,7 @@ class Format3:
         self.load_header()
         self.sn.header = loader.Header(self.sn)
 
-        if self.combineParticles or (self.combineFiles and self.sn.nfiles>1) or self.toDouble:
+        if self.combineParticles or (self.combineFiles and self.sn.num_files>1) or self.toDouble:
             if isinstance(self.sn, loader.Snapshot):
                 self.load_data()
                 self.sn.part0 = loader.PartGroup(self.sn,0)
@@ -52,9 +52,9 @@ class Format3:
                 self.sn.part5 = loader.PartGroup(self.sn,5)
                 self.sn.groups = [ self.sn.part0, self.sn.part1, self.sn.part2, self.sn.part3, self.sn.part4, self.sn.part5]
             else:
+                self.load_data_subfind()
                 self.sn.group = loader.PartGroup(self.sn,0)
                 self.sn.subhalo = loader.PartGroup(self.sn,1)
-                self.load_data_subfind()
         else:
             if isinstance(self.sn, loader.Snapshot):
                 self.sn.part0 = loader.PartGroup(self.sn,0)
@@ -80,7 +80,7 @@ class Format3:
             self.sn.nparticlesall = np.longlong(file['/Header'].attrs['NumPart_Total'])
             self.sn.nparticlesall += np.longlong(file['/Header'].attrs['NumPart_Total_HighWord'])<<32
             self.sn.masses = file['/Header'].attrs['MassTable']
-            self.sn.nfiles = file['/Header'].attrs['NumFilesPerSnapshot']
+            self.sn.num_files = file['/Header'].attrs['NumFilesPerSnapshot']
             
             self.sn.npart = np.array( self.sn.nparticles ).sum()
             self.sn.npartall = np.array( self.sn.nparticlesall ).sum()
@@ -92,10 +92,10 @@ class Format3:
             self.sn.nidsall =  file['/Header'].attrs['Nids_Total']
             self.sn.nsubgroups =  file['/Header'].attrs['Nsubgroups_ThisFile']
             self.sn.nsubgroupsall =  file['/Header'].attrs['Nsubgroups_Total']
-            self.sn.nfiles = file['/Header'].attrs['NumFiles']
+            self.sn.num_files = file['/Header'].attrs['NumFiles']
             
-            self.sn.nparticles = [self.sn.ngroups, self.sn.nsubgroups,0,0,0,0]
-            self.sn.nparticlesall = [self.sn.ngroupsall, self.sn.nsubgroupsall,0,0,0,0]
+            self.sn.nparticles = np.array([self.sn.ngroups, self.sn.nsubgroups,0,0,0,0])
+            self.sn.nparticlesall = np.array([self.sn.ngroupsall, self.sn.nsubgroupsall,0,0,0,0])
         
 
 
@@ -113,7 +113,7 @@ class Format3:
 
         for (gr, hgr) in groups:
             if gr.__num__ in self.sn.__parttype__:
-                self.sn.numpart_loaded[gr.__num__] = self.sn.header.nparticles[gr.__num__]
+                self.sn.npart_loaded[gr.__num__] = self.sn.header.nparticles[gr.__num__]
                 if hgr in self.file.keys():
                     for key in self.file[hgr].keys():
                         if not self.dict.has_key(key):
@@ -126,11 +126,11 @@ class Format3:
 
     def load_data(self):
         self.sn.data = {}
-        self.sn.numpart_loaded = np.zeros(6,dtype=np.longlong)
+        self.sn.npart_loaded = np.zeros(6,dtype=np.longlong)
 
         if self.combineFiles:
             filesA = 0
-            filesB = self.sn.nfiles
+            filesB = self.sn.num_files
         else:
             filesA = self.currFile
             filesB = self.currFile+1
@@ -180,7 +180,7 @@ class Format3:
                         if self.sn.__fields__==None or name in self.sn.__fields__:
                             pres = fields.isPresent(name,gr,self.sn)
                                 
-                            n1 = np.where(pres > 0, self.sn.numpart_loaded, np.zeros(6,dtype=np.longlong))
+                            n1 = np.where(pres > 0, self.sn.npart_loaded, np.zeros(6,dtype=np.longlong))
                                 
                             if self.combineFiles:
                                 n2 = np.where(pres > 0, self.sn.nparticlesall, np.zeros(6,dtype=np.longlong))
@@ -207,17 +207,19 @@ class Format3:
                                     
                             self.sn.data[name][n2[0:gr].sum()+n1[gr]:n2[0:gr].sum()+n1[gr]+shape[0]] = d
             
-            self.sn.numpart_loaded[self.sn.__parttype__] += self.sn.nparticles[self.sn.__parttype__]
+            self.sn.npart_loaded[self.sn.__parttype__] += self.sn.nparticles[self.sn.__parttype__]
        
             self.close()
         
     def load_data_subfind(self):
         self.sn.data = {}
-        self.sn.numpart_loaded = np.zeros(6,dtype=np.longlong)
+        self.sn.npart_loaded = np.zeros(6,dtype=np.longlong)
+        
+        groupnames = ['Group','Subhalo']
 
         if self.combineFiles:
             filesA = 0
-            filesB = self.sn.nfiles
+            filesB = self.sn.num_files
         else:
             filesA = self.currFile
             filesB = self.currFile+1
@@ -235,11 +237,11 @@ class Format3:
                 
 
             for gr in self.sn.__parttype__:
-                if gr in self.file.keys():
-                    for item in self.file[gr].keys():
+                if groupnames[gr] in self.file.keys():
+                    for item in self.file[groupnames[gr]].keys():
                         name  = self.dict.get(item,item)
                         if self.sn.__fields__==None or name in self.sn.__fields__:
-                            d = self.file["%s/%s"%(gr,item)]
+                            d = self.file["%s/%s"%(groupnames[gr],item)]
                             shape = np.array(d.shape)
                             elem = 1
                             if shape.size == 2:
@@ -261,20 +263,20 @@ class Format3:
                 
 
             for gr in self.sn.__parttype__:
-                if gr in self.file.keys():
-                    for item in self.file[gr].keys():
+                if groupnames[gr] in self.file.keys():
+                    for item in self.file[groupnames[gr]].keys():
                         name  = self.dict.get(item,item)
                         if self.sn.__fields__==None or name in self.sn.__fields__:
                             pres = fields.isPresent(name,gr,self.sn)
                                 
-                            n1 = np.where(pres > 0, self.sn.numpart_loaded, np.zeros(6,dtype=np.longlong))
+                            n1 = np.where(pres > 0, self.sn.npart_loaded, np.zeros(6,dtype=np.longlong))
                                 
                             if self.combineFiles:
                                 n2 = np.where(pres > 0, self.sn.nparticlesall, np.zeros(6,dtype=np.longlong))
                             else:
                                 n2 = np.where(pres > 0, self.sn.nparticles, np.zeros(6,dtype=np.longlong))
                             
-                            d = self.file["%s/%s"%(gr,item)]
+                            d = self.file["%s/%s"%(groupnames[gr],item)]
                             shape = np.array(d.shape)
                                 
                             if not self.sn.data.has_key(name):
@@ -294,13 +296,13 @@ class Format3:
                                     
                             self.sn.data[name][n2[0:gr].sum()+n1[gr]:n2[0:gr].sum()+n1[gr]+shape[0]] = d
             
-            self.sn.numpart_loaded[self.sn.__parttype__] += self.sn.nparticles[self.sn.__parttype__]
+            self.sn.npart_loaded[self.sn.__parttype__] += self.sn.nparticles[self.sn.__parttype__]
        
             self.close()
 
 
     def next_chunk(self):
-        if self.currFile < (self.sn.nfiles-1):
+        if self.currFile < (self.sn.num_files-1):
             self.currFile = self.currFile+1
             if isinstance(self.sn, loader.Snapshot):
                 del self.sn.data
@@ -318,7 +320,7 @@ class Format3:
             self.close()
 
             #open next file
-            self.sn.numpart_loaded = np.zeros(6,dtype=np.longlong)
+            self.sn.npart_loaded = np.zeros(6,dtype=np.longlong)
             filename = re.sub("\.[0-9]*\.hdf5",".%d.hdf5"%self.currFile, self.sn.filename)
             filename = re.sub("\.[0-9]*\.h5",".%d.h5"%self.currFile, filename)
             self.sn.filename = filename

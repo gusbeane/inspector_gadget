@@ -10,7 +10,7 @@ import gadget.fields as fields
 
 class Format2:
 
-    def __init__( self, sn, filename, verbose=False, onlyHeader=False, nommap=False, tracer=False, **param):
+    def __init__( self, sn, filename, verbose=False, onlyHeader=False, nommap=False, tracer=False, toDouble=False **param):
         self.sn = sn
         if type( sn.__fields__ ) == np.ndarray or type( sn.__fields__ ) == list:
             self.loadlist = sn.__fields__
@@ -21,6 +21,7 @@ class Format2:
         self.nommap=nommap
         self.tracer = tracer
         self.onlyHeader = onlyHeader
+        self.toDouble = toDouble
 
         self.filecount = 1
         if path.exists( filename ):
@@ -43,17 +44,16 @@ class Format2:
     def load(self):
         self.load_header( 0, verbose=self.verbose )
         self.get_blocks( 0, verbose=self.verbose )
-        self.sn.header = loader.Header(self.sn)
 
         if self.onlyHeader:
             return
 
-        if self.filecount == 1 and not self.nommap:
+        if self.filecount == 1 and not self.nommap and not self.toDouble:
             self.load_data_mmap()
         else:
             self.load_data()
 
-
+        self.sn.header = loader.Header(self.sn)
         self.sn.part0 = loader.PartGroup(self.sn,0)
         self.sn.part1 = loader.PartGroup(self.sn,1)
         self.sn.part2 = loader.PartGroup(self.sn,2)
@@ -179,13 +179,13 @@ class Format2:
             else:
                 f.seek( 4, 1 ) # skip fortran header of data block
                 s = f.read(24)
-                self.sn.nparticles = pylab.array( struct.unpack( endian + "6i", s ) )
+                self.sn.nparticles = np.longlong( struct.unpack( endian + "6i", s ) )
                 s = f.read(48)
-                self.sn.masses = pylab.array( struct.unpack( endian + "6d", s ) )
+                self.sn.masses = np.array( struct.unpack( endian + "6d", s ) )
                 s = f.read(24)
                 self.sn.time, self.sn.redshift, self.sn.flag_sfr, self.sn.flag_feedback = struct.unpack( endian + "ddii", s )
                 s = f.read(24)
-                self.sn.nparticlesall = pylab.array( struct.unpack( endian + "6i", s ) )
+                self.sn.nparticlesall = np.longlong( struct.unpack( endian + "6i", s ) )
                 s = f.read(16)
                 self.sn.flag_cooling, self.sn.num_files, self.sn.boxsize = struct.unpack( endian + "iid", s )
                 s = f.read(24)
@@ -193,16 +193,11 @@ class Format2:
                 s = f.read(8)
                 self.sn.flag_stellarage, self.sn.flag_metals = struct.unpack( endian + "ii", s )
                 s = f.read(24)
-                self.sn.nparticlesallhighword = pylab.array( struct.unpack( endian + "6i", s ) )
+                self.sn.nparticlesall += np.longlong( struct.unpack( endian + "6i", s ) )<<32
                 s = f.read(12)
                 self.sn.flag_entropy_instead_u, self.sn.flag_doubleprecision, self.sn.flag_lpt_ics = struct.unpack( "iii", s )
                 s = f.read(52)
-                
-                #if self.boxsize > 0:
-                #    self.set_center( [0.5 * self.boxsize, 0.5 * self.boxsize, 0.5 * self.boxsize] )
 
-                self.sn.nparticles = pylab.array( self.sn.nparticles )
-                self.sn.nparticlesall = pylab.array( self.sn.nparticlesall )
 
                 if self.sn.nparticlesall.sum() == 0:
                     self.sn.nparticlesall = self.sn.nparticles
@@ -213,17 +208,12 @@ class Format2:
                 else:
                     self.sn.singleparticlespecies = False
 
-                if self.sn.nparticlesall[1] > 0 and verbose:
-                    if self.singleparticlespecies:
-                        print "Pure DARKNESS detected."
-                    else:
-                        print "DARKNESS detected."
 
                 f.close()
                 s = "" # stop reading
 
-                self.sn.npart = pylab.array( self.sn.nparticles ).sum()
-                self.sn.npartall = pylab.array( self.sn.nparticlesall ).sum()
+                self.sn.npart = self.sn.nparticles.sum()
+                self.sn.npartall = self.sn.nparticlesall.sum()
 
                 if verbose:
                     print "nparticlesall:", self.sn.nparticlesall, "sum:", self.sn.npartall
@@ -289,7 +279,7 @@ class Format2:
             else:
                 self.sn.data[ blockname ] = np.memmap( self.files[0], offset=offset, mode='c', dtype=endian+blocktype, shape=(nsum, dim) )
 
-        self.sn.numpart_loaded = self.sn.nparticlesall
+        self.sn.npart_loaded = self.sn.nparticlesall
         return
 
     def load_data( self ):
@@ -352,7 +342,7 @@ class Format2:
                         else:
                             self.sn.data[ blockname ] = pylab.zeros( (npartall, dim), dtype=blocktype )
 
-                    if blocktype == 'f4':
+                    if blocktype == 'f4' and self.toDouble:
                         self.sn.data[ blockname ] = self.sn.data[ blockname ].astype( 'float64' ) # change array type to float64
 
                     lb = nsum + nparttot[ptype]
@@ -373,7 +363,7 @@ class Format2:
         if self.filecount > 1:
             self.sn.npart = self.npartall
         print '%d particles loaded.' % self.sn.npartall
-        self.sn.numpart_loaded = s.nparticlesall
+        self.sn.npart_loaded = s.nparticlesall
         return
 
     def get_block_size_from_table( self, block ):
