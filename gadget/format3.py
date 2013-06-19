@@ -105,8 +105,14 @@ class Format3:
         self.sn.omega0 = file['/Header'].attrs['Omega0']
         self.sn.omegalambda = file['/Header'].attrs['OmegaLambda']
         self.sn.hubbleparam = file['/Header'].attrs['HubbleParam']
-        #TODO read flags
         
+        self.sn.flag_sfr = file['/Header'].attrs['Flag_Sfr']
+        self.sn.flag_cooling = file['/Header'].attrs['Flag_Cooling']
+        self.sn.flag_feedback = file['/Header'].attrs['Flag_Feedback']
+        self.sn.flag_stellarage = file['/Header'].attrs['Flag_StellarAge']
+        self.sn.flag_metals = file['/Header'].attrs['Flag_Metals']
+        self.sn.flag_doubleprecision = file['/Header'].attrs['Flag_DoublePrecision']
+
 
     def load_data_map(self, groups):      
         self.sn.data = {}
