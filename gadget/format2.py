@@ -10,7 +10,7 @@ import gadget.fields as fields
 
 class Format2:
 
-    def __init__( self, sn, filename, verbose=False, onlyHeader=False, nommap=False, tracer=False, toDouble=False **param):
+    def __init__( self, sn, filename, verbose=False, onlyHeader=False, nommap=False, tracer=False, toDouble=False, **param):
         self.sn = sn
         if type( sn.__fields__ ) == np.ndarray or type( sn.__fields__ ) == list:
             self.loadlist = sn.__fields__
