@@ -363,7 +363,7 @@ class Format2:
         if self.filecount > 1:
             self.sn.npart = self.npartall
         print '%d particles loaded.' % self.sn.npartall
-        self.sn.npart_loaded = s.nparticlesall
+        self.sn.npart_loaded = self.sn.nparticlesall
         return
 
     def get_block_size_from_table( self, block ):
