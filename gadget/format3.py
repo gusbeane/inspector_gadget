@@ -127,8 +127,8 @@ class Format3:
         self.sn.flag_feedback = file['/Header'].attrs['Flag_Feedback']
         self.sn.flag_stellarage = file['/Header'].attrs['Flag_StellarAge']
         self.sn.flag_metals = file['/Header'].attrs['Flag_Metals']
-        self.sn.flag_doubleprecision = file['/Header'].attrs['Flag_DoublePrecision']
-        
+        if "Flag_DoublePrecision" in file['/Header'].attrs.keys():
+	           self.sn.flag_doubleprecision = file['/Header'].attrs['Flag_DoublePrecision']
 
     def load_data_map(self, groups):  
         self.file = h5py.File(self.sn.filename,"r")
