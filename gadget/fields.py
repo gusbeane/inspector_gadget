@@ -48,13 +48,30 @@ hdf5toformat2 = {'Coordinates':'pos',
         'Temperature' : 'temp',
         'Vorticity' : 'vort'}
 
-def isPresent(name, gr , snapshot, learn=False, shape=1):
+default = [
+    'id',
+    'pos',
+    'vel',
+    'u',
+    'mass']
+
+present = {
+    'id' : np.array([1,1,1,1,1,1]),
+    'pos' : np.array([3,3,3,3,3,3]),
+    'vel' : np.array([3,3,3,3,3,3]),
+    'u'  : np.array([1,0,0,0,0,0]),           
+           }
+
+def isPresent(name, snapshot, learn=False, gr=None, shape=1):
     if learn:
-        pres = np.zeros(6,dtype=np.longlong)
-        pres[gr] = shape
+        if gr !=None:
+            pres = np.zeros(6,dtype=np.int64)
+            pres[gr] = shape
+            if name == 'mass':
+                pres[gr] = (0 if snapshot.masses[gr]>0  else 1)
+        else:
+            pres = shape
           
-        if name == 'mass':
-            pres[gr] = (0 if snapshot.masses[gr]>0  else 1)
         if not hasattr(snapshot,"__present__"):
             snapshot.__present__ = {}
             

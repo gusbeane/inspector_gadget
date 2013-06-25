@@ -15,18 +15,6 @@ class Format3:
 
     def __init__(self,sn,filename, verbose=False, onlyHeader=False, nommap=False, combineParticles=True, combineFiles=True, toDouble = False, **param):
         self.sn=sn
-
-        if not path.exists( filename ):
-            if path.exists( filename + ".hdf5" ):
-                filename += ".hdf5"
-            elif  path.exists( filename + "0.hdf5" ):
-                filename += "0.hdf5"
-            elif path.exists( filename + ".h5" ):
-                filename += ".h5"
-            elif  path.exists( filename + "0.h5" ):
-                filename += "0.h5"
-
-        self.sn.filename = filename
         
         res = re.findall("\.[0-9]*\.hdf5",filename)
         res2 = re.findall("\.[0-9]*\.h5",filename)
@@ -48,6 +36,17 @@ class Format3:
         self.sn.npart_loaded = np.zeros(6,dtype=np.longlong)
 
     def load(self):
+        
+        if not path.exists( self.sn.filename ):
+            if path.exists( self.sn.filename + ".hdf5" ):
+                self.sn.filename += ".hdf5"
+            elif  path.exists( self.sn.filename + "0.hdf5" ):
+                self.sn.filename += "0.hdf5"
+            elif path.exists( self.sn.filename + ".h5" ):
+                self.sn.filename += ".h5"
+            elif  path.exists( self.sn.filename + "0.h5" ):
+                self.sn.filename += "0.h5"
+        
         self.file = h5py.File(self.sn.filename,"r")
         self.load_header()
         self.file.close()
@@ -175,7 +174,7 @@ class Format3:
             for gr in self.sn.__parttype__:
                 if "PartType%d"%gr in self.file.keys():
                     for item in self.file["PartType%d"%gr].keys():
-                        if not self.dict.has_key(key):
+                        if not self.dict.has_key(item):
                             if self.verbose:
                                 print "warning: hdf5 key '%s' could not translated"%key
                                 
@@ -187,7 +186,7 @@ class Format3:
                             if shape.size == 2:
                                 elem=shape[1]
                                 
-                            pres = fields.isPresent(name,gr,self.sn,learn=True,shape=elem)
+                            pres = fields.isPresent(name,self.sn,learn=True,gr=gr,shape=elem)
             self.file.close()
                                 
         #now load the requested data                        
@@ -207,7 +206,7 @@ class Format3:
                     for item in self.file["PartType%d"%gr].keys():
                         name  = self.dict.get(item,item)
                         if self.sn.__fields__==None or name in self.sn.__fields__:
-                            pres = fields.isPresent(name,gr,self.sn)
+                            pres = fields.isPresent(name,self.sn)
                                 
                             n1 = np.where(pres > 0, self.sn.npart_loaded, np.zeros(6,dtype=np.longlong))
                                 
@@ -268,7 +267,7 @@ class Format3:
             for gr in self.sn.__parttype__:
                 if groupnames[gr] in self.file.keys():
                     for item in self.file[groupnames[gr]].keys():
-                        if not self.dict.has_key(key):
+                        if not self.dict.has_key(item):
                             if self.verbose:
                                 print "warning: hdf5 key '%s' could not translated"%key
                                 
@@ -280,7 +279,7 @@ class Format3:
                             if shape.size == 2:
                                 elem=shape[1]
                                 
-                            pres = fields.isPresent(name,gr,self.sn,learn=True,shape=elem)
+                            pres = fields.isPresent(name,self.sn,learn=True,gr=gr,shape=elem)
             self.file.close()
                                 
         #now load the requested data                    
@@ -300,7 +299,7 @@ class Format3:
                     for item in self.file[groupnames[gr]].keys():
                         name  = self.dict.get(item,item)
                         if self.sn.__fields__==None or name in self.sn.__fields__:
-                            pres = fields.isPresent(name,gr,self.sn)
+                            pres = fields.isPresent(name,self.sn)
                                 
                             n1 = np.where(pres > 0, self.sn.npart_loaded, np.zeros(6,dtype=np.longlong))
                                 
