@@ -36,6 +36,7 @@ class Format3:
         self.sn.npart_loaded = np.zeros(6,dtype=np.longlong)
 
     def load(self):
+        self.sn.data = {}
         
         if not path.exists( self.sn.filename ):
             if path.exists( self.sn.filename + ".hdf5" ):
@@ -50,9 +51,11 @@ class Format3:
         self.file = h5py.File(self.sn.filename,"r")
         self.load_header()
         self.file.close()
+        del self.file
         self.sn.header = loader.Header(self.sn)
         
         if self.onlyHeader:
+            self.sn.npart_loaded = np.zeros(6,dtype=np.longlong)
             return
 
         if self.combineParticles or (self.combineFiles and self.sn.num_files>1) or self.toDouble or self.nommap:
@@ -131,8 +134,6 @@ class Format3:
 
     def load_data_map(self, groups):  
         self.file = h5py.File(self.sn.filename,"r")
-            
-        self.sn.data = {}
 
         for (gr, hgr) in groups:
             if gr.__num__ in self.sn.__parttype__:
@@ -149,7 +150,6 @@ class Format3:
 
 
     def load_data(self):
-        self.sn.data = {}
         self.sn.npart_loaded = np.zeros(6,dtype=np.longlong)
 
         if self.combineFiles:
@@ -238,6 +238,7 @@ class Format3:
             self.sn.npart_loaded[self.sn.__parttype__] += self.sn.nparticles[self.sn.__parttype__]
        
             self.file.close()
+            del self.file
         
     def load_data_subfind(self):
         self.sn.data = {}
@@ -331,12 +332,13 @@ class Format3:
             self.sn.npart_loaded[self.sn.__parttype__] += self.sn.nparticles[self.sn.__parttype__]
        
             self.file.close()
+            del self.file
 
 
     def nextFile(self, num=None):
         if self.sn.currFile < (self.sn.num_files-1) or (num != None and num < self.sn.currFile):
             if num == None:
-                self.sn.currFile = self.currFile+1
+                self.sn.currFile = self.sn.currFile+1
             else:
                 self.sn.currFile = num
                 
