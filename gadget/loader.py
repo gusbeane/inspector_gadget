@@ -6,7 +6,6 @@ import gadget.fields as fields
 class Loader(Object):
        
     def __init__(self,filename, format=None, fields=None, parttype=None, **param):     
-
         #detect backend
         if format==None:
             if filename.endswith('.hdf5') or filename.endswith('.h5'):
@@ -77,11 +76,9 @@ class Snapshot(Loader):
     """
     This class loads Gadget snapshots. Currently file format 2 and 3 (hdf5) are supported.
     """
-    def __init__(self,filename,base=None,num=None, format=None, fields=None, parttype=None, **param):     
+    def __init__(self,filename, format=None, fields=None, parttype=None, **param):     
         """
         *filename* : The name of the snapshot file
-        *base* : (optional) if given, this is added in front of the filename
-        *num* : (optional) number of the snapshot to load (requires '%d' pattern in filename)
         *format* : (optional) file format of the snapshot, otherwise this is guessed from the file name
         *fields* : (optional) list of fields to load, if None, all fields available in the snapshot are loaded
         *parttype* : (optional) array with particle type numbers to load, if None, all particles are loaded
@@ -91,7 +88,7 @@ class Snapshot(Loader):
         *combineParticles* : (optinal) if True arrays containng all particle species are provided as well (disables mmap)
         *combineFiles* : (optinal) if False only on part of the snapshot is loaded at a time, use nextChunk() to get the next part.
         """
-        Loader.__init__(self,filename,base,num, format, fields, parttype, **param)
+        Loader.__init__(self, filename, format, fields, parttype, **param)
 
 
     def __convenience__(self):
@@ -116,7 +113,7 @@ class Snapshot(Loader):
 
 
 class Subfind(Loader):
-    def __init__(self,filename,base=None,num=None, format=None, fields=None, parttype=None, **param):
+    def __init__(self,filename, format=None, fields=None, parttype=None, **param):
         if parttype == None:
             parttype = [0,1]
 
@@ -129,7 +126,7 @@ class Subfind(Loader):
 
         param['combineParticles'] = False  
            
-        Loader.__init__(self,filename,base,num, format, fields, parttype, **param)
+        Loader.__init__(self, filename, format, fields, parttype, **param)
 
 
     def __convenience__(self):
