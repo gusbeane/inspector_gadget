@@ -3,23 +3,9 @@ import re
 
 import gadget.fields as fields
 
-class Loader:
-    def nextChunk(self):
-        if self.__format__ == 2:
-            print "not supported"
-
-        self.__backend__.next_chunk()
-
-    def close(self):
-        self.__backend__.close()
-        
-    def __init__(self,filename,base=None,num=None, format=None, fields=None, parttype=None, **param):     
-
-        if base!=None:
-            filename = base+'/'+filename
-
-        if num!=None:
-            filename = filename%num
+class Loader(Object):
+       
+    def __init__(self,filename, format=None, fields=None, parttype=None, **param):     
 
         #detect backend
         if format==None:
@@ -77,6 +63,15 @@ class Loader:
                 
     def __getitem__(self, item):
         return self.data[item]
+    
+    def nextFile(self, num=None):
+        if self.__format__ == 2:
+            print "not supported yet"
+
+        self.__backend__.nextFile(num)
+
+    def close(self):
+        self.__backend__.close()
 
 class Snapshot(Loader):
     """
@@ -100,13 +95,14 @@ class Snapshot(Loader):
 
 
     def __convenience__(self):
-        for gr in (self, self.part0,self.part1,self.part2,self.part3,self.part4, self.part5):
-            items = gr.data.keys()
-            for i in items:
-                setattr(gr,i,gr.data[i])
-                if fields.shortnames.has_key(i):
-                    setattr(gr,fields.shortnames[i],gr.data[i])
-
+        items = self.data.keys()
+        for i in items:
+            setattr(self,i,self.data[i])
+            if fields.shortnames.has_key(i):
+                setattr(self,fields.shortnames[i],self.data[i])
+                
+        for gr in (self.part0,self.part1,self.part2,self.part3,self.part4, self.part5):
+            gr.__convenience__()
 
 
     def __str__(self):
@@ -137,12 +133,15 @@ class Subfind(Loader):
 
 
     def __convenience__(self):
+        items = self.data.keys()
+        for i in items:
+            setattr(self,i,self.data[i])
+            if fields.shortnames.has_key(i):
+                setattr(self,fields.shortnames[i],self.data[i])
+                
         for gr in (self.group, self.subhalo):
-            items = gr.data.keys()
-            for i in items:
-                setattr(gr,i,gr.data[i])
-                if fields.shortnames.has_key(i):
-                    setattr(gr,fields.shortnames[i],gr.data[i])
+            gr.__convenience__()
+            
 
     def __str__(self):
         tmp = self.header.__str__()
@@ -197,6 +196,14 @@ class PartGroup:
                         n1 = np.where(pres>0, parent.npart_loaded,np.zeros(6,dtype=np.longlong))
                         tmp = np.sum(n1[0:num])
                         self.data[key] = f[tmp:tmp+parent.npart_loaded[num]]
+                        
+    def __convenience__(self):
+        items = self.data.keys()
+        for i in items:
+            setattr(self,i,self.data[i])
+            if fields.shortnames.has_key(i):
+                setattr(self,fields.shortnames[i],self.data[i])
+
 
     def __str__(self):
         if isinstance(self.__parent__, Snapshot):

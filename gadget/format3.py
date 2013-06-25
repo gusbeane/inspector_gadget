@@ -13,7 +13,7 @@ class Format3:
     dict = fields.hdf5toformat2
 
 
-    def __init__(self,sn,filename,combineParticles=False, combineFiles=True, toDouble = False):
+    def __init__(self,sn,filename, verbose=False, onlyHeader=False, nommap=False, combineParticles=True, combineFiles=True, toDouble = False, **param):
         self.sn=sn
 
         if not path.exists( filename ):
@@ -27,21 +27,36 @@ class Format3:
                 filename += "0.h5"
 
         self.sn.filename = filename
-        self.currFile=0
+        
+        res = re.findall("\.[0-9]*\.hdf5",filename)
+        res2 = re.findall("\.[0-9]*\.h5",filename)
+        if len(res) > 0:
+            self.sn.currFile = int(res[-1][1:-5])
+        elif len(res2) > 0:
+            self.sn.currFile = int(res[-1][1:-3])
+        else:
+            self.sn.currFile=0
 
         self.combineParticles = combineParticles
         self.combineFiles = combineFiles
         self.toDouble = toDouble
-
+        
+        self.onlyHeader = onlyHeader
+        self.verbose = verbose
+        self.nommap = nommap
+        
         self.sn.npart_loaded = np.zeros(6,dtype=np.longlong)
 
     def load(self):
-        self.file = h5py.File(self.sn.filename,'r')
-
+        self.file = h5py.File(self.sn.filename,"r")
         self.load_header()
+        self.file.close()
         self.sn.header = loader.Header(self.sn)
+        
+        if self.onlyHeader:
+            return
 
-        if self.combineParticles or (self.combineFiles and self.sn.num_files>1) or self.toDouble:
+        if self.combineParticles or (self.combineFiles and self.sn.num_files>1) or self.toDouble or self.nommap:
             if isinstance(self.sn, loader.Snapshot):
                 self.load_data()
                 self.sn.part0 = loader.PartGroup(self.sn,0)
@@ -75,6 +90,7 @@ class Format3:
 
     def load_header(self):
         file = self.file
+        
         if isinstance(self.sn, loader.Snapshot):
             self.sn.nparticles =  np.longlong(file['/Header'].attrs['NumPart_ThisFile'])
             self.sn.nparticlesall = np.longlong(file['/Header'].attrs['NumPart_Total'])
@@ -112,9 +128,11 @@ class Format3:
         self.sn.flag_stellarage = file['/Header'].attrs['Flag_StellarAge']
         self.sn.flag_metals = file['/Header'].attrs['Flag_Metals']
         self.sn.flag_doubleprecision = file['/Header'].attrs['Flag_DoublePrecision']
+        
 
-
-    def load_data_map(self, groups):      
+    def load_data_map(self, groups):  
+        self.file = h5py.File(self.sn.filename,"r")
+            
         self.sn.data = {}
 
         for (gr, hgr) in groups:
@@ -123,7 +141,8 @@ class Format3:
                 if hgr in self.file.keys():
                     for key in self.file[hgr].keys():
                         if not self.dict.has_key(key):
-                            print "warning: hdf5 key '%s' could not translated"%key
+                            if self.verbose:
+                                print "warning: hdf5 key '%s' could not translated"%key
 
                         name = self.dict.get(key,key)
                         if self.sn.__fields__==None or name in self.sn.__fields__:
@@ -138,8 +157,8 @@ class Format3:
             filesA = 0
             filesB = self.sn.num_files
         else:
-            filesA = self.currFile
-            filesB = self.currFile+1
+            filesA = self.sn.currFile
+            filesB = self.sn.currFile+1
             
         #learn about present fields
         for i in np.arange(filesA,filesB):
@@ -147,7 +166,7 @@ class Format3:
             filename = re.sub("\.[0-9]*\.h5",".%d.h5"%i, filename)
             self.sn.filename = filename
             self.file = h5py.File(filename,'r')
-            self.currFile = i
+            self.sn.currFile = i
            
             self.load_header()
             self.sn.header = loader.Header(self.sn)
@@ -156,6 +175,10 @@ class Format3:
             for gr in self.sn.__parttype__:
                 if "PartType%d"%gr in self.file.keys():
                     for item in self.file["PartType%d"%gr].keys():
+                        if not self.dict.has_key(key):
+                            if self.verbose:
+                                print "warning: hdf5 key '%s' could not translated"%key
+                                
                         name  = self.dict.get(item,item)
                         if self.sn.__fields__==None or name in self.sn.__fields__:
                             d = self.file["PartType%d/%s"%(gr,item)]
@@ -165,7 +188,7 @@ class Format3:
                                 elem=shape[1]
                                 
                             pres = fields.isPresent(name,gr,self.sn,learn=True,shape=elem)
-            self.close()
+            self.file.close()
                                 
         #now load the requested data                        
         for i in np.arange(filesA,filesB):
@@ -173,7 +196,7 @@ class Format3:
             filename = re.sub("\.[0-9]*\.h5",".%d.h5"%i, filename)
             self.sn.filename = filename
             self.file = h5py.File(filename,'r')
-            self.currFile = i
+            self.sn.currFile = i
                 
             self.load_header()
             self.sn.header = loader.Header(self.sn)
@@ -215,7 +238,7 @@ class Format3:
             
             self.sn.npart_loaded[self.sn.__parttype__] += self.sn.nparticles[self.sn.__parttype__]
        
-            self.close()
+            self.file.close()
         
     def load_data_subfind(self):
         self.sn.data = {}
@@ -227,8 +250,8 @@ class Format3:
             filesA = 0
             filesB = self.sn.num_files
         else:
-            filesA = self.currFile
-            filesB = self.currFile+1
+            filesA = self.sn.currFile
+            filesB = self.sn.currFile+1
             
         #learn about present fields
         for i in np.arange(filesA,filesB):
@@ -236,7 +259,7 @@ class Format3:
             filename = re.sub("\.[0-9]*\.h5",".%d.h5"%i, filename)
             self.sn.filename = filename
             self.file = h5py.File(filename,'r')
-            self.currFile = i
+            self.sn.currFile = i
            
             self.load_header()
             self.sn.header = loader.Header(self.sn)
@@ -245,6 +268,10 @@ class Format3:
             for gr in self.sn.__parttype__:
                 if groupnames[gr] in self.file.keys():
                     for item in self.file[groupnames[gr]].keys():
+                        if not self.dict.has_key(key):
+                            if self.verbose:
+                                print "warning: hdf5 key '%s' could not translated"%key
+                                
                         name  = self.dict.get(item,item)
                         if self.sn.__fields__==None or name in self.sn.__fields__:
                             d = self.file["%s/%s"%(groupnames[gr],item)]
@@ -254,7 +281,7 @@ class Format3:
                                 elem=shape[1]
                                 
                             pres = fields.isPresent(name,gr,self.sn,learn=True,shape=elem)
-            self.close()
+            self.file.close()
                                 
         #now load the requested data                    
         for i in np.arange(filesA,filesB):
@@ -262,7 +289,7 @@ class Format3:
             filename = re.sub("\.[0-9]*\.h5",".%d.h5"%i, filename)
             self.sn.filename = filename
             self.file = h5py.File(filename,'r')
-            self.currFile = i
+            self.sn.currFile = i
                 
             self.load_header()
             self.sn.header = loader.Header(self.sn)
@@ -304,12 +331,16 @@ class Format3:
             
             self.sn.npart_loaded[self.sn.__parttype__] += self.sn.nparticles[self.sn.__parttype__]
        
-            self.close()
+            self.file.close()
 
 
-    def next_chunk(self):
-        if self.currFile < (self.sn.num_files-1):
-            self.currFile = self.currFile+1
+    def nextFile(self, num=None):
+        if self.sn.currFile < (self.sn.num_files-1) or (num != None and num < self.sn.currFile):
+            if num == None:
+                self.sn.currFile = self.currFile+1
+            else:
+                self.sn.currFile = num
+                
             if isinstance(self.sn, loader.Snapshot):
                 del self.sn.data
                 del self.sn.part0
@@ -327,14 +358,17 @@ class Format3:
 
             #open next file
             self.sn.npart_loaded = np.zeros(6,dtype=np.longlong)
-            filename = re.sub("\.[0-9]*\.hdf5",".%d.hdf5"%self.currFile, self.sn.filename)
-            filename = re.sub("\.[0-9]*\.h5",".%d.h5"%self.currFile, filename)
+            filename = re.sub("\.[0-9]*\.hdf5",".%d.hdf5"%self.sn.currFile, self.sn.filename)
+            filename = re.sub("\.[0-9]*\.h5",".%d.h5"%self.sn.currFile, filename)
             self.sn.filename = filename
 
             self.load()
 
         else:
-            print "last chunk reached"
+            if num == None:
+                print "last chunk reached"
+            else:
+                print "invalid file number: %d"%num
 
     def close(self):
         if hasattr(self,"file"):
