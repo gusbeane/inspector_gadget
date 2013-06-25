@@ -113,7 +113,7 @@ class Snapshot(Loader):
         else:
             super(Snapshot,self).__init__(filename, format=format, fields=fields, parttype=parttype, combineFiles=combineFiles, toDouble=toDouble, onlyHeader=onlyHeader, verbose=verbose, load=True, **param)
         
-    def __initEmpty__(self, num_part, masses=None, toDouble):
+    def __initEmpty__(self, num_part, masses=None, toDouble=False):
         self.__parttype__ = np.where(num_part>0)[0]
         
         if masses == None:
