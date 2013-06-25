@@ -13,10 +13,10 @@ import gadget.calcGrid as calcGrid
 
 class Simulation(Snapshot):
     
-    def __init__(self,filename,base=None,num=None, format=None, fields=None, parttype=None, **param):
+    def __init__(self,filename, format=None, fields=None, parttype=None, **param):
         
         param['combineParticles'] = True
-        Snapshot.__init__(self,filename,base,num, format, fields,parttype,**param)
+        super(Simulation,self).__init__(filename, format=format, fields=fields, parttype=parttype,**param)
         
 
         center = np.ones(3) * 0.5 * self.boxsize

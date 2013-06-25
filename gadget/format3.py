@@ -33,10 +33,10 @@ class Format3:
         self.verbose = verbose
         self.nommap = nommap
         
-        self.sn.npart_loaded = np.zeros(6,dtype=np.longlong)
 
     def load(self):
         self.sn.data = {}
+        self.sn.npart_loaded = np.zeros(6,dtype=np.longlong)
         
         if not path.exists( self.sn.filename ):
             if path.exists( self.sn.filename + ".hdf5" ):
@@ -55,7 +55,17 @@ class Format3:
         self.sn.header = loader.Header(self.sn)
         
         if self.onlyHeader:
-            self.sn.npart_loaded = np.zeros(6,dtype=np.longlong)
+            if isinstance(self.sn, loader.Snapshot):
+                self.sn.part0 = loader.PartGroup(self.sn,0)
+                self.sn.part1 = loader.PartGroup(self.sn,1)
+                self.sn.part2 = loader.PartGroup(self.sn,2)
+                self.sn.part3 = loader.PartGroup(self.sn,3)
+                self.sn.part4 = loader.PartGroup(self.sn,4)
+                self.sn.part5 = loader.PartGroup(self.sn,5)
+                self.sn.groups = [ self.sn.part0, self.sn.part1, self.sn.part2, self.sn.part3, self.sn.part4, self.sn.part5]
+            else:
+                self.sn.group = loader.PartGroup(self.sn,0)
+                self.sn.subhalo = loader.PartGroup(self.sn,1)
             return
 
         if self.combineParticles or (self.combineFiles and self.sn.num_files>1) or self.toDouble or self.nommap:

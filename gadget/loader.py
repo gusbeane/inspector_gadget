@@ -216,8 +216,12 @@ class Snapshot(Loader):
         if format==None or format == self.__format__:
             self.__backend__.write(filename=filename)
         else:
-            pass
-        
+            if format==3:
+                import format3
+                tmp_backend = format3.Format3(self,sn.filename, toDouble=self.flag_doubleprecision)
+                tmp_backend.write(filename=filename)
+            elif format==2:
+                raise Exception( "Creating format2 snapshots is not supported yet")
 
 
 class Subfind(Loader):
