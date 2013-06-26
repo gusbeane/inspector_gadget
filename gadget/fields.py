@@ -116,8 +116,10 @@ def isPresent(name, snapshot, learn=False, gr=None, shape=1):
             pres = snapshot.__present__[name]
         except KeyError:
             raise Exception("Unkonwn array shape for field %s"%name)
-            
-        
-    return pres
+    
+    #filter for loaded particle types
+    tmp = np.zeros(6,dtype=np.longlong)
+    tmp[snapshot.__parttype__] = pres[snapshot.__parttype__]
+    return tmp
 
 

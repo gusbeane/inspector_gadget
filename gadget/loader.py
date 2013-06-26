@@ -161,9 +161,7 @@ class Snapshot(Loader):
         else:
             pres = flds.isPresent(name,self)
             
-        tmp = np.where(pres>0,self.nparticles,0)
-        num = np.zeros(6,dtype=np.int64)
-        num[self.__parttype__] = tmp[self.__parttype__]
+        num = np.where(pres>0,self.nparticles,0)
         
         if dtype==None:
             if name=='id':
