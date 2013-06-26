@@ -12,7 +12,7 @@ class Format2:
 
     def __init__( self, sn, filename, verbose=False, onlyHeader=False, nommap=False, tracer=False, toDouble=False, **param):
         self.sn = sn
-        if type( sn.__fields__ ) == np.ndarray or type( sn.__fields__ ) == list:
+        if sn.__fields__ != None:
             self.loadlist = sn.__fields__
     	else:
             self.loadlist = []
@@ -22,26 +22,29 @@ class Format2:
         self.tracer = tracer
         self.onlyHeader = onlyHeader
         self.toDouble = toDouble
+        self.filename = filename
 
+
+        self.datablocks_skip = ["HEAD"]
+        self.datablocks_int32 = ["ID  ","NONN"]
+
+    def load(self):
         self.filecount = 1
-        if path.exists( filename ):
-            self.files = [filename]
-        elif path.exists( filename + '.0' ):
-            self.files = [filename + '.0']
-            while path.exists( filename + ".%d" % self.filecount ):
-                self.files += [filename + ".%d" % self.filecount]
+        if path.exists( self.filename ):
+            self.files = [self.filename]
+        elif path.exists( self.filename + '.0' ):
+            self.files = [self.filename + '.0']
+            while path.exists( self.filename + ".%d" % self.filecount ):
+                self.files += [self.filename + ".%d" % self.filecount]
                 self.filecount += 1
 
             if not nommap:
                 print "Multiple files detected, thus mmap is deactivated."
                 self.nommap = True
         else:
-            raise Exception( "Neither %s nor %s.0 exists." % (filename, filename) )
+            raise Exception( "Neither %s nor %s.0 exists." % (self.filename, self.filename) )
 
-        self.datablocks_skip = ["HEAD"]
-        self.datablocks_int32 = ["ID  ","NONN"]
 
-    def load(self):
         self.load_header( 0, verbose=self.verbose )
         self.get_blocks( 0, verbose=self.verbose )
 

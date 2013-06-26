@@ -64,23 +64,29 @@ present = {
 
 def isPresent(name, snapshot, learn=False, gr=None, shape=1):
     if learn:
+        if not hasattr(snapshot,"__present__"):
+            snapshot.__present__ = present
+            
         if gr !=None:
             pres = np.zeros(6,dtype=np.int64)
             pres[gr] = shape
             if name == 'mass':
                 pres[gr] = (0 if snapshot.masses[gr]>0  else 1)
+            old = snapshot.__present__.get(name,np.zeros(6,dtype=np.longlong))
+            pres = np.maximum(old,pres)
+            snapshot.__present__[name] = pres
         else:
+            shape = np.array(shape)
+            if shape.shape!=(6,):
+               raise Exception("invalide present array")
             pres = shape
-          
-        if not hasattr(snapshot,"__present__"):
-            snapshot.__present__ = {}
-            
-        old = snapshot.__present__.get(name,np.zeros(6,dtype=np.longlong))
-        pres = np.maximum(old,pres)
-        snapshot.__present__[name] = pres
-        
+            snapshot.__present__[name] = pres
     else:
-        pres = snapshot.__present__[name]
+        try:
+            pres = snapshot.__present__[name]
+        except KeyError:
+            raise Exception("Unkonwn array shape for field %s"%name)
+            
         
     return pres
 

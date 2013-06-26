@@ -35,7 +35,6 @@ class Format3:
         
 
     def load(self):
-        self.sn.data = {}
         self.sn.npart_loaded = np.zeros(6,dtype=np.longlong)
         
         if not path.exists( self.sn.filename ):
@@ -157,10 +156,12 @@ class Format3:
                         name = self.dict.get(key,key)
                         if self.sn.__fields__==None or name in self.sn.__fields__:
                             gr.data[str(name)]=self.file[hgr+'/'+key]
-
+                            
+        #TODO update npart_loaded
 
     def load_data(self):
         self.sn.npart_loaded = np.zeros(6,dtype=np.longlong)
+        self.data = {}
 
         if self.combineFiles:
             filesA = 0
@@ -344,7 +345,6 @@ class Format3:
             self.file.close()
             del self.file
 
-
     def nextFile(self, num=None):
         if self.sn.currFile < (self.sn.num_files-1) or (num != None and num < self.sn.currFile):
             if num == None:
@@ -369,6 +369,8 @@ class Format3:
 
             #open next file
             self.sn.npart_loaded = np.zeros(6,dtype=np.longlong)
+            self.sn.data = {}
+            
             filename = re.sub("\.[0-9]*\.hdf5",".%d.hdf5"%self.sn.currFile, self.sn.filename)
             filename = re.sub("\.[0-9]*\.h5",".%d.h5"%self.sn.currFile, filename)
             self.sn.filename = filename
@@ -386,3 +388,65 @@ class Format3:
             self.file.close()
             del self.file
 
+    def write(self,filename):
+        if not filename.endswith(".hdf5") and not filename.endswith(".h5"):
+            filename += ".hdf5"
+            
+        #TODO check filename for multipart files    
+            
+        file = h5py.File(filename,"w")
+        
+        self.write_header(file)
+        
+        self.write_particles(file)
+        
+        file.close()
+
+        
+    def write_header(self,file):
+        header = file.create_group("/Header")
+        header.attrs['NumPart_ThisFile'] = self.sn.nparticles
+        header.attrs['NumPart_Total'] = self.sn.nparticlesall
+        header.attrs['NumPart_Total_HighWord'] = [0,0,0,0,0,0]
+        header.attrs['MassTable'] = self.sn.masses
+        
+        header.attrs['Time'] = self.sn.time
+        header.attrs['NumFilesPerSnapshot'] = self.sn.num_files
+        header.attrs['Redshift'] = self.sn.redshift
+        header.attrs['BoxSize'] = self.sn.boxsize
+
+        header.attrs['Omega0'] =  self.sn.omega0
+        header.attrs['OmegaLambda'] = self.sn.omegalambda
+        header.attrs['HubbleParam'] =  self.sn.hubbleparam
+        header.attrs['Flag_Sfr'] =  self.sn.flag_sfr
+        header.attrs['Flag_Cooling'] = self.sn.flag_cooling
+        header.attrs['Flag_StellarAge'] = self.sn.flag_stellarage
+        header.attrs['Flag_Metals'] =  self.sn.flag_metals
+        header.attrs['Flag_Feedback'] =  self.sn.flag_feedback
+        if hasattr(self, "flag_doubleprecision"):
+            header.attrs['Flag_DoublePrecision'] = self.sn.flag_doubleprecision
+        
+        
+    def write_particles(self,file):
+        for i in np.arange(0,6):
+            group = file.create_group("PartType%d"%i)
+            
+            for item in self.sn.data:
+                pres = fields.isPresent(item,self.sn)
+                if pres[i] > 0 and self.sn.npart_loaded[i]>0:
+                    #reverse translate name
+                    if item in self.dict.values():
+                        name = (key for key,value in self.dict.items() if value==item).next()
+                    else:
+                        name = item
+                        
+                    f = self.sn.data[item]
+                    
+                    if pres[i]>1:
+                        dataset = group.create_dataset(name, shape=(self.sn.npart_loaded[i],pres[i]), dtype=f.dtype)
+                    else:
+                        dataset = group.create_dataset(name, shape=(self.sn.npart_loaded[i],), dtype=f.dtype)
+                        
+                    n1 = np.where(pres>0, self.sn.npart_loaded,np.zeros(6,dtype=np.longlong))
+                    tmp = np.sum(n1[0:i])
+                    dataset[...] = f[tmp:tmp+self.sn.npart_loaded[i]]

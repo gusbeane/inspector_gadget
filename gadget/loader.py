@@ -1,11 +1,12 @@
 import numpy as np
 import re
+import functools
 
-import gadget.fields as fields
+import gadget.fields as flds
 
 class Loader(object):
        
-    def __init__(self,filename, format=None, fields=None, parttype=None, combineFiles=True, toDouble=False, onlyHeader=False, verbose=False, load=True, **param):     
+    def __init__(self,filename, format=None, fields=None, parttype=None, combineFiles=True, toDouble=False, onlyHeader=False, verbose=False, **param):     
         #detect backend
         if format==None:
             if filename.endswith('.hdf5') or filename.endswith('.h5'):
@@ -37,17 +38,12 @@ class Loader(object):
             import format3
             self.__backend__=format3.Format3(self,filename, **param)
 
-        if format==2:
-            if load==False:
-                raise Exception( "Creating format2 snapshots is not supported yet")
-                
+        if format==2:              
             import format2
             self.__backend__=format2.Format2(self,filename, **param)
                 
-
-        if load:
-            self.__backend__.load()
-            self.__convenience__()
+        self.data = {}
+            
         
     def __normalizeFields__(self):
         if self.__fields__ == None:
@@ -56,11 +52,11 @@ class Loader(object):
         tmp = self.__fields__
         self.__fields__ = []
 
-        rev = dict((v,k) for k, v in fields.shortnames.iteritems())
+        rev = dict((v,k) for k, v in flds.shortnames.iteritems())
 
         for item in tmp:
             if self.__format__==3:
-                item = fields.hdf5toformat2.get(item,item)
+                item = flds.hdf5toformat2.get(item,item)
 
             self.__fields__.append(rev.get(item,item))
     
@@ -88,7 +84,7 @@ class Snapshot(Loader):
     """
     This class loads Gadget snapshots. Currently file format 2 and 3 (hdf5) are supported.
     """
-    def __init__(self,filename, format=None, fields=None, parttype=None, num_part=None, masses=None, combineFiles=True, toDouble=False, onlyHeader=False, verbose=False, **param):     
+    def __init__(self,filename, format=None, fields=None, parttype=None, combineFiles=True, toDouble=False, onlyHeader=False, verbose=False, **param):     
         """
         *filename* : The name of the snapshot file
         *format* : (optional) file format of the snapshot, otherwise this is guessed from the file name
@@ -105,19 +101,124 @@ class Snapshot(Loader):
         format 3 (hdf5) only:
         *combineParticles* : (optinal) if True arrays containing data of all species are provided on the snapshot object as well (disables mmap)
         """
+        super(Snapshot,self).__init__(filename, format=format, fields=fields, parttype=parttype, combineFiles=combineFiles, toDouble=toDouble, onlyHeader=onlyHeader, verbose=verbose, **param)
         
-        
-        if num_part != None:
-            super(Snapshot,self).__init__(filename, format=format, fields=fields, parttype=parttype, combineFiles=combineFiles, toDouble=toDouble, onlyHeader=onlyHeader, verbose=verbose, load=False, **param)
-            self.__initEmpty__(np.array(num_part), masses, toDouble)
+        if not isinstance(self, ICs):
+            self.__backend__.load()
+            self.__convenience__()
+
+            self.__precision__ = None
+            
+            if toDouble:
+               self.__precision__ = np.float64
+            elif hasattr(self,"flag_doubleprecision"):
+                if self.flag_doubleprecision:
+                    self.__precision__ = np.float64
+                else:
+                    self.__precision__ = np.float32
+            elif hasattr(self,"pos"):
+                self.__precision__ = self.pos.dtype
+
+    def __convenience__(self):
+        items = self.data.keys()
+        for i in items:
+            setattr(self,i,self.data[i])
+            if flds.shortnames.has_key(i):
+                setattr(self,flds.shortnames[i],self.data[i])
+                
+        for gr in (self.part0,self.part1,self.part2,self.part3,self.part4, self.part5):
+            gr.__convenience__()
+
+
+    def __str__(self):
+        tmp = self.header.__str__()
+        for i in np.arange(0,6):
+            if self.nparticlesall[i] > 0:
+                tmp += re.sub("[^\n]*\n","\n",self.groups[i].__str__(),count=1)
+
+        return tmp
+
+    def addField(self, name, pres=None, dtype=None):
+        name = flds.hdf5toformat2.get(name,name)
+
+        if pres != None:
+            pres = flds.isPresent(name,self,learn=True,shape=pres)
         else:
-            super(Snapshot,self).__init__(filename, format=format, fields=fields, parttype=parttype, combineFiles=combineFiles, toDouble=toDouble, onlyHeader=onlyHeader, verbose=verbose, load=True, **param)
+            pres = flds.isPresent(name,self)
+            
+        tmp = np.where(pres>0,self.nparticles,0)
+        num = np.zeros(6,dtype=np.int64)
+        num[self.__parttype__] = tmp[self.__parttype__]
         
-    def __initEmpty__(self, num_part, masses=None, toDouble=False):
+        if dtype==None:
+            if name=='id':
+                if self.__longids__:
+                    dtype = np.uint64
+                else:
+                    dtype = np.uint32
+            elif self.__precision__ != None:
+                dtype = self.__precision__
+            else:
+                dtype = np.float32
+             
+        if np.max(pres)>1:        
+            f = np.zeros([num.sum(),np.max(pres)], dtype=dtype)
+        else:
+            f = np.zeros([num.sum(),], dtype=dtype)
+            
+        self.data[name] = f
+        
+        for gr in (self.part0,self.part1,self.part2,self.part3,self.part4, self.part5):
+            gr.__update_data__(name)
+        self.__convenience__()
+        
+        
+    def write(self, filename=None, format=None):
+        if filename==None:
+            filename = self.filename
+            
+        if format==None or format == self.__format__:
+            if format==2:
+                raise Exception( "Creating format2 snapshots is not supported yet")
+            
+            self.__backend__.write(filename=filename)
+        else:
+            if format==3:
+                import format3
+                tmp_backend = format3.Format3(self,self.filename)
+                tmp_backend.write(filename=filename)
+            elif format==2:
+                raise Exception( "Creating format2 snapshots is not supported yet")
+            
+            
+class ICs(Snapshot):
+    def __init__(self,filename, num_part, format=None, fields=None, masses=None, precision=None, longids=False, verbose=False, **param): 
+        """
+        Creates an empty snapshot used for ic generation
+        
+        *filename* : The name of the snapshot file
+        *num_part* : (ic generation) generate an empty snapshot instead; num_part must be an array with 6 integers, giving the number of particles for each particle species
+        *masses* : (ic generation, optinal) array with masses of each particle species, (0 if specified in the mass array)
+        *format* : (optional) file format of the snapshot, otherwise this is guessed from the file name
+        *fields* : (optional) list of fields to add beside the basic fields
+       
+        *verbose* : (optional) enable debug output
+        """
+        super(ICs,self).__init__(filename, format=format, fields=fields,  verbose=verbose, **param)
+        
+        if format==2:
+            raise Exception( "Creating format2 snapshots is not supported yet")
+        
         self.__parttype__ = np.where(num_part>0)[0]
         
         if masses == None:
             masses = np.zeros(6)
+            
+        if precision == None:
+            precision = np.float32
+            
+        self.__precision__ = precision
+        self.__longids__ = longids
             
         self.nparticles = np.longlong(num_part)
         self.nparticlesall = np.longlong(num_part)
@@ -140,25 +241,16 @@ class Snapshot(Loader):
         self.flag_cooling = 0
         self.flag_stellarage = 0
         self.flag_metals = 0
-        if toDouble:
+        if precision == np.float64:
             self.flag_doubleprecision=1
         else:
             self.flag_doubleprecision=0
         
         self.header = Header(self)
         
-        #initiate default present fields
-        self.__present__ = fields.present
-        self.__present__['mass'] = np.where(masses==0,1,0)
-        
-        self.data = {}
-        
-        for field in fields.default:
-            self.addField(field)
-        if self.__fields__ != None:
-            for field in self.__fields__:
-                self.addField(field)
-        
+        #initiate mass field
+        flds.isPresent('mass',self,learn=True,shape=np.where(masses==0,1,0))
+    
         self.part0 = PartGroup(self,0)
         self.part1 = PartGroup(self,1)
         self.part2 = PartGroup(self,2)
@@ -167,62 +259,13 @@ class Snapshot(Loader):
         self.part5 = PartGroup(self,5)
         self.groups = [ self.part0, self.part1, self.part2, self.part3, self.part4, self.part5]
         
-                
+        for field in flds.default:
+            self.addField(field)
+        if self.__fields__ != None:
+            for field in self.__fields__:
+                self.addField(field)
+        
         self.__convenience__()
-
-    def __convenience__(self):
-        items = self.data.keys()
-        for i in items:
-            setattr(self,i,self.data[i])
-            if fields.shortnames.has_key(i):
-                setattr(self,fields.shortnames[i],self.data[i])
-                
-        for gr in (self.part0,self.part1,self.part2,self.part3,self.part4, self.part5):
-            gr.__convenience__()
-
-
-    def __str__(self):
-        tmp = self.header.__str__()
-        for i in np.arange(0,6):
-            if self.nparticlesall[i] > 0:
-                tmp += re.sub("[^\n]*\n","\n",self.groups[i].__str__(),count=1)
-
-        return tmp
-
-    def addField(self, name, shape=None, dtype=None):
-        name = fields.hdf5toformat2.get(name,name)
-
-        if shape != None:
-            pres = fields.isPresent(name,self,learn=True,shape=shape)
-        else:
-            pres = fields.isPresent(name,self)
-            
-        tmp = np.where(pres>0,self.nparticles,0)
-        num = np.zeros(6,dtype=np.int64)
-        num[self.__parttype__] = tmp[self.__parttype__]
-        
-        if dtype==None:
-            if name=='id':
-                dtype = np.uint32
-            elif self.flag_doubleprecision:
-                dtype = np.float64
-            else:
-                dtype = np.float32
-                
-        self.data[name] = np.zeros([num.sum(),np.max(pres)], dtype=dtype)
-        
-        
-    def write(self, filename=None, format=None):
-        if format==None or format == self.__format__:
-            self.__backend__.write(filename=filename)
-        else:
-            if format==3:
-                import format3
-                tmp_backend = format3.Format3(self,sn.filename, toDouble=self.flag_doubleprecision)
-                tmp_backend.write(filename=filename)
-            elif format==2:
-                raise Exception( "Creating format2 snapshots is not supported yet")
-
 
 class Subfind(Loader):
     def __init__(self,filename, format=None, fields=None, parttype=None, combineFiles=True, toDouble=False, onlyHeader=False, verbose=False, **param):
@@ -238,15 +281,16 @@ class Subfind(Loader):
 
         param['combineParticles'] = False  
            
-        super(Subfind,self).__init__(filename, format=format, fields=fields, parttype=parttype, combineFiles=combineFilesm, toDouble=toDouble, onlyHeader=onlyHeader, verbose=verbose, load=True, **param)
-
+        super(Subfind,self).__init__(filename, format=format, fields=fields, parttype=parttype, combineFiles=combineFilesm, toDouble=toDouble, onlyHeader=onlyHeader, verbose=verbose, **param)
+        self.__backend__.load()
+        self.__convenience__()
 
     def __convenience__(self):
         items = self.data.keys()
         for i in items:
             setattr(self,i,self.data[i])
-            if fields.shortnames.has_key(i):
-                setattr(self,fields.shortnames[i],self.data[i])
+            if flds.shortnames.has_key(i):
+                setattr(self,flds.shortnames[i],self.data[i])
                 
         for gr in (self.group, self.subhalo):
             gr.__convenience__()
@@ -260,23 +304,48 @@ class Subfind(Loader):
         return tmp
 
     def __getitem__(self, item):
-        pass
-
+        raise KeyError()
+    
 
 class Header(object):
     def __init__(self,parent):
         self.__parent__ = parent
-        for entry in fields.headerfields:
+        self.__attrs__ = []
+        for entry in flds.headerfields:
             if hasattr(parent,entry):
-                setattr(self,entry,getattr(parent,entry))
-
+                self.__attrs__.append(entry)
+    def __getattr__(self,name):
+        print "get %s"%name
+        #we can't handle these
+        if name in ["__parent__","__attrs__"]:
+            return super(Header,self).__getattr__(name)
+        elif name in self.__attrs__:
+            return getattr(self.__parent__,name)
+        else:
+            raise KeyError()
+            
+    def __setattr__(self,name, value):
+        print "in set attr"
+        #we can't handle these
+        if name in ["__parent__","__attrs__"]:
+            super(Header,self).__setattr__(name,value)
+        elif name in self.__attrs__:
+            if type(value)==list:
+                value = np.array(value)
+            setattr(self.__parent__,name,value)
+        else:
+            raise KeyError()
+        
+    def __dir__(self):
+        return self.__attrs__
+    
     def __str__(self):
         if isinstance(self.__parent__, Snapshot):
             tmp = "snapshot "+self.__parent__.filename+":\n"
         else:
             tmp = "subfind output "+self.__parent__.filename+":\n"
             
-        for entry in fields.headerfields:
+        for entry in flds.headerfields:
             if hasattr(self,entry):
                 val = getattr(self,entry)
                 if type(val) ==  np.ndarray or type(val) == list:
@@ -299,19 +368,28 @@ class PartGroup(object):
         if parent.npart_loaded[num]>0:
             if hasattr(parent,"data"):
                 for key in parent.data.iterkeys():
-                    pres = fields.isPresent(key, parent)
+                    pres = flds.isPresent(key, parent)
                     if pres[num]>0:
                         f = parent.data[key]
                         n1 = np.where(pres>0, parent.npart_loaded,np.zeros(6,dtype=np.longlong))
                         tmp = np.sum(n1[0:num])
                         self.data[key] = f[tmp:tmp+parent.npart_loaded[num]]
                         
+    def __update_data__(self,name):
+        if self.__parent__.npart_loaded[self.__num__]>0:
+            pres = flds.isPresent(name, self.__parent__)
+            if pres[self.__num__]>0:
+                f = self.__parent__.data[name]
+                n1 = np.where(pres>0, self.__parent__.npart_loaded,np.zeros(6,dtype=np.longlong))
+                tmp = np.sum(n1[0:self.__num__])
+                self.data[name] = f[tmp:tmp+self.__parent__.npart_loaded[self.__num__]]
+                        
     def __convenience__(self):
         items = self.data.keys()
         for i in items:
             setattr(self,i,self.data[i])
-            if fields.shortnames.has_key(i):
-                setattr(self,fields.shortnames[i],self.data[i])
+            if flds.shortnames.has_key(i):
+                setattr(self,flds.shortnames[i],self.data[i])
 
 
     def __str__(self):
@@ -324,9 +402,9 @@ class PartGroup(object):
                 tmp = "subfind output "+self.__parent__.filename+"\ncontains %d subhalos:\n"%(self.__parent__.npart_loaded[self.__num__])
             
         for i in self.data.keys():
-            if fields.shortnames.has_key(i):
-                tmp += "  "+i +'/'+fields.shortnames.get(i,i)+"\n"
-            elif not i in fields.shortnames.values():
+            if flds.shortnames.has_key(i):
+                tmp += "  "+i +'/'+flds.shortnames.get(i,i)+"\n"
+            elif not i in flds.shortnames.values():
                 tmp += "  "+i+"\n"
         return tmp
         
