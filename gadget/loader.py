@@ -332,7 +332,6 @@ class Header(object):
             if hasattr(parent,entry):
                 self.__attrs__.append(entry)
     def __getattr__(self,name):
-        print "get %s"%name
         #we can't handle these
         if name in ["__parent__","__attrs__"]:
             return super(Header,self).__getattr__(name)
@@ -342,7 +341,6 @@ class Header(object):
             raise KeyError()
             
     def __setattr__(self,name, value):
-        print "in set attr"
         #we can't handle these
         if name in ["__parent__","__attrs__"]:
             super(Header,self).__setattr__(name,value)
