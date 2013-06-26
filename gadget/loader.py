@@ -21,8 +21,10 @@ class Loader(object):
         self.__fields__ = fields
         self.__normalizeFields__()
         
+        self.__writeable__ = True
+        
         if parttype == None:
-            parttype = [0,1,2,3,4,5]
+            parttype = np.array([0,1,2,3,4,5])
         self.__parttype__ = parttype
 
         param['format'] = format
@@ -103,12 +105,14 @@ class Snapshot(Loader):
         """
         super(Snapshot,self).__init__(filename, format=format, fields=fields, parttype=parttype, combineFiles=combineFiles, toDouble=toDouble, onlyHeader=onlyHeader, verbose=verbose, **param)
         
+        #we are supposed to load a snapshot
         if not isinstance(self, ICs):
             self.__backend__.load()
             self.__convenience__()
 
             self.__precision__ = None
             
+            #set these two, in case we want to add fields to an existing snapshot
             if toDouble:
                self.__precision__ = np.float64
             elif hasattr(self,"flag_doubleprecision"):
@@ -118,6 +122,14 @@ class Snapshot(Loader):
                     self.__precision__ = np.float32
             elif hasattr(self,"pos"):
                 self.__precision__ = self.pos.dtype
+                
+            if hasattr(self,"id"):
+                if self.data['id'].dtype==np.uint64:
+                    self.__longids__ = True
+                else:
+                    self.__longids__ = False
+            else:
+                 self.__longids__ = False
 
     def __convenience__(self):
         items = self.data.keys()
@@ -139,6 +151,9 @@ class Snapshot(Loader):
         return tmp
 
     def addField(self, name, pres=None, dtype=None):
+        if not self.__writeable__:
+            raise Exception("This snapshot can not be modified")
+        
         name = flds.hdf5toformat2.get(name,name)
 
         if pres != None:
@@ -174,6 +189,9 @@ class Snapshot(Loader):
         
         
     def write(self, filename=None, format=None):
+        if not self.__writeable__:
+            raise Exception("This snapshot can not be modified")
+        
         if filename==None:
             filename = self.filename
             
@@ -272,18 +290,17 @@ class Subfind(Loader):
         if parttype == None:
             parttype = [0,1]
 
-        for i in parttype:
+        for i in parttype and verbose:
             if i!=0 and i!=1:
-                print "ignoring part type %d for subfind output"%i
-        
-        if parttype == None:
-            parttype = [0,1]       
+                print "ignoring part type %d for subfind output"%i      
 
         param['combineParticles'] = False  
            
         super(Subfind,self).__init__(filename, format=format, fields=fields, parttype=parttype, combineFiles=combineFilesm, toDouble=toDouble, onlyHeader=onlyHeader, verbose=verbose, **param)
         self.__backend__.load()
         self.__convenience__()
+        
+        self.__writeable__ = False
 
     def __convenience__(self):
         items = self.data.keys()

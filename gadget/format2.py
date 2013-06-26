@@ -83,7 +83,7 @@ class Format2:
 
             for i in np.arange(0,6):
                 if self.parttype_has_block(i,name):
-                    fields.isPresent(name.strip().lower(), i, self.sn,learn=True, shape=self.get_block_dim_from_table(name))
+                    fields.isPresent(name.strip().lower(), self.sn, learn=True, gr=i, shape=self.get_block_dim_from_table(name))
 
             length = self.get_block_length( fileid, fpos + 16, name, length, endian, verbose=verbose )
             if length < 0:

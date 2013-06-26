@@ -97,6 +97,8 @@ class Format3:
                 self.sn.subhalo = loader.PartGroup(self.sn,1)
                 self.load_data_map(((self.sn.group, 'Group'),(self.sn.subhalo, 'Subhalo')))
             
+            self.sn.__writable__ = False
+            
 
 
     def load_header(self):
