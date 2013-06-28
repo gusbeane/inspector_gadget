@@ -3,6 +3,8 @@ import numpy as np
 shortnames = {
     "pos":"position",
     "u":"internalenergy",
+    "rho":"density",
+    "vol":"volume",
     "hsml":"smoothinglength",
     "vel":"velocity",
     "pres":"pressure",
@@ -13,6 +15,8 @@ shortnames = {
     "grap":"pressuregradient",
     "temp":"temperature"
 }
+
+rev_shortnames = dict((v,k) for k, v in shortnames.iteritems())
 
 hdf5toformat2 = {
     'Coordinates':'pos',
@@ -92,6 +96,12 @@ headerfields = [
     'nsubhalosall'
     ]
 
+def normalizeName(name):
+    name = flds.hdf5toformat2.get(name,name)
+    name = rev.get(name,name)
+    return name
+        
+        
 def isPresent(name, snapshot, learn=False, gr=None, shape=1):
     if learn:
         if not hasattr(snapshot,"__present__"):

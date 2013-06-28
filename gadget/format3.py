@@ -97,6 +97,7 @@ class Format3:
                 self.sn.subhalo = loader.PartGroup(self.sn,1)
                 self.load_data_map(((self.sn.group, 'Group'),(self.sn.subhalo, 'Subhalo')))
             
+            self.sn.__convenience__()
             self.sn.__writable__ = False
             
 
@@ -348,7 +349,7 @@ class Format3:
             del self.file
 
     def nextFile(self, num=None):
-        if self.sn.currFile < (self.sn.num_files-1) or (num != None and num < self.sn.currFile):
+        if (num == None and self.sn.currFile < (self.sn.num_files-1) ) or (num != None and num < self.sn.num_files and num >= 0):
             if num == None:
                 self.sn.currFile = self.sn.currFile+1
             else:
@@ -378,12 +379,17 @@ class Format3:
             self.sn.filename = filename
 
             self.load()
+            
+            return True
 
         else:
-            if num == None:
-                print "last chunk reached"
-            else:
-                print "invalid file number: %d"%num
+            if self.verbose:
+                if num == None:
+                    print "last chunk reached"
+                else:
+                    print "invalid file number: %d"%num
+                
+            return False
 
     def close(self):
         if hasattr(self,"file"):

@@ -51,16 +51,8 @@ class Loader(object):
         if self.__fields__ == None:
             return
 
-        tmp = self.__fields__
-        self.__fields__ = []
-
-        rev = dict((v,k) for k, v in flds.shortnames.iteritems())
-
-        for item in tmp:
-            if self.__format__==3:
-                item = flds.hdf5toformat2.get(item,item)
-
-            self.__fields__.append(rev.get(item,item))
+        for i in np.arange(len(self.__fields__)):
+            self.__fields__[i] = flds.normalizeName(self.__fields__[i])
     
     def __convenience__():
         pass
@@ -77,7 +69,7 @@ class Loader(object):
         if self.__format__ == 2:
             print "not supported yet"
 
-        self.__backend__.nextFile(num)
+        return self.__backend__.nextFile(num)
 
     def close(self):
         self.__backend__.close()
@@ -108,7 +100,6 @@ class Snapshot(Loader):
         #we are supposed to load a snapshot
         if not isinstance(self, ICs):
             self.__backend__.load()
-            self.__convenience__()
 
             self.__precision__ = None
             
@@ -296,8 +287,7 @@ class Subfind(Loader):
            
         super(Subfind,self).__init__(filename, format=format, fields=fields, parttype=parttype, combineFiles=combineFilesm, toDouble=toDouble, onlyHeader=onlyHeader, verbose=verbose, **param)
         self.__backend__.load()
-        self.__convenience__()
-        
+    
         self.__writeable__ = False
 
     def __convenience__(self):

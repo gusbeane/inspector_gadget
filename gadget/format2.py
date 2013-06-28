@@ -65,6 +65,7 @@ class Format2:
         self.sn.part5 = loader.PartGroup(self.sn,5)
         self.sn.groups = [ self.sn.part0, self.sn.part1, self.sn.part2, self.sn.part3, self.sn.part4, self.sn.part5]
 
+        self.sn.__convenience__()
 
 
     def get_blocks( self, fileid, verbose=False ):
