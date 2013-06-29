@@ -97,8 +97,8 @@ class Format3:
                 self.sn.subhalo = loader.PartGroup(self.sn,1)
                 self.load_data_map(((self.sn.group, 'Group'),(self.sn.subhalo, 'Subhalo')))
             
-            self.sn.__convenience__()
-            self.sn.__writable__ = False
+        self.sn.__convenience__()
+        self.sn.__writable__ = False
             
 
 
@@ -112,6 +112,12 @@ class Format3:
             self.sn.masses = file['/Header'].attrs['MassTable']
             self.sn.num_files = file['/Header'].attrs['NumFilesPerSnapshot']
             
+            self.sn.flag_sfr = file['/Header'].attrs['Flag_Sfr']
+            self.sn.flag_cooling = file['/Header'].attrs['Flag_Cooling']
+            self.sn.flag_feedback = file['/Header'].attrs['Flag_Feedback']
+            self.sn.flag_stellarage = file['/Header'].attrs['Flag_StellarAge']
+            self.sn.flag_metals = file['/Header'].attrs['Flag_Metals']
+
             self.sn.npart = np.array( self.sn.nparticles ).sum()
             self.sn.npartall = np.array( self.sn.nparticlesall ).sum()
 
@@ -136,11 +142,7 @@ class Format3:
         self.sn.omegalambda = file['/Header'].attrs['OmegaLambda']
         self.sn.hubbleparam = file['/Header'].attrs['HubbleParam']
         
-        self.sn.flag_sfr = file['/Header'].attrs['Flag_Sfr']
-        self.sn.flag_cooling = file['/Header'].attrs['Flag_Cooling']
-        self.sn.flag_feedback = file['/Header'].attrs['Flag_Feedback']
-        self.sn.flag_stellarage = file['/Header'].attrs['Flag_StellarAge']
-        self.sn.flag_metals = file['/Header'].attrs['Flag_Metals']
+        
         if "Flag_DoublePrecision" in file['/Header'].attrs.keys():
 	           self.sn.flag_doubleprecision = file['/Header'].attrs['Flag_DoublePrecision']
 

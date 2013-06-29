@@ -97,8 +97,8 @@ headerfields = [
     ]
 
 def normalizeName(name):
-    name = flds.hdf5toformat2.get(name,name)
-    name = rev.get(name,name)
+    name = hdf5toformat2.get(name,name)
+    name = rev_shortnames.get(name,name)
     return name
         
         

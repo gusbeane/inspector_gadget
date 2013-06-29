@@ -278,14 +278,18 @@ class Subfind(Loader):
     def __init__(self,filename, format=None, fields=None, parttype=None, combineFiles=True, toDouble=False, onlyHeader=False, verbose=False, **param):
         if parttype == None:
             parttype = [0,1]
-
-        for i in parttype and verbose:
+	
+	parttype_filter = []
+        for i in parttype:
             if i!=0 and i!=1:
-                print "ignoring part type %d for subfind output"%i      
+		if verbose:
+	            print "ignoring part type %d for subfind output"%i
+            else:
+                parttype_filter.append(i)
 
-        param['combineParticles'] = False  
+        param['combineParticles'] = False
            
-        super(Subfind,self).__init__(filename, format=format, fields=fields, parttype=parttype, combineFiles=combineFilesm, toDouble=toDouble, onlyHeader=onlyHeader, verbose=verbose, **param)
+        super(Subfind,self).__init__(filename, format=format, fields=fields, parttype=parttype_filter, combineFiles=combineFiles, toDouble=toDouble, onlyHeader=onlyHeader, verbose=verbose, **param)
         self.__backend__.load()
     
         self.__writeable__ = False
