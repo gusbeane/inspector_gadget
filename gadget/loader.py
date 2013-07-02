@@ -58,10 +58,6 @@ class Loader(object):
     def __convenience__():
         pass
     
-    
-    def __repr__(self):
-        return self.__str__()
-    
                 
     def __getitem__(self, item):
         return self.data[item]
@@ -190,6 +186,9 @@ class Snapshot(Loader):
                 tmp += re.sub("[^\n]*\n","\n",self.groups[i].__str__(),count=1)
 
         return tmp
+    
+    def __repr__(self):
+        return self.header.__repr__()
 
     def addField(self, name, pres=None, dtype=None):
         if not self.__writeable__:
@@ -361,6 +360,9 @@ class Subfind(Loader):
             tmp += re.sub("[^\n]*\n","\n",i.__str__(),count=1)
 
         return tmp
+    
+    def __repr__(self):
+        return self.header.__repr__()
 
     def __getitem__(self, item):
         raise KeyError()
@@ -414,7 +416,10 @@ class Header(object):
         return tmp
 
     def __repr__(self):
-        return self.__str__()
+        if isinstance(self.__parent__, Snapshot):
+            return "snapshot "+self.__parent__.filename
+        else:
+            return "subfind output "+self.__parent__.filename
 
 class PartGroup(object):
     def __init__(self,parent,num):
@@ -466,7 +471,13 @@ class PartGroup(object):
         return tmp
         
     def __repr__(self):
-        return self.__str__()
+        if isinstance(self.__parent__, Snapshot):
+            return "snapshot "+self.__parent__.filename+", particle group %d contains %d particles"%(self.__num__,self.__parent__.npart_loaded[self.__num__])
+        else:
+            if self.__num__ == 0:
+                return "subfind output "+self.__parent__.filename+", contains %d groups"%(self.__parent__.npart_loaded[self.__num__])
+            else:
+                return "subfind output "+self.__parent__.filename+", contains %d subhalos"%(self.__parent__.npart_loaded[self.__num__])
 
     def __getitem__(self, item):
         return self.data[item]
