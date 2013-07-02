@@ -16,15 +16,6 @@ class Format3:
     def __init__(self,sn,filename, verbose=False, onlyHeader=False, nommap=False, combineParticles=True, combineFiles=True, toDouble = False, **param):
         self.sn=sn
         
-        res = re.findall("\.[0-9]*\.hdf5",filename)
-        res2 = re.findall("\.[0-9]*\.h5",filename)
-        if len(res) > 0:
-            self.sn.currFile = int(res[-1][1:-5])
-        elif len(res2) > 0:
-            self.sn.currFile = int(res[-1][1:-3])
-        else:
-            self.sn.currFile=0
-
         self.combineParticles = combineParticles
         self.combineFiles = combineFiles
         self.toDouble = toDouble
@@ -68,23 +59,10 @@ class Format3:
         del self.file
         self.sn.header = loader.Header(self.sn)
         
-        if self.onlyHeader:
-            if isinstance(self.sn, loader.Snapshot):
-                self.sn.part0 = loader.PartGroup(self.sn,0)
-                self.sn.part1 = loader.PartGroup(self.sn,1)
-                self.sn.part2 = loader.PartGroup(self.sn,2)
-                self.sn.part3 = loader.PartGroup(self.sn,3)
-                self.sn.part4 = loader.PartGroup(self.sn,4)
-                self.sn.part5 = loader.PartGroup(self.sn,5)
-                self.sn.groups = [ self.sn.part0, self.sn.part1, self.sn.part2, self.sn.part3, self.sn.part4, self.sn.part5]
-            else:
-                self.sn.group = loader.PartGroup(self.sn,0)
-                self.sn.subhalo = loader.PartGroup(self.sn,1)
-            return
-
         if self.combineParticles or (self.combineFiles and self.sn.num_files>1) or self.toDouble or self.nommap:
             if isinstance(self.sn, loader.Snapshot):
-                self.load_data(filename,num)
+                if not self.onlyHeader:
+                    self.load_data(filename,num)
                 self.sn.part0 = loader.PartGroup(self.sn,0)
                 self.sn.part1 = loader.PartGroup(self.sn,1)
                 self.sn.part2 = loader.PartGroup(self.sn,2)
@@ -93,7 +71,8 @@ class Format3:
                 self.sn.part5 = loader.PartGroup(self.sn,5)
                 self.sn.groups = [ self.sn.part0, self.sn.part1, self.sn.part2, self.sn.part3, self.sn.part4, self.sn.part5]
             else:
-                self.load_data_subfind(filename,num)
+                if not self.onlyHeader:
+                    self.load_data_subfind(filename,num)
                 self.sn.group = loader.PartGroup(self.sn,0)
                 self.sn.subhalo = loader.PartGroup(self.sn,1)
         else:
@@ -105,17 +84,18 @@ class Format3:
                 self.sn.part4 = loader.PartGroup(self.sn,4)
                 self.sn.part5 = loader.PartGroup(self.sn,5)
                 self.sn.groups = [ self.sn.part0, self.sn.part1, self.sn.part2, self.sn.part3, self.sn.part4, self.sn.part5]
-                self.load_data_map(filename, ((self.sn.part0, 'PartType0'),(self.sn.part1, 'PartType1'),(self.sn.part2, 'PartType2'),(self.sn.part3, 'PartType3'),(self.sn.part4, 'PartType4'),(self.sn.part5, 'PartType5')))
+                if not self.onlyHeader:
+                    self.load_data_map(filename, ((self.sn.part0, 'PartType0'),(self.sn.part1, 'PartType1'),(self.sn.part2, 'PartType2'),(self.sn.part3, 'PartType3'),(self.sn.part4, 'PartType4'),(self.sn.part5, 'PartType5')))
                 
             else:
                 self.sn.group = loader.PartGroup(self.sn,0)
                 self.sn.subhalo = loader.PartGroup(self.sn,1)
-                self.load_data_map(filename, ((self.sn.group, 'Group'),(self.sn.subhalo, 'Subhalo')))
-            
-        self.sn.__convenience__()
-        self.sn.__writable__ = False
-        
-        
+                if not self.onlyHeader:
+                    self.load_data_map(filename, ((self.sn.group, 'Group'),(self.sn.subhalo, 'Subhalo')))
+
+            self.sn.__writable__ = False            
+
+
         if self.combineFiles==False and self.sn.num_files>1:
             self.sn.currFile = num
             self.sn.filename = filename
@@ -166,9 +146,11 @@ class Format3:
         
         
         if "Flag_DoublePrecision" in file['/Header'].attrs.keys():
-	           self.sn.flag_doubleprecision = file['/Header'].attrs['Flag_DoublePrecision']
+            self.sn.flag_doubleprecision = file['/Header'].attrs['Flag_DoublePrecision']
 
-    def load_data_map(self, filename, groups):  
+    def load_data_map(self, filename, groups):
+        self.data = {}
+  
         self.file = h5py.File(filename,"r")
 
         for (gr, hgr) in groups:
@@ -203,7 +185,6 @@ class Format3:
             filename = re.sub("\.[0-9]*\.h5",".%d.h5"%i, filename)
             self.sn.filename = filename
             self.file = h5py.File(filename,'r')
-            self.sn.currFile = i
            
             self.load_header()
             self.sn.header = loader.Header(self.sn)
@@ -233,7 +214,6 @@ class Format3:
             filename = re.sub("\.[0-9]*\.h5",".%d.h5"%i, filename)
             self.sn.filename = filename
             self.file = h5py.File(filename,'r')
-            self.sn.currFile = i
                 
             self.load_header()
             self.sn.header = loader.Header(self.sn)
@@ -297,7 +277,6 @@ class Format3:
             filename = re.sub("\.[0-9]*\.h5",".%d.h5"%i, filename)
             self.sn.filename = filename
             self.file = h5py.File(filename,'r')
-            self.sn.currFile = i
            
             self.load_header()
             self.sn.header = loader.Header(self.sn)
@@ -327,7 +306,6 @@ class Format3:
             filename = re.sub("\.[0-9]*\.h5",".%d.h5"%i, filename)
             self.sn.filename = filename
             self.file = h5py.File(filename,'r')
-            self.sn.currFile = i
                 
             self.load_header()
             self.sn.header = loader.Header(self.sn)

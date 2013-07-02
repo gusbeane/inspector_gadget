@@ -55,56 +55,76 @@ class Loader(object):
         for i in np.arange(len(self.__fields__)):
             self.__fields__[i] = flds.normalizeName(self.__fields__[i])
     
-    def __convenience__():
-        pass
-    
+    def __convenience__(self):
+        for i in  self.data.keys():
+            setattr(self,i,self.data[i])
+            if flds.shortnames.has_key(i):
+                setattr(self,flds.shortnames[i],self.data[i])
                 
+        for gr in self.groups:
+            gr.__convenience__()
+                
+
+    def __rmconvenience__(self):
+        if hasattr(self,"data"):
+            for i in self.data.keys():
+                delattr(self,i)
+                if flds.shortnames.has_key(i):
+                    delattr(self,flds.shortnames[i])
+
     def __getitem__(self, item):
         return self.data[item]
     
     def nextFile(self, num=None):
         if self.currFile == None:
-            return
+            return False
         if num == None:
-            if self.currFile< self.sn.num_files-1:
-                num = self.sn.currFile+1
+            if self.currFile< self.num_files-1:
+                num = self.currFile+1
             else:
                 if self.__verbose__:
                     print "last chunk reached"
                 return False
             
         else:
-            if num >= self.sn.num_files or num < 0:
+            if num >= self.num_files or num < 0:
                 if self.__verbose__:
                     print "invalide file number %d"%num
                 return False
             
         if self.currFile == num:
             return True
-            
-        if isinstance(self.sn, loader.Snapshot):
-            self.__rmconvenience__()
-            del self.sn.data
-            del self.sn.part0
-            del self.sn.part1
-            del self.sn.part2
-            del self.sn.part3
-            del self.sn.part4
-            del self.sn.part5
-        else:
-            del self.sn.group
-            del self.sn.subhalo
-            
-        del self.sn.groups
+        
         self.close()
+        self.__rmconvenience__()
+        
+        #TODO keep groups, only clean data
+        if isinstance(self, Snapshot):    
+            del self.part0
+            del self.part1
+            del self.part2
+            del self.part3
+            del self.part4
+            del self.part5
+        else:
+            del self.group
+            del self.subhalo
+            
+        del self.groups
+        if hasattr(self,"data"):
+            del self.data
 
         #open next file
         self.__backend__.load(num)
         
         return True
 
-    def __iter__(self):
-        for i in arange(self.num_files):
+    def iterFiles(self):
+        if self.currFile == None:
+            yield self
+            return
+
+        for i in np.arange(self.num_files):
             self.nextFile(i)
             yield self
 
@@ -159,24 +179,6 @@ class Snapshot(Loader):
                     self.__longids__ = False
             else:
                  self.__longids__ = False
-
-    def __convenience__(self):
-        items = self.data.keys()
-        for i in items:
-            setattr(self,i,self.data[i])
-            if flds.shortnames.has_key(i):
-                setattr(self,flds.shortnames[i],self.data[i])
-                
-        for gr in (self.part0,self.part1,self.part2,self.part3,self.part4, self.part5):
-            gr.__convenience__()
-                
-
-    def __rmconvenience__(self):
-        items = self.data.keys()
-        for i in items:
-            delattr(self,i,self.data[i])
-            if flds.shortnames.has_key(i):
-                delattr(self,flds.shortnames[i],self.data[i])
 
         
     def __str__(self):
@@ -342,17 +344,6 @@ class Subfind(Loader):
         self.__backend__.load()
     
         self.__writeable__ = False
-
-    def __convenience__(self):
-        items = self.data.keys()
-        for i in items:
-            setattr(self,i,self.data[i])
-            if flds.shortnames.has_key(i):
-                setattr(self,flds.shortnames[i],self.data[i])
-                
-        for gr in (self.group, self.subhalo):
-            gr.__convenience__()
-            
 
     def __str__(self):
         tmp = self.header.__str__()
