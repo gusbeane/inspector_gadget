@@ -34,7 +34,7 @@ class Format3:
         self.nommap = nommap
         
 
-    def load(self):
+    def load(self, num=None):
         self.sn.npart_loaded = np.zeros(6,dtype=np.longlong)
         
         if not path.exists( self.sn.filename ):
@@ -46,8 +46,23 @@ class Format3:
                 self.sn.filename += ".h5"
             elif  path.exists( self.sn.filename + "0.h5" ):
                 self.sn.filename += "0.h5"
+                
+        if num==None:
+            res = re.findall("\.[0-9]*\.hdf5",self.sn.filename)
+            res2 = re.findall("\.[0-9]*\.h5",self.sn.filename)
+            if len(res) > 0:
+                num = int(res[-1][1:-5])
+            elif len(res2) > 0:
+                num = int(res[-1][1:-3])
+            else:
+                num = 0    
+                
+        filename = self.sn.filename
+        if num!=None:
+            filename = re.sub("\.[0-9]*\.hdf5",".%d.hdf5"%num, filename)
+            filename = re.sub("\.[0-9]*\.h5",".%d.h5"%num, filename) 
         
-        self.file = h5py.File(self.sn.filename,"r")
+        self.file = h5py.File(filename,"r")
         self.load_header()
         self.file.close()
         del self.file
@@ -69,7 +84,7 @@ class Format3:
 
         if self.combineParticles or (self.combineFiles and self.sn.num_files>1) or self.toDouble or self.nommap:
             if isinstance(self.sn, loader.Snapshot):
-                self.load_data()
+                self.load_data(filename,num)
                 self.sn.part0 = loader.PartGroup(self.sn,0)
                 self.sn.part1 = loader.PartGroup(self.sn,1)
                 self.sn.part2 = loader.PartGroup(self.sn,2)
@@ -78,7 +93,7 @@ class Format3:
                 self.sn.part5 = loader.PartGroup(self.sn,5)
                 self.sn.groups = [ self.sn.part0, self.sn.part1, self.sn.part2, self.sn.part3, self.sn.part4, self.sn.part5]
             else:
-                self.load_data_subfind()
+                self.load_data_subfind(filename,num)
                 self.sn.group = loader.PartGroup(self.sn,0)
                 self.sn.subhalo = loader.PartGroup(self.sn,1)
         else:
@@ -90,15 +105,22 @@ class Format3:
                 self.sn.part4 = loader.PartGroup(self.sn,4)
                 self.sn.part5 = loader.PartGroup(self.sn,5)
                 self.sn.groups = [ self.sn.part0, self.sn.part1, self.sn.part2, self.sn.part3, self.sn.part4, self.sn.part5]
-                self.load_data_map(((self.sn.part0, 'PartType0'),(self.sn.part1, 'PartType1'),(self.sn.part2, 'PartType2'),(self.sn.part3, 'PartType3'),(self.sn.part4, 'PartType4'),(self.sn.part5, 'PartType5')))
+                self.load_data_map(filename, ((self.sn.part0, 'PartType0'),(self.sn.part1, 'PartType1'),(self.sn.part2, 'PartType2'),(self.sn.part3, 'PartType3'),(self.sn.part4, 'PartType4'),(self.sn.part5, 'PartType5')))
                 
             else:
                 self.sn.group = loader.PartGroup(self.sn,0)
                 self.sn.subhalo = loader.PartGroup(self.sn,1)
-                self.load_data_map(((self.sn.group, 'Group'),(self.sn.subhalo, 'Subhalo')))
+                self.load_data_map(filename, ((self.sn.group, 'Group'),(self.sn.subhalo, 'Subhalo')))
             
         self.sn.__convenience__()
         self.sn.__writable__ = False
+        
+        
+        if self.combineFiles==False and self.sn.num_files>1:
+            self.sn.currFile = num
+            self.sn.filename = filename
+        else:
+            self.sn.currFile = None
             
 
 
@@ -146,8 +168,8 @@ class Format3:
         if "Flag_DoublePrecision" in file['/Header'].attrs.keys():
 	           self.sn.flag_doubleprecision = file['/Header'].attrs['Flag_DoublePrecision']
 
-    def load_data_map(self, groups):  
-        self.file = h5py.File(self.sn.filename,"r")
+    def load_data_map(self, filename, groups):  
+        self.file = h5py.File(filename,"r")
 
         for (gr, hgr) in groups:
             if gr.__num__ in self.sn.__parttype__:
@@ -164,7 +186,7 @@ class Format3:
                             
         #TODO update npart_loaded
 
-    def load_data(self):
+    def load_data(self, filename, num):
         self.sn.npart_loaded = np.zeros(6,dtype=np.longlong)
         self.data = {}
 
@@ -172,8 +194,8 @@ class Format3:
             filesA = 0
             filesB = self.sn.num_files
         else:
-            filesA = self.sn.currFile
-            filesB = self.sn.currFile+1
+            filesA = num
+            filesB = num+1
             
         #learn about present fields
         for i in np.arange(filesA,filesB):
@@ -256,7 +278,7 @@ class Format3:
             self.file.close()
             del self.file
         
-    def load_data_subfind(self):
+    def load_data_subfind(self, filename, num):
         self.sn.data = {}
         self.sn.npart_loaded = np.zeros(6,dtype=np.longlong)
         
@@ -266,12 +288,12 @@ class Format3:
             filesA = 0
             filesB = self.sn.num_files
         else:
-            filesA = self.sn.currFile
-            filesB = self.sn.currFile+1
+            filesA = num
+            filesB = num+1
             
         #learn about present fields
         for i in np.arange(filesA,filesB):
-            filename = re.sub("\.[0-9]*\.hdf5",".%d.hdf5"%i, self.sn.filename)
+            filename = re.sub("\.[0-9]*\.hdf5",".%d.hdf5"%i, filename)
             filename = re.sub("\.[0-9]*\.h5",".%d.h5"%i, filename)
             self.sn.filename = filename
             self.file = h5py.File(filename,'r')
@@ -350,48 +372,7 @@ class Format3:
             self.file.close()
             del self.file
 
-    def nextFile(self, num=None):
-        if (num == None and self.sn.currFile < (self.sn.num_files-1) ) or (num != None and num < self.sn.num_files and num >= 0):
-            if num == None:
-                self.sn.currFile = self.sn.currFile+1
-            else:
-                self.sn.currFile = num
-                
-            if isinstance(self.sn, loader.Snapshot):
-                del self.sn.data
-                del self.sn.part0
-                del self.sn.part1
-                del self.sn.part2
-                del self.sn.part3
-                del self.sn.part4
-                del self.sn.part5
-            else:
-                del self.sn.group
-                del self.sn.subhalo
-                
-            del self.sn.groups
-            self.close()
 
-            #open next file
-            self.sn.npart_loaded = np.zeros(6,dtype=np.longlong)
-            self.sn.data = {}
-            
-            filename = re.sub("\.[0-9]*\.hdf5",".%d.hdf5"%self.sn.currFile, self.sn.filename)
-            filename = re.sub("\.[0-9]*\.h5",".%d.h5"%self.sn.currFile, filename)
-            self.sn.filename = filename
-
-            self.load()
-            
-            return True
-
-        else:
-            if self.verbose:
-                if num == None:
-                    print "last chunk reached"
-                else:
-                    print "invalid file number: %d"%num
-                
-            return False
 
     def close(self):
         if hasattr(self,"file"):

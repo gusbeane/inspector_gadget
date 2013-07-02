@@ -64,6 +64,10 @@ class Format2:
         self.sn.part4 = loader.PartGroup(self.sn,4)
         self.sn.part5 = loader.PartGroup(self.sn,5)
         self.sn.groups = [ self.sn.part0, self.sn.part1, self.sn.part2, self.sn.part3, self.sn.part4, self.sn.part5]
+        
+        #TODO implement combineFiles=False
+        self.sn.currFile = None
+
 
         self.sn.__convenience__()
 

@@ -22,10 +22,11 @@ class Loader(object):
         self.__normalizeFields__()
         
         self.__writeable__ = True
+        self.__verbose__ = verbose
         
         if parttype == None:
-            parttype = np.array([0,1,2,3,4,5])
-        self.__parttype__ = parttype
+            parttype = [0,1,2,3,4,5]
+        self.__parttype__ = np.array(parttype)
 
         param['format'] = format
         param['parttype'] = parttype
@@ -66,10 +67,50 @@ class Loader(object):
         return self.data[item]
     
     def nextFile(self, num=None):
-        if self.__format__ == 2:
-            print "not supported yet"
+        if self.currFile == None:
+            return
+        if num == None:
+            if self.currFile< self.sn.num_files-1:
+                num = self.sn.currFile+1
+            else:
+                if self.__verbose__:
+                    print "last chunk reached"
+                return False
+            
+        else:
+            if num >= self.sn.num_files or num < 0:
+                if self.__verbose__:
+                    print "invalide file number %d"%num
+                return False
+            
+        if self.currFile == num:
+            return True
+            
+        if isinstance(self.sn, loader.Snapshot):
+            self.__rmconvenience__()
+            del self.sn.data
+            del self.sn.part0
+            del self.sn.part1
+            del self.sn.part2
+            del self.sn.part3
+            del self.sn.part4
+            del self.sn.part5
+        else:
+            del self.sn.group
+            del self.sn.subhalo
+            
+        del self.sn.groups
+        self.close()
 
-        return self.__backend__.nextFile(num)
+        #open next file
+        self.__backend__.load(num)
+        
+        return True
+
+    def __iter__(self):
+        for i in arange(self.num_files):
+            self.nextFile(i)
+            yield self
 
     def close(self):
         self.__backend__.close()
@@ -100,6 +141,7 @@ class Snapshot(Loader):
         #we are supposed to load a snapshot
         if not isinstance(self, ICs):
             self.__backend__.load()
+            self.__convenience__()
 
             self.__precision__ = None
             
@@ -131,8 +173,16 @@ class Snapshot(Loader):
                 
         for gr in (self.part0,self.part1,self.part2,self.part3,self.part4, self.part5):
             gr.__convenience__()
+                
 
+    def __rmconvenience__(self):
+        items = self.data.keys()
+        for i in items:
+            delattr(self,i,self.data[i])
+            if flds.shortnames.has_key(i):
+                delattr(self,flds.shortnames[i],self.data[i])
 
+        
     def __str__(self):
         tmp = self.header.__str__()
         for i in np.arange(0,6):
@@ -174,8 +224,8 @@ class Snapshot(Loader):
         
         for gr in (self.part0,self.part1,self.part2,self.part3,self.part4, self.part5):
             gr.__update_data__(name)
+            
         self.__convenience__()
-        
         
     def write(self, filename=None, format=None):
         if not self.__writeable__:
