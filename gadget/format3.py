@@ -149,7 +149,7 @@ class Format3:
             self.sn.flag_doubleprecision = file['/Header'].attrs['Flag_DoublePrecision']
 
     def load_data_map(self, filename, groups):
-        self.data = {}
+        self.sn.data = {}
   
         self.file = h5py.File(filename,"r")
 
@@ -170,7 +170,7 @@ class Format3:
 
     def load_data(self, filename, num):
         self.sn.npart_loaded = np.zeros(6,dtype=np.longlong)
-        self.data = {}
+        self.sn.data = {}
 
         if self.combineFiles:
             filesA = 0

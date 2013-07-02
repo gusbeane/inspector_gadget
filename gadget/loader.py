@@ -116,7 +116,8 @@ class Loader(object):
 
         #open next file
         self.__backend__.load(num)
-        
+        self.__convenience__()
+
         return True
 
     def iterFiles(self):
