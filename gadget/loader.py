@@ -263,6 +263,10 @@ class ICs(Snapshot):
        
         *verbose* : (optional) enable debug output
         """
+        num_part = np.array(num_part)
+        if masses != None:
+            masses = np.array(masses)
+        
         super(ICs,self).__init__(filename, format=format, fields=fields,  verbose=verbose, **param)
         
         if format==2:
