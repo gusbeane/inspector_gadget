@@ -75,6 +75,7 @@ class Format3:
                     self.load_data_subfind(filename,num)
                 self.sn.group = loader.PartGroup(self.sn,0)
                 self.sn.subhalo = loader.PartGroup(self.sn,1)
+                self.sn.groups = [self.sn.group, self.sn.subhalo]
         else:
             if isinstance(self.sn, loader.Snapshot):
                 self.sn.part0 = loader.PartGroup(self.sn,0)
@@ -90,6 +91,7 @@ class Format3:
             else:
                 self.sn.group = loader.PartGroup(self.sn,0)
                 self.sn.subhalo = loader.PartGroup(self.sn,1)
+                self.sn.groups = [self.sn.group, self.sn.subhalo]
                 if not self.onlyHeader:
                     self.load_data_map(filename, ((self.sn.group, 'Group'),(self.sn.subhalo, 'Subhalo')))
 

@@ -73,6 +73,7 @@ class Loader(object):
                     delattr(self,flds.shortnames[i])
 
     def __getitem__(self, item):
+        item = flds.normalizeName(item)
         return self.data[item]
     
     def nextFile(self, num=None):
@@ -349,6 +350,7 @@ class Subfind(Loader):
         self.__backend__.load()
     
         self.__writeable__ = False
+        self.__convenience__()
 
     def __str__(self):
         tmp = self.header.__str__()
