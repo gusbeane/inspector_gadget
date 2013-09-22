@@ -73,8 +73,50 @@ class Loader(object):
                     delattr(self,flds.shortnames[i])
 
     def __getitem__(self, item):
-        item = flds.normalizeName(item)
+        item = self.__normalizeName__(item)
         return self.data[item]
+    
+    
+    def __normalizeName__(self, name):
+        name = flds.hdf5toformat2.get(name,name)
+        name = flds.rev_shortnames.get(name,name)
+        return name
+        
+        
+    def __isPresent__(self, name):
+        try:
+            pres = self.__present__[name]
+        except KeyError:
+            raise Exception("Unkonwn array shape for field %s"%name)
+    
+        #filter for loaded particle types
+        tmp = np.zeros(6,dtype=np.longlong)
+        tmp[self.__parttype__] = pres[self.__parttype__]
+        return tmp
+
+    def __learnPresent__(self, name, gr=None, shape=1):
+        if not hasattr(self,"__present__"):
+            self.__present__ = flds.present
+            
+        if gr !=None:
+            pres = np.zeros(6,dtype=np.int64)
+            pres[gr] = shape
+            if name == 'mass':
+                pres[gr] = (0 if self.masses[gr]>0  else 1)
+            old = self.__present__.get(name,np.zeros(6,dtype=np.longlong))
+            pres = np.maximum(old,pres)
+            self.__present__[name] = pres
+        else:
+            shape = np.array(shape)
+            if shape.shape!=(6,):
+               raise Exception("invalide present array")
+            pres = shape
+            self.__present__[name] = pres
+    
+        #filter for loaded particle types
+        tmp = np.zeros(6,dtype=np.longlong)
+        tmp[self.__parttype__] = pres[self.__parttype__]
+        return tmp
     
     def nextFile(self, num=None):
         if self.currFile == None:
@@ -201,9 +243,9 @@ class Snapshot(Loader):
         name = flds.hdf5toformat2.get(name,name)
 
         if pres != None:
-            pres = flds.isPresent(name,self,learn=True,shape=pres)
+            pres = self.__learnPresent__(name,shape=pres)
         else:
-            pres = flds.isPresent(name,self)
+            pres = self.__isPresent__(name)
             
         num = np.where(pres>0,self.nparticles,0)
         
@@ -313,7 +355,7 @@ class ICs(Snapshot):
         self.header = Header(self)
         
         #initiate mass field
-        flds.isPresent('mass',self,learn=True,shape=np.where(masses==0,1,0))
+        self.__learnPresent__('mass',shape=np.where(masses==0,1,0))
     
         self.part0 = PartGroup(self,0)
         self.part1 = PartGroup(self,1)
@@ -428,7 +470,7 @@ class PartGroup(object):
         if parent.npart_loaded[num]>0:
             if hasattr(parent,"data"):
                 for key in parent.data.iterkeys():
-                    pres = flds.isPresent(key, parent)
+                    pres = parent.__isPresent__(key)
                     if pres[num]>0:
                         f = parent.data[key]
                         n1 = np.where(pres>0, parent.npart_loaded,np.zeros(6,dtype=np.longlong))
@@ -437,7 +479,7 @@ class PartGroup(object):
                         
     def __update_data__(self,name):
         if self.__parent__.npart_loaded[self.__num__]>0:
-            pres = flds.isPresent(name, self.__parent__)
+            pres = self.__parent__.__isPresent__(name)
             if pres[self.__num__]>0:
                 f = self.__parent__.data[name]
                 n1 = np.where(pres>0, self.__parent__.npart_loaded,np.zeros(6,dtype=np.longlong))
@@ -478,6 +520,7 @@ class PartGroup(object):
                 return "subfind output "+self.__parent__.filename+", contains %d subhalos"%(self.__parent__.npart_loaded[self.__num__])
 
     def __getitem__(self, item):
+        item = self.__parent__.__normalizeName__(item)
         return self.data[item]
         
         

@@ -207,7 +207,7 @@ class Format3:
                             if shape.size == 2:
                                 elem=shape[1]
                                 
-                            pres = fields.isPresent(name,self.sn,learn=True,gr=gr,shape=elem)
+                            pres = self.sn.__learnPresent__(name,gr=gr,shape=elem)
             self.file.close()
                                 
         #now load the requested data                        
@@ -299,7 +299,7 @@ class Format3:
                             if shape.size == 2:
                                 elem=shape[1]
                                 
-                            pres = fields.isPresent(name,self.sn,learn=True,gr=gr,shape=elem)
+                            pres = self.__learnPresent__(name,gr=gr,shape=elem)
             self.file.close()
                                 
         #now load the requested data                    
@@ -318,11 +318,11 @@ class Format3:
                     for item in self.file[groupnames[gr]].keys():
                         name  = self.dict.get(item,item)
                         if self.sn.__fields__==None or name in self.sn.__fields__:
-                            pres = fields.isPresent(name,self.sn)
+                            pres = self.sn.__isPresent__(name)
                                 
                             n1 = np.where(pres > 0, self.sn.npart_loaded, np.zeros(6,dtype=np.longlong))
                                 
-                            if self.combineFiles:
+                            if self.sn.__combineFiles__:
                                 n2 = np.where(pres > 0, self.sn.nparticlesall, np.zeros(6,dtype=np.longlong))
                             else:
                                 n2 = np.where(pres > 0, self.sn.nparticles, np.zeros(6,dtype=np.longlong))
@@ -403,7 +403,7 @@ class Format3:
             group = file.create_group("PartType%d"%i)
             
             for item in self.sn.data:
-                pres = fields.isPresent(item,self.sn)
+                pres = self.sn.__isPresent__(item)
                 if pres[i] > 0 and self.sn.npart_loaded[i]>0:
                     #reverse translate name
                     if item in self.dict.values():
