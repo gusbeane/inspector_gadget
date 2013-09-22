@@ -23,27 +23,22 @@ class Loader(object):
         
         self.__writeable__ = True
         self.__verbose__ = verbose
+        self.__onlyHeader__ = onlyHeader
+        self.__combineFiles__ = combineFiles
+        self.__toDouble__ = toDouble
         
         if parttype == None:
             parttype = [0,1,2,3,4,5]
         self.__parttype__ = np.array(parttype)
 
-        param['format'] = format
-        param['parttype'] = parttype
-        param['fields'] = fields
-        param['toDouble'] = toDouble
-        param['onlyHeader'] = onlyHeader
-        param['verbose'] = verbose
-        param['combineFiles'] = combineFiles
-
 
         if format==3:
             import format3
-            self.__backend__=format3.Format3(self,filename, **param)
+            self.__backend__=format3.Format3(self, **param)
 
         if format==2:              
             import format2
-            self.__backend__=format2.Format2(self,filename, **param)
+            self.__backend__=format2.Format2(self, **param)
                 
         self.data = {}
             
@@ -53,7 +48,7 @@ class Loader(object):
             return
 
         for i in np.arange(len(self.__fields__)):
-            self.__fields__[i] = flds.normalizeName(self.__fields__[i])
+            self.__fields__[i] = self.__normalizeName__(self.__fields__[i])
     
     def __convenience__(self):
         for i in  self.data.keys():
@@ -139,23 +134,7 @@ class Loader(object):
             return True
         
         self.close()
-        self.__rmconvenience__()
-        
-        #TODO keep groups, only clean data
-        if isinstance(self, Snapshot):    
-            del self.part0
-            del self.part1
-            del self.part2
-            del self.part3
-            del self.part4
-            del self.part5
-        else:
-            del self.group
-            del self.subhalo
-            
-        del self.groups
-        if hasattr(self,"data"):
-            del self.data
+
 
         #open next file
         self.__backend__.load(num)
@@ -174,6 +153,32 @@ class Loader(object):
 
     def close(self):
         self.__backend__.close()
+        
+        self.__rmconvenience__()
+        
+        #TODO keep groups, only clean data
+        if isinstance(self, Snapshot):    
+            del self.part0
+            del self.part1
+            del self.part2
+            del self.part3
+            del self.part4
+            del self.part5
+        else:
+            del self.group
+            del self.subhalo
+            
+        del self.groups
+        
+        if hasattr(self,"data"):
+            for i in self.data.keys():
+                if isinstance(self.data[i], np.ndarray): 
+                    try:
+                        self.data[i].resize(0)
+                    except ValueError:
+                        pass
+        
+            del self.data
 
 class Snapshot(Loader):
     """
@@ -192,15 +197,24 @@ class Snapshot(Loader):
         
         *num_part* : (ic generation) generate an empty snapshot instead; num_part must be an array with 6 integers, giving the number of particles for each particle species
         *masses* : (ic generation, optinal) array with masses of each particle species, (0 if specified in the mass array)
-                        
-        format 3 (hdf5) only:
-        *combineParticles* : (optinal) if True arrays containing data of all species are provided on the snapshot object as well (disables mmap)
         """
         super(Snapshot,self).__init__(filename, format=format, fields=fields, parttype=parttype, combineFiles=combineFiles, toDouble=toDouble, onlyHeader=onlyHeader, verbose=verbose, **param)
         
         #we are supposed to load a snapshot
         if not isinstance(self, ICs):
             self.__backend__.load()
+            
+            self.header = Header(self)
+            
+            if not onlyHeader:        
+                self.part0 = PartGroup(self,0)
+                self.part1 = PartGroup(self,1)
+                self.part2 = PartGroup(self,2)
+                self.part3 = PartGroup(self,3)
+                self.part4 = PartGroup(self,4)
+                self.part5 = PartGroup(self,5)
+                self.groups = [ self.part0, self.part1, self.part2, self.part3, self.part4, self.part5]
+            
             self.__convenience__()
 
             self.__precision__ = None
@@ -287,7 +301,7 @@ class Snapshot(Loader):
         else:
             if format==3:
                 import format3
-                tmp_backend = format3.Format3(self,self.filename)
+                tmp_backend = format3.Format3(self)
                 tmp_backend.write(filename=filename)
             elif format==2:
                 raise Exception( "Creating format2 snapshots is not supported yet")
@@ -378,7 +392,7 @@ class Subfind(Loader):
         if parttype == None:
             parttype = [0,1]
 	
-	parttype_filter = []
+        parttype_filter = []
         for i in parttype:
             if i!=0 and i!=1:
 		if verbose:
@@ -390,6 +404,11 @@ class Subfind(Loader):
            
         super(Subfind,self).__init__(filename, format=format, fields=fields, parttype=parttype_filter, combineFiles=combineFiles, toDouble=toDouble, onlyHeader=onlyHeader, verbose=verbose, **param)
         self.__backend__.load()
+
+        self.header = Header(self)
+        self.group = PartGroup(self,0)
+        self.subhalo = PartGroup(self,1)
+        self.groups = [self.group, self.subhalo]   
     
         self.__writeable__ = False
         self.__convenience__()

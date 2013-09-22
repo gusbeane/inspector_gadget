@@ -10,66 +10,50 @@ import gadget.fields as fields
 
 class Format2:
 
-    def __init__( self, sn, filename, verbose=False, onlyHeader=False, nommap=False, tracer=False, toDouble=False, **param):
+    def __init__( self, sn, nommap=False, tracer=False, **param):
         self.sn = sn
         if sn.__fields__ != None:
             self.loadlist = sn.__fields__
     	else:
             self.loadlist = []
             
-        self.verbose = verbose
         self.nommap=nommap
         self.tracer = tracer
-        self.onlyHeader = onlyHeader
-        self.toDouble = toDouble
-        self.filename = filename
-
 
         self.datablocks_skip = ["HEAD"]
         self.datablocks_int32 = ["ID  ","NONN"]
 
     def load(self):
         self.filecount = 1
-        if path.exists( self.filename ):
-            self.files = [self.filename]
-        elif path.exists( self.filename + '.0' ):
-            self.files = [self.filename + '.0']
-            while path.exists( self.filename + ".%d" % self.filecount ):
-                self.files += [self.filename + ".%d" % self.filecount]
+        if path.exists( self.sn.filename ):
+            self.files = [self.sn.filename]
+        elif path.exists( self.sn.filename + '.0' ):
+            self.files = [self.sn.filename + '.0']
+            while path.exists( self.sn.filename + ".%d" % self.filecount ):
+                self.files += [self.sn.filename + ".%d" % self.filecount]
                 self.filecount += 1
 
             if not nommap:
                 print "Multiple files detected, thus mmap is deactivated."
                 self.nommap = True
         else:
-            raise Exception( "Neither %s nor %s.0 exists." % (self.filename, self.filename) )
+            raise Exception( "Neither %s nor %s.0 exists." % (self.sn.filename, self.sn.filename) )
 
 
-        self.load_header( 0, verbose=self.verbose )
-        self.get_blocks( 0, verbose=self.verbose )
+        self.load_header( 0, verbose=self.sn.__verbose__ )
+        self.get_blocks( 0, verbose=self.sn.__verbose__ )
 
-        if self.onlyHeader:
+        if self.sn.__onlyHeader__:
             return
 
-        if self.filecount == 1 and not self.nommap and not self.toDouble:
+        if self.filecount == 1 and not self.nommap and not self.sn.__toDouble__:
             self.load_data_mmap()
         else:
             self.load_data()
-
-        self.sn.header = loader.Header(self.sn)
-        self.sn.part0 = loader.PartGroup(self.sn,0)
-        self.sn.part1 = loader.PartGroup(self.sn,1)
-        self.sn.part2 = loader.PartGroup(self.sn,2)
-        self.sn.part3 = loader.PartGroup(self.sn,3)
-        self.sn.part4 = loader.PartGroup(self.sn,4)
-        self.sn.part5 = loader.PartGroup(self.sn,5)
-        self.sn.groups = [ self.sn.part0, self.sn.part1, self.sn.part2, self.sn.part3, self.sn.part4, self.sn.part5]
         
         #TODO implement combineFiles=False
         self.sn.currFile = None
 
-
-        self.sn.__convenience__()
 
 
     def get_blocks( self, fileid, verbose=False ):
@@ -238,7 +222,7 @@ class Format2:
         swap, endian = self.endianness_check( self.files[0] )
         self.sn.data = {}
 
-        self.get_blocks( 0, verbose=self.verbose )
+        self.get_blocks( 0, verbose=self.sn.__verbose__ )
         f = open( self.files[0], 'r' )
         for block in self.blocks.keys():
             # skip some blocks
@@ -277,7 +261,7 @@ class Format2:
             elements = (length-8)/elementsize
             dim = elements / nsum
             
-            if self.verbose:
+            if self.sn.__verbose__:
                 print "Loading block %s, offset %d, length %d, elements %d, dimension %d, particles %d/%d." % (block, self.blocks[block], length, elements, dim, nsum, self.sn.nparticlesall.sum())
 
             offset = f.tell() + 4
@@ -296,8 +280,8 @@ class Format2:
 
         nparttot = pylab.zeros( 6, dtype='int32' )    
         for fileid in range( self.filecount ):
-            self.load_header( fileid, verbose=self.verbose )
-            self.get_blocks( fileid, verbose=self.verbose )
+            self.load_header( fileid, verbose=self.sn.__verbose__ )
+            self.get_blocks( fileid, verbose=self.sn.__verbose__ )
             
             f = open( self.files[fileid], 'r' )
             for block in self.blocks.keys():
@@ -308,7 +292,7 @@ class Format2:
                 if len(self.loadlist) > 0 and not block.strip().lower() in self.loadlist:
                     continue
 
-                if self.verbose:
+                if self.sn.__verbose__:
                     print "Loading block %s of file %s." % (block, fileid)
 
                 f.seek( self.blocks[block], 0 )
@@ -340,7 +324,7 @@ class Format2:
                     npartptype = self.sn.nparticles[ptype]
                     elements = npartptype * dim
                     
-                    if self.verbose:
+                    if self.sn.__verbose__:
                         print "Loading block %s, offset %d, length %d, elements %d, dimension %d, type %d, particles %d/%d." % (block, self.blocks[block], length, elements, dim, ptype, npartptype, npartall)
                     
                     blockname = block.strip().lower()
@@ -350,13 +334,13 @@ class Format2:
                         else:
                             self.sn.data[ blockname ] = pylab.zeros( (npartall, dim), dtype=blocktype )
 
-                    if blocktype == 'f4' and self.toDouble:
+                    if blocktype == 'f4' and self.sn.__toDouble__:
                         self.sn.data[ blockname ] = self.sn.data[ blockname ].astype( 'float64' ) # change array type to float64
 
                     lb = nsum + nparttot[ptype]
                     ub = lb + npartptype
                     
-                    if self.verbose:
+                    if self.sn.__verbose__:
                         print "Block contains %d elements (length=%g, elementsize=%g, lb=%d, ub=%d)." % (elements,length,elementsize,lb,ub)
 
                     if dim == 1:

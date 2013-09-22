@@ -13,17 +13,8 @@ class Format3:
     dict = fields.hdf5toformat2
 
 
-    def __init__(self,sn,filename, verbose=False, onlyHeader=False, nommap=False, combineParticles=True, combineFiles=True, toDouble = False, **param):
+    def __init__(self, sn, **param):
         self.sn=sn
-        
-        self.combineParticles = combineParticles
-        self.combineFiles = combineFiles
-        self.toDouble = toDouble
-        
-        self.onlyHeader = onlyHeader
-        self.verbose = verbose
-        self.nommap = nommap
-        
 
     def load(self, num=None):
         self.sn.npart_loaded = np.zeros(6,dtype=np.longlong)
@@ -53,52 +44,22 @@ class Format3:
             filename = re.sub("\.[0-9]*\.hdf5",".%d.hdf5"%num, filename)
             filename = re.sub("\.[0-9]*\.h5",".%d.h5"%num, filename) 
         
-        self.file = h5py.File(filename,"r")
+        try:
+            self.file = h5py.File(filename,"r")
+        except Exception:
+            raise Exception("could not open file %s"%filename)
+        
         self.load_header()
         self.file.close()
         del self.file
-        self.sn.header = loader.Header(self.sn)
         
-        if self.combineParticles or (self.combineFiles and self.sn.num_files>1) or self.toDouble or self.nommap:
+        if not self.sn.__onlyHeader__:
             if isinstance(self.sn, loader.Snapshot):
-                if not self.onlyHeader:
-                    self.load_data(filename,num)
-                self.sn.part0 = loader.PartGroup(self.sn,0)
-                self.sn.part1 = loader.PartGroup(self.sn,1)
-                self.sn.part2 = loader.PartGroup(self.sn,2)
-                self.sn.part3 = loader.PartGroup(self.sn,3)
-                self.sn.part4 = loader.PartGroup(self.sn,4)
-                self.sn.part5 = loader.PartGroup(self.sn,5)
-                self.sn.groups = [ self.sn.part0, self.sn.part1, self.sn.part2, self.sn.part3, self.sn.part4, self.sn.part5]
+                self.load_data(filename,num)
             else:
-                if not self.onlyHeader:
-                    self.load_data_subfind(filename,num)
-                self.sn.group = loader.PartGroup(self.sn,0)
-                self.sn.subhalo = loader.PartGroup(self.sn,1)
-                self.sn.groups = [self.sn.group, self.sn.subhalo]
-        else:
-            if isinstance(self.sn, loader.Snapshot):
-                self.sn.part0 = loader.PartGroup(self.sn,0)
-                self.sn.part1 = loader.PartGroup(self.sn,1)
-                self.sn.part2 = loader.PartGroup(self.sn,2)
-                self.sn.part3 = loader.PartGroup(self.sn,3)
-                self.sn.part4 = loader.PartGroup(self.sn,4)
-                self.sn.part5 = loader.PartGroup(self.sn,5)
-                self.sn.groups = [ self.sn.part0, self.sn.part1, self.sn.part2, self.sn.part3, self.sn.part4, self.sn.part5]
-                if not self.onlyHeader:
-                    self.load_data_map(filename, ((self.sn.part0, 'PartType0'),(self.sn.part1, 'PartType1'),(self.sn.part2, 'PartType2'),(self.sn.part3, 'PartType3'),(self.sn.part4, 'PartType4'),(self.sn.part5, 'PartType5')))
-                
-            else:
-                self.sn.group = loader.PartGroup(self.sn,0)
-                self.sn.subhalo = loader.PartGroup(self.sn,1)
-                self.sn.groups = [self.sn.group, self.sn.subhalo]
-                if not self.onlyHeader:
-                    self.load_data_map(filename, ((self.sn.group, 'Group'),(self.sn.subhalo, 'Subhalo')))
+                self.load_data_subfind(filename,num)
 
-            self.sn.__writable__ = False            
-
-
-        if self.combineFiles==False and self.sn.num_files>1:
+        if self.sn.__combineFiles__==False and self.sn.num_files>1:
             self.sn.currFile = num
             self.sn.filename = filename
         else:
@@ -150,31 +111,12 @@ class Format3:
         if "Flag_DoublePrecision" in file['/Header'].attrs.keys():
             self.sn.flag_doubleprecision = file['/Header'].attrs['Flag_DoublePrecision']
 
-    def load_data_map(self, filename, groups):
-        self.sn.data = {}
-  
-        self.file = h5py.File(filename,"r")
-
-        for (gr, hgr) in groups:
-            if gr.__num__ in self.sn.__parttype__:
-                self.sn.npart_loaded[gr.__num__] = self.sn.header.nparticles[gr.__num__]
-                if hgr in self.file.keys():
-                    for key in self.file[hgr].keys():
-                        if not self.dict.has_key(key):
-                            if self.verbose:
-                                print "warning: hdf5 key '%s' could not translated"%key
-
-                        name = self.dict.get(key,key)
-                        if self.sn.__fields__==None or name in self.sn.__fields__:
-                            gr.data[str(name)]=self.file[hgr+'/'+key]
-                            
-        #TODO update npart_loaded
 
     def load_data(self, filename, num):
         self.sn.npart_loaded = np.zeros(6,dtype=np.longlong)
         self.sn.data = {}
 
-        if self.combineFiles:
+        if self.sn.__combineFiles__:
             filesA = 0
             filesB = self.sn.num_files
         else:
@@ -186,7 +128,10 @@ class Format3:
             filename = re.sub("\.[0-9]*\.hdf5",".%d.hdf5"%i, self.sn.filename)
             filename = re.sub("\.[0-9]*\.h5",".%d.h5"%i, filename)
             self.sn.filename = filename
-            self.file = h5py.File(filename,'r')
+            try:
+                self.file = h5py.File(filename,'r')
+            except Exception:
+                raise Exception("could not open file %s"%filename)
            
             self.load_header()
             self.sn.header = loader.Header(self.sn)
@@ -196,7 +141,7 @@ class Format3:
                 if "PartType%d"%gr in self.file.keys():
                     for item in self.file["PartType%d"%gr].keys():
                         if not self.dict.has_key(item):
-                            if self.verbose:
+                            if self.sn.__verbose__:
                                 print "warning: hdf5 key '%s' could not translated"%key
                                 
                         name  = self.dict.get(item,item)
@@ -215,7 +160,10 @@ class Format3:
             filename = re.sub("\.[0-9]*\.hdf5",".%d.hdf5"%i, self.sn.filename)
             filename = re.sub("\.[0-9]*\.h5",".%d.h5"%i, filename)
             self.sn.filename = filename
-            self.file = h5py.File(filename,'r')
+            try:
+                self.file = h5py.File(filename,'r')
+            except Exception:
+                raise Exception("could not open file %s"%filename)
                 
             self.load_header()
             self.sn.header = loader.Header(self.sn)
@@ -226,11 +174,11 @@ class Format3:
                     for item in self.file["PartType%d"%gr].keys():
                         name  = self.dict.get(item,item)
                         if self.sn.__fields__==None or name in self.sn.__fields__:
-                            pres = fields.isPresent(name,self.sn)
+                            pres = self.sn.__isPresent__(name)
                                 
                             n1 = np.where(pres > 0, self.sn.npart_loaded, np.zeros(6,dtype=np.longlong))
                                 
-                            if self.combineFiles:
+                            if self.sn.__combineFiles__:
                                 n2 = np.where(pres > 0, self.sn.nparticlesall, np.zeros(6,dtype=np.longlong))
                             else:
                                 n2 = np.where(pres > 0, self.sn.nparticles, np.zeros(6,dtype=np.longlong))
@@ -239,7 +187,7 @@ class Format3:
                             shape = np.array(d.shape)
                                 
                             if not self.sn.data.has_key(name):
-                                if self.combineFiles:
+                                if self.sn.__combineFiles__:
                                     num = np.where(pres > 0, self.sn.nparticlesall, np.zeros(6,dtype=np.longlong)).sum()
                                 else:
                                     num = np.where(pres > 0, self.sn.nparticles, np.zeros(6,dtype=np.longlong)).sum()
@@ -248,7 +196,7 @@ class Format3:
                                 datatype = d.dtype
                                 s = np.array(d.shape)
                                 s[0] = num
-                                if self.toDouble and datatype == np.dtype('float32'):
+                                if self.sn.__toDouble__ and datatype == np.dtype('float32'):
                                     datatype = np.dtype('float64')
                                         
                                 self.sn.data[name] = np.empty(s, dtype=datatype)
@@ -266,7 +214,7 @@ class Format3:
         
         groupnames = ['Group','Subhalo']
 
-        if self.combineFiles:
+        if self.sn.__combineFiles__:
             filesA = 0
             filesB = self.sn.num_files
         else:
@@ -278,7 +226,10 @@ class Format3:
             filename = re.sub("\.[0-9]*\.hdf5",".%d.hdf5"%i, filename)
             filename = re.sub("\.[0-9]*\.h5",".%d.h5"%i, filename)
             self.sn.filename = filename
-            self.file = h5py.File(filename,'r')
+            try:
+                self.file = h5py.File(filename,'r')
+            except Exception:
+                raise Exception("could not open file %s"%filename)
            
             self.load_header()
             self.sn.header = loader.Header(self.sn)
@@ -288,7 +239,7 @@ class Format3:
                 if groupnames[gr] in self.file.keys():
                     for item in self.file[groupnames[gr]].keys():
                         if not self.dict.has_key(item):
-                            if self.verbose:
+                            if self.sn.__verbose__:
                                 print "warning: hdf5 key '%s' could not translated"%key
                                 
                         name  = self.dict.get(item,item)
@@ -307,7 +258,10 @@ class Format3:
             filename = re.sub("\.[0-9]*\.hdf5",".%d.hdf5"%i, self.sn.filename)
             filename = re.sub("\.[0-9]*\.h5",".%d.h5"%i, filename)
             self.sn.filename = filename
-            self.file = h5py.File(filename,'r')
+            try:
+                self.file = h5py.File(filename,'r')
+            except Exception:
+                raise Exception("could not open file %s"%filename)
                 
             self.load_header()
             self.sn.header = loader.Header(self.sn)
@@ -331,7 +285,7 @@ class Format3:
                             shape = np.array(d.shape)
                                 
                             if not self.sn.data.has_key(name):
-                                if self.combineFiles:
+                                if self.sn.__combineFiles__:
                                     num = np.where(pres > 0, self.sn.nparticlesall, np.zeros(6,dtype=np.longlong)).sum()
                                 else:
                                     num = np.where(pres > 0, self.sn.nparticles, np.zeros(6,dtype=np.longlong)).sum()
@@ -340,7 +294,7 @@ class Format3:
                                 datatype = d.dtype
                                 s = np.array(d.shape)
                                 s[0] = num
-                                if self.toDouble and datatype == np.dtype('float32'):
+                                if self.sn.__toDouble__ and datatype == np.dtype('float32'):
                                     datatype = np.dtype('float64')
                                         
                                 self.sn.data[name] = np.empty(s, dtype=datatype)
@@ -364,8 +318,11 @@ class Format3:
             filename += ".hdf5"
             
         #TODO check filename for multipart files    
-            
-        file = h5py.File(filename,"w")
+        try:
+            file = h5py.File(filename,"w")
+        except Exception:
+            raise Exception("could not open file %s for writing"%filename)
+        
         
         self.write_header(file)
         
@@ -394,7 +351,7 @@ class Format3:
         header.attrs['Flag_StellarAge'] = self.sn.flag_stellarage
         header.attrs['Flag_Metals'] =  self.sn.flag_metals
         header.attrs['Flag_Feedback'] =  self.sn.flag_feedback
-        if hasattr(self, "flag_doubleprecision"):
+        if hasattr(self.sn, "flag_doubleprecision"):
             header.attrs['Flag_DoublePrecision'] = self.sn.flag_doubleprecision
         
         
