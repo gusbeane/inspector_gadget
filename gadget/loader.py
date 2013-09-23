@@ -113,132 +113,6 @@ class Loader(object):
         tmp[self.__parttype__] = pres[self.__parttype__]
         return tmp
     
-    def nextFile(self, num=None):
-        if self.currFile == None:
-            return False
-        if num == None:
-            if self.currFile< self.num_files-1:
-                num = self.currFile+1
-            else:
-                if self.__verbose__:
-                    print "last chunk reached"
-                return False
-            
-        else:
-            if num >= self.num_files or num < 0:
-                if self.__verbose__:
-                    print "invalide file number %d"%num
-                return False
-            
-        if self.currFile == num:
-            return True
-        
-        self.close()
-
-
-        #open next file
-        self.__backend__.load(num)
-        self.__convenience__()
-
-        return True
-
-    def iterFiles(self):
-        if self.currFile == None:
-            yield self
-            return
-
-        for i in np.arange(self.num_files):
-            self.nextFile(i)
-            yield self
-
-    def close(self):
-        self.__backend__.close()
-        
-        self.__rmconvenience__()
-        
-        #TODO keep groups, only clean data
-        if isinstance(self, Snapshot):    
-            del self.part0
-            del self.part1
-            del self.part2
-            del self.part3
-            del self.part4
-            del self.part5
-        else:
-            del self.group
-            del self.subhalo
-            
-        del self.groups
-        
-        if hasattr(self,"data"):
-            for i in self.data.keys():
-                if isinstance(self.data[i], np.ndarray): 
-                    try:
-                        self.data[i].resize(0)
-                    except ValueError:
-                        pass
-        
-            del self.data
-
-class Snapshot(Loader):
-    """
-    This class loads Gadget snapshots. Currently file format 2 and 3 (hdf5) are supported.
-    """
-    def __init__(self,filename, format=None, fields=None, parttype=None, combineFiles=True, toDouble=False, onlyHeader=False, verbose=False, **param):     
-        """
-        *filename* : The name of the snapshot file
-        *format* : (optional) file format of the snapshot, otherwise this is guessed from the file name
-        *fields* : (optional) list of fields to load, if None, all fields available in the snapshot are loaded
-        *parttype* : (optional) array with particle type numbers to load, if None, all particles are loaded
-        *combineFiles* : (optinal) if False only on part of the snapshot is loaded at a time, use nextFile() to go the next file.
-        *toDouble* : (optinal) converts all values of type float to double precision
-        *onlyHeader* : (optinal) load only the snapshot header
-        *verbose* : (optional) enable debug output
-        
-        *num_part* : (ic generation) generate an empty snapshot instead; num_part must be an array with 6 integers, giving the number of particles for each particle species
-        *masses* : (ic generation, optinal) array with masses of each particle species, (0 if specified in the mass array)
-        """
-        super(Snapshot,self).__init__(filename, format=format, fields=fields, parttype=parttype, combineFiles=combineFiles, toDouble=toDouble, onlyHeader=onlyHeader, verbose=verbose, **param)
-        
-        #we are supposed to load a snapshot
-        if not isinstance(self, ICs):
-            self.__backend__.load()
-            
-            self.header = Header(self)
-            
-            if not onlyHeader:        
-                self.part0 = PartGroup(self,0)
-                self.part1 = PartGroup(self,1)
-                self.part2 = PartGroup(self,2)
-                self.part3 = PartGroup(self,3)
-                self.part4 = PartGroup(self,4)
-                self.part5 = PartGroup(self,5)
-                self.groups = [ self.part0, self.part1, self.part2, self.part3, self.part4, self.part5]
-            
-            self.__convenience__()
-
-            self.__precision__ = None
-            
-            #set these two, in case we want to add fields to an existing snapshot
-            if toDouble:
-               self.__precision__ = np.float64
-            elif hasattr(self,"flag_doubleprecision"):
-                if self.flag_doubleprecision:
-                    self.__precision__ = np.float64
-                else:
-                    self.__precision__ = np.float32
-            elif hasattr(self,"pos"):
-                self.__precision__ = self.pos.dtype
-                
-            if hasattr(self,"id"):
-                if self.data['id'].dtype==np.uint64:
-                    self.__longids__ = True
-                else:
-                    self.__longids__ = False
-            else:
-                 self.__longids__ = False
-
-        
     def __str__(self):
         tmp = self.header.__str__()
         for i in np.arange(0,6):
@@ -305,9 +179,148 @@ class Snapshot(Loader):
                 tmp_backend.write(filename=filename)
             elif format==2:
                 raise Exception( "Creating format2 snapshots is not supported yet")
+    
+    def nextFile(self, num=None):
+        if self.currFile == None:
+            return False
+        if num == None:
+            if self.currFile< self.num_files-1:
+                num = self.currFile+1
+            else:
+                if self.__verbose__:
+                    print "last chunk reached"
+                return False
             
+        else:
+            if num >= self.num_files or num < 0:
+                if self.__verbose__:
+                    print "invalide file number %d"%num
+                return False
             
-class ICs(Snapshot):
+        if self.currFile == num:
+            return True
+        
+        self.close()
+
+
+        #open next file
+        self.__backend__.load(num)
+        
+        if not self.__onlyHeader__: 
+            if not isinstance(self, Subfind):       
+                self.part0 = PartGroup(self,0)
+                self.part1 = PartGroup(self,1)
+                self.part2 = PartGroup(self,2)
+                self.part3 = PartGroup(self,3)
+                self.part4 = PartGroup(self,4)
+                self.part5 = PartGroup(self,5)
+                self.groups = [self.part0, self.part1, self.part2, self.part3, self.part4, self.part5]
+            else:
+                self.group = PartGroup(self,0)
+                self.subhalo = PartGroup(self,1)
+                self.groups = [self.group, self.subhalo]   
+            
+                
+        self.__convenience__()
+
+        return True
+
+    def iterFiles(self):
+        if self.currFile == None:
+            yield self
+            return
+
+        for i in np.arange(self.num_files):
+            self.nextFile(i)
+            yield self
+
+    def close(self):
+        self.__backend__.close()
+        
+        self.__rmconvenience__()
+        
+        #TODO keep groups, only clean data
+        if isinstance(self, Snapshot):    
+            del self.part0
+            del self.part1
+            del self.part2
+            del self.part3
+            del self.part4
+            del self.part5
+        else:
+            del self.group
+            del self.subhalo
+            
+        del self.groups
+        
+        if hasattr(self,"data"):
+            for i in self.data.keys():
+                if isinstance(self.data[i], np.ndarray): 
+                    try:
+                        self.data[i].resize(0)
+                    except ValueError:
+                        pass
+        
+            del self.data
+
+class Snapshot(Loader):
+    """
+    This class loads Gadget snapshots. Currently file format 2 and 3 (hdf5) are supported.
+    """
+    def __init__(self,filename, format=None, fields=None, parttype=None, combineFiles=True, toDouble=False, onlyHeader=False, verbose=False, **param):     
+        """
+        *filename* : The name of the snapshot file
+        *format* : (optional) file format of the snapshot, otherwise this is guessed from the file name
+        *fields* : (optional) list of fields to load, if None, all fields available in the snapshot are loaded
+        *parttype* : (optional) array with particle type numbers to load, if None, all particles are loaded
+        *combineFiles* : (optinal) if False only on part of the snapshot is loaded at a time, use nextFile() to go the next file.
+        *toDouble* : (optinal) converts all values of type float to double precision
+        *onlyHeader* : (optinal) load only the snapshot header
+        *verbose* : (optional) enable debug output
+        
+        *num_part* : (ic generation) generate an empty snapshot instead; num_part must be an array with 6 integers, giving the number of particles for each particle species
+        *masses* : (ic generation, optinal) array with masses of each particle species, (0 if specified in the mass array)
+        """
+        super(Snapshot,self).__init__(filename, format=format, fields=fields, parttype=parttype, combineFiles=combineFiles, toDouble=toDouble, onlyHeader=onlyHeader, verbose=verbose, **param)
+    
+        self.__backend__.load()
+        
+        self.header = Header(self)
+        
+        if not self.__onlyHeader__: 
+            self.part0 = PartGroup(self,0)
+            self.part1 = PartGroup(self,1)
+            self.part2 = PartGroup(self,2)
+            self.part3 = PartGroup(self,3)
+            self.part4 = PartGroup(self,4)
+            self.part5 = PartGroup(self,5)
+            self.groups = [self.part0, self.part1, self.part2, self.part3, self.part4, self.part5]
+        
+        self.__convenience__()
+
+        self.__precision__ = None
+        
+        #set these two, in case we want to add fields to an existing snapshot
+        if toDouble:
+           self.__precision__ = np.float64
+        elif hasattr(self,"flag_doubleprecision"):
+            if self.flag_doubleprecision:
+                self.__precision__ = np.float64
+            else:
+                self.__precision__ = np.float32
+        elif hasattr(self,"pos"):
+            self.__precision__ = self.pos.dtype
+            
+        if hasattr(self,"id"):
+            if self.data['id'].dtype==np.uint64:
+                self.__longids__ = True
+            else:
+                self.__longids__ = False
+        else:
+             self.__longids__ = False
+
+
+class ICs(Loader):
     def __init__(self,filename, num_part, format=None, fields=None, masses=None, precision=None, longids=False, verbose=False, **param): 
         """
         Creates an empty snapshot used for ic generation
@@ -406,22 +419,13 @@ class Subfind(Loader):
         self.__backend__.load()
 
         self.header = Header(self)
-        self.group = PartGroup(self,0)
-        self.subhalo = PartGroup(self,1)
-        self.groups = [self.group, self.subhalo]   
+        if not onlyHeader:
+            self.group = PartGroup(self,0)
+            self.subhalo = PartGroup(self,1)
+            self.groups = [self.group, self.subhalo]   
     
         self.__writeable__ = False
         self.__convenience__()
-
-    def __str__(self):
-        tmp = self.header.__str__()
-        for i in (self.group,self.subhalo):
-            tmp += re.sub("[^\n]*\n","\n",i.__str__(),count=1)
-
-        return tmp
-    
-    def __repr__(self):
-        return self.header.__repr__()
 
     def __getitem__(self, item):
         raise KeyError()
