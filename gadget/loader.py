@@ -162,7 +162,7 @@ class Loader(object):
         
     def write(self, filename=None, format=None):
         if not self.__writeable__:
-            raise Exception("This snapshot can not be modified")
+            raise Exception("This snapshot can not be written")
         
         if filename==None:
             filename = self.filename
