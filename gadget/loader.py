@@ -56,8 +56,9 @@ class Loader(object):
             if flds.shortnames.has_key(i):
                 setattr(self,flds.shortnames[i],self.data[i])
                 
-        for gr in self.groups:
-            gr.__convenience__()
+        if hasattr(self, "groups"):
+            for gr in self.groups:
+                gr.__convenience__()
                 
 
     def __rmconvenience__(self):
