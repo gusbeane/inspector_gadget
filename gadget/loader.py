@@ -168,7 +168,10 @@ class Loader(object):
         if filename==None:
             filename = self.filename
             
-        if format==None or format == self.__format__:
+        if format==None:
+            format = self.__format__
+            
+        if format == self.__format__:
             if format==2:
                 raise Exception( "Creating format2 snapshots is not supported yet")
             

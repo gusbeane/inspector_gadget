@@ -31,7 +31,11 @@ def reduce(func):
     return reduce_wrapper        
     
 class MapReduce(object):
-    def __init__(self, num=None):
+    """
+        *num* : Number of work items
+        *order* : This parameter sets the mapping of work items to MPI tasks, default is 'sequential', 'stride' is possible as well   
+        """
+    def __init__(self, num=None, order=None):
         self.__comm__ = MPI.COMM_WORLD
         self.__thistask__ = self.__comm__.rank
         self.__ntasks__ = self.__comm__.size
@@ -42,11 +46,17 @@ class MapReduce(object):
         
         items = int(np.floor(num/self.__ntasks__))
         rem = num - items*self.__ntasks__
-             
-        if self.__thistask__ < rem:
-            self.__myitems__ = np.arange(self.__thistask__*(items+1), (self.__thistask__+1)*(items+1))
+        
+        if order == None or order == "sequential":
+            if self.__thistask__ < rem:
+                self.__myitems__ = np.arange(self.__thistask__*(items+1), (self.__thistask__+1)*(items+1))
+            else:
+                self.__myitems__ = np.arange(rem*(items+1)+(self.__thistask__-rem)*items,rem*(items+1)+(self.__thistask__-rem+1)*items )
+        elif order == "stride":
+            self.__myitems__ = np.arange(0,self.__num__-self.__this_task__,self.__ntasks__)+self.__thistask__
         else:
-            self.__myitems__ = np.arange(rem*(items+1)+(self.__thistask__-rem)*items,rem*(items+1)+(self.__thistask__-rem+1)*items )
+            raise Exception("unknown order argument: %s"%order)
+            
 
         self.__dicts__ = []
         for i in np.arange(len(self.__myitems__)):
