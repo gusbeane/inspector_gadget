@@ -53,7 +53,7 @@ class MapReduce(object):
             else:
                 self.__myitems__ = np.arange(rem*(items+1)+(self.__thistask__-rem)*items,rem*(items+1)+(self.__thistask__-rem+1)*items )
         elif order == "stride":
-            self.__myitems__ = np.arange(0,self.__num__-self.__this_task__,self.__ntasks__)+self.__thistask__
+            self.__myitems__ = np.arange(0,self.__num__-self.__thistask__,self.__ntasks__)+self.__thistask__
         else:
             raise Exception("unknown order argument: %s"%order)
             
