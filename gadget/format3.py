@@ -15,7 +15,9 @@ class Format3:
 
     def __init__(self, sn, **param):
         self.sn=sn
-
+        
+        
+        
     def load(self, num=None):
         self.sn.npart_loaded = np.zeros(6,dtype=np.longlong)
         

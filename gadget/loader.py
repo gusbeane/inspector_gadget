@@ -116,9 +116,11 @@ class Loader(object):
     
     def __str__(self):
         tmp = self.header.__str__()
-        for i in np.arange(0,6):
-            if self.nparticlesall[i] > 0:
-                tmp += re.sub("[^\n]*\n","\n",self.groups[i].__str__(),count=1)
+        
+        if not self.__onlyHeader__:
+            for i in np.arange(0,6):
+                if self.nparticlesall[i] > 0:
+                    tmp += re.sub("[^\n]*\n","\n",self.groups[i].__str__(),count=1)
 
         return tmp
     

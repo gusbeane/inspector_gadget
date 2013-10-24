@@ -31,9 +31,9 @@ static inline void _sphgetkernel( double h, double r, double *wk, double *dwk ) 
 	}
 }
 
-int createTree( t_sph_tree *tree, int npart, double *pos ) {
+int createTree( t_sph_tree *tree, int npart, double *pos , double domainLen, double* center) {
 	int maxnodes, result;
-	double domainLen;
+	//double domainLen;
 	time_t start;
 	
 	start = clock();
@@ -42,9 +42,8 @@ int createTree( t_sph_tree *tree, int npart, double *pos ) {
 	printf( "Creating tree for %d particles with %d nodes.\n", npart, maxnodes );
 	
 	initTree( tree, npart, maxnodes );
-	domainLen = getDomainLen( npart, pos );
 	
-	result = makeTree( tree, pos, domainLen );
+	result = makeTree( tree, pos, domainLen, center );
 	while ( result != 0 ) {
 		switch (result) {
 		case 1:
@@ -58,7 +57,7 @@ int createTree( t_sph_tree *tree, int npart, double *pos ) {
 		freeTree( tree );
 		initTree( tree, npart, maxnodes );
 		
-		result = makeTree( tree, pos, domainLen );
+		result = makeTree( tree, pos, domainLen, center );
 	}
 	
 	organizeTree( tree );
@@ -95,7 +94,7 @@ double getDomainLen( int npart, double *pos ) {
 	return len*2.1;
 }
 
-int makeTree( t_sph_tree *tree, double *pos, double domainLen ) {
+int makeTree( t_sph_tree *tree, double *pos, double domainLen, double* center) {
 	int nodecount, subnode;
 	int i, j, p;
 	t_sph_treenode *node, *parent;
@@ -106,7 +105,7 @@ int makeTree( t_sph_tree *tree, double *pos, double domainLen ) {
 	node = &tree->nodes[nodecount];
 	
 	node->len = domainLen;
-	for (j=0; j<3; j++) node->center[j] = 0.0;
+	for (j=0; j<3; j++) node->center[j] = center[j];
 	for (j=0; j<8; j++) node->sons[j] = -1;
 	
 	nodecount++;
@@ -701,7 +700,8 @@ int relaxData( int npart, double *pos, double *mass, double *hsml, int nneighbou
 	
 	errors = (double*)malloc( npart * sizeof( double ) );
 	
-	createTree( &tree, npart, pos );
+	double center[] = {0.,0.,0.};
+	createTree( &tree, npart, pos, getDomainLen(npart, pos) , center);
 	
 	err_min = 1e30;
 	err_max = 0;
@@ -729,7 +729,7 @@ int relaxData( int npart, double *pos, double *mass, double *hsml, int nneighbou
 	while (iter < nsteps) {
 		if (iter > 0) {
 			freeTree( &tree );
-			createTree( &tree, npart, pos );
+			createTree( &tree, npart, pos, getDomainLen(npart, pos), center  );
 		}
 		
 		err_min = 1e30;

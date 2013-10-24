@@ -655,3 +655,102 @@ class Simulation(Snapshot):
                     yticklabels += [ r'$%.2f \cdot 10^{%d}$' % (tick/10**(ceil(log10(abs(tick)))), ceil(log10(abs(tick)))) ]
             pc.axes.set_yticklabels( yticklabels, size=24, ha='right' )
         return
+
+
+    def plot_AMRslice( self, value, grad=False, logplot=False, colorbar=False, contour=False, res=1024, center=False, axes=[0,1], minimum=1e-8, newfig=True, newlabels=False, cmap=False, vrange=False, cblabel=False, rasterized=False, box=False, proj=False ):
+        if type( center ) == list:
+            center = pylab.array( center )
+        elif type( center ) != np.ndarray:
+            center = np.array([self.boxsize/2., self.boxsize/2.,self.boxsize/2.])
+
+        if type( box ) == list:
+            box = pylab.array( box )
+        elif type( box ) != np.ndarray:
+            box = np.array( [self.boxsize,self.boxsize] )
+        
+        axis0 = axes[0]
+        axis1 = axes[1]
+
+        c = pylab.zeros( 3 )
+        c[0] = center[axis0]
+        c[1] = center[axis1]
+        c[2] = center[3 - axis0 - axis1]
+
+        pos = self.pos.astype( 'float64' )
+        #px = np.abs( pos[:,axis0])
+        #py = np.abs( pos[:,axis1])
+        #pz = np.abs( pos[:,3 - axis0 - axis1])
+
+        #zdist = 2. * self.data['vol'].astype('float64')**(1./3.)
+        #if proj:
+        #    zdist[:] = 0.8 * box.max()
+
+        #pp, = np.where( (px < 0.5*box[0]) & (py < 0.5*box[1]) & (pz < zdist) )
+        #print "Selected %d of %d particles." % (pp.size,self.npart)
+
+        posdata = pos
+        valdata = self.data[value].astype('float64')
+        if not grad:
+            data = calcGrid.calcAMRSlice( posdata, valdata, res, res, box[0], box[1], c[0], c[1], c[2], axis0, axis1, proj=proj )
+        else:
+            graddata = self.data[grad].astype('float64')
+            data = calcGrid.calcAMRSlice( posdata, valdata, res, res, box[0], box[1], c[0], c[1], c[2], axis0, axis1, graddata, proj=proj )
+        slice = data[ "grid"]
+        if (not proj):
+            neighbours = data[ "neighbours" ]
+            contours = data[ "contours" ]
+        x = pylab.arange( res+1, dtype="float64" ) / res * box[0] - .5 * box[0] + c[0]
+        y = pylab.arange( res+1, dtype="float64" ) / res * box[1] - .5 * box[1] + c[1]
+
+        if newfig:
+            fig = pylab.figure()
+
+        if cmap:
+            pylab.set_cmap( cmap )
+
+        if logplot:
+            slice = pylab.maximum( slice, minimum )
+
+        if not vrange:
+            vrange = [ slice.min(), slice.max() ]
+        
+        if logplot:
+            pc = pylab.pcolormesh( x, y, pylab.transpose( slice ), shading='flat', norm=matplotlib.colors.LogNorm(vmin=vrange[0], vmax=vrange[1]), rasterized=rasterized )
+        else:
+            pc = pylab.pcolormesh( x, y, pylab.transpose( slice ), shading='flat', rasterized=rasterized, vmin=vrange[0], vmax=vrange[1] )
+        
+        if colorbar:
+            if logplot:
+                cb = pylab.colorbar( format=matplotlib.ticker.LogFormatterMathtext() )
+            else:
+                fmt = matplotlib.ticker.ScalarFormatter( useMathText=True )
+                fmt.set_powerlimits( (-2, 2) )
+                fmt.set_useOffset( False )
+                cb = pylab.colorbar( format=fmt )
+            if cblabel:
+                cb.set_label( cblabel )
+        
+        if contour and not proj:
+            x = ( pylab.arange( res, dtype="float64" ) + 0.5 ) / res * box[0] - .5 * box[0] + center[0]
+            y = ( pylab.arange( res, dtype="float64" ) + 0.5 ) / res * box[1] - .5 * box[1] + center[1]
+            pylab.contour( x, y, pylab.transpose( contours ), levels=[0.99], colors="w" )
+
+        pylab.axis( "image" )
+
+        if newlabels:
+            xticklabels = []
+            for tick in pc.axes.get_xticks():
+                if (tick == 0):
+                    xticklabels += [ r'$0.0$' ]
+                else:
+                    xticklabels += [ r'$%.2f \cdot 10^{%d}$' % (tick/10**(ceil(log10(abs(tick)))), ceil(log10(abs(tick)))) ]
+            pc.axes.set_xticklabels( xticklabels, size=24, y=-0.1, va='baseline' )
+
+            yticklabels = []
+            for tick in pc.axes.get_yticks():
+                if (tick == 0):
+                    yticklabels += [ r'$0.0$' ]
+                else:
+                    yticklabels += [ r'$%.2f \cdot 10^{%d}$' % (tick/10**(ceil(log10(abs(tick)))), ceil(log10(abs(tick)))) ]
+            pc.axes.set_yticklabels( yticklabels, size=24, ha='right' )
+        return

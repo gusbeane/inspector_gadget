@@ -27,11 +27,11 @@ typedef struct {
 	t_sph_treenode *nodes; /* stores the nodes */
 } t_sph_tree;
 
-int createTree( t_sph_tree *tree, int npart, double *pos );
+int createTree( t_sph_tree *tree, int npart, double *pos, double domainLen, double* center );
 void initTree( t_sph_tree *tree, int npart, int maxnodes );
 void freeTree( t_sph_tree *tree );
 double getDomainLen( int npart, double *pos );
-int makeTree( t_sph_tree *tree, double *pos, double domainLen );
+int makeTree( t_sph_tree *tree, double *pos, double domainLen, double* center );
 int organizeTree( t_sph_tree *tree );
 int getParticles( t_sph_tree *tree, int node );
 int getNearestNode( t_sph_tree *tree, double *coord );
