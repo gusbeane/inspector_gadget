@@ -252,7 +252,7 @@ class Format3:
                             if shape.size == 2:
                                 elem=shape[1]
                                 
-                            pres = self.__learnPresent__(name,gr=gr,shape=elem)
+                            pres = self.sn.__learnPresent__(name,gr=gr,shape=elem)
             self.file.close()
                                 
         #now load the requested data                    
