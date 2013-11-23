@@ -6,7 +6,7 @@ import gadget.fields as flds
 
 class Loader(object):
        
-    def __init__(self,filename, format=None, fields=None, parttype=None, combineFiles=True, toDouble=False, onlyHeader=False, verbose=False, **param):     
+    def __init__(self,filename, format=None, fields=None, parttype=None, combineFiles=False, toDouble=False, onlyHeader=False, verbose=False, **param):     
         #detect backend
         if format==None:
             if filename.endswith('.hdf5') or filename.endswith('.h5'):
@@ -190,7 +190,7 @@ class Loader(object):
         if self.currFile == None:
             return False
         if num == None:
-            if self.currFile< self.num_files-1:
+            if self.currFile < self.num_files-1:
                 num = self.currFile+1
             else:
                 if self.__verbose__:
@@ -228,6 +228,8 @@ class Loader(object):
             
                 
         self.__convenience__()
+        
+        self.__onlyHeader__ = False
 
         return True
 
@@ -273,7 +275,7 @@ class Snapshot(Loader):
     """
     This class loads Gadget snapshots. Currently file format 2 and 3 (hdf5) are supported.
     """
-    def __init__(self,filename, format=None, fields=None, parttype=None, combineFiles=True, toDouble=False, onlyHeader=False, verbose=False, **param):     
+    def __init__(self,filename, format=None, fields=None, parttype=None, combineFiles=False, toDouble=False, onlyHeader=False, verbose=False, **param):     
         """
         *filename* : The name of the snapshot file
         *format* : (optional) file format of the snapshot, otherwise this is guessed from the file name
@@ -407,7 +409,7 @@ class ICs(Loader):
         self.__convenience__()
 
 class Subfind(Loader):
-    def __init__(self,filename, format=None, fields=None, parttype=None, combineFiles=True, toDouble=False, onlyHeader=False, verbose=False, **param):
+    def __init__(self,filename, format=None, fields=None, parttype=None, combineFiles=False, toDouble=False, onlyHeader=False, verbose=False, **param):
         if parttype == None:
             parttype = [0,1]
 	
