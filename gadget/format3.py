@@ -11,6 +11,7 @@ class Format3:
 
 
     dict = fields.hdf5toformat2
+    rev_dict = fields.rev_hdf5toformat2
 
 
     def __init__(self, sn, **param):
@@ -117,6 +118,14 @@ class Format3:
     def load_data(self, filename, num):
         self.sn.npart_loaded = np.zeros(6,dtype=np.longlong)
         self.sn.data = {}
+        
+        loaded = np.zeros(6,dtype=np.longlong)
+        
+        if hasattr(self.sn,"__selector__"):
+            selector = self.sn.__selector__
+            indices = [[],[],[],[],[],[]]
+        else:
+            selector = None
 
         if self.sn.__combineFiles__:
             filesA = 0
@@ -136,7 +145,7 @@ class Format3:
                 raise Exception("could not open file %s"%filename)
            
             self.load_header()
-            self.sn.header = loader.Header(self.sn)
+            #self.sn.header = loader.Header(self.sn)
                 
 
             for gr in self.sn.__parttype__:
@@ -155,6 +164,21 @@ class Format3:
                                 elem=shape[1]
                                 
                             pres = self.sn.__learnPresent__(name,gr=gr,shape=elem)
+                if selector != None:
+                    if "PartType%d"%gr in self.file.keys():
+                        data = {}
+                        for fld in selector.requieredFields:
+                            fld2 = self.rev_dict.get(fld,fld)
+                            data[fld] = self.file["PartType%d"%gr][fld2][...]
+                            
+                        ind = selector.getIndices(data)
+                        indices[gr].append(ind)
+                        self.sn.npart_loaded[gr] += len(ind)
+                        
+                    else:
+                        indices[gr].append(np.array([]))
+                else:
+                    self.sn.npart_loaded[gr] += self.sn.nparticles[gr]
             self.file.close()
                                 
         #now load the requested data                        
@@ -168,7 +192,7 @@ class Format3:
                 raise Exception("could not open file %s"%filename)
                 
             self.load_header()
-            self.sn.header = loader.Header(self.sn)
+            #self.sn.header = loader.Header(self.sn)
                 
 
             for gr in self.sn.__parttype__:
@@ -178,21 +202,14 @@ class Format3:
                         if self.sn.__fields__==None or name in self.sn.__fields__:
                             pres = self.sn.__isPresent__(name)
                                 
-                            n1 = np.where(pres > 0, self.sn.npart_loaded, np.zeros(6,dtype=np.longlong))
-                                
-                            if self.sn.__combineFiles__:
-                                n2 = np.where(pres > 0, self.sn.nparticlesall, np.zeros(6,dtype=np.longlong))
-                            else:
-                                n2 = np.where(pres > 0, self.sn.nparticles, np.zeros(6,dtype=np.longlong))
+                            n1 = np.where(pres > 0, loaded, np.zeros(6,dtype=np.longlong))
+                            n2 = np.where(pres > 0, self.sn.npart_loaded, np.zeros(6,dtype=np.longlong))
                             
                             d = self.file["PartType%d/%s"%(gr,item)]
                             shape = np.array(d.shape)
                                 
                             if not self.sn.data.has_key(name):
-                                if self.sn.__combineFiles__:
-                                    num = np.where(pres > 0, self.sn.nparticlesall, np.zeros(6,dtype=np.longlong)).sum()
-                                else:
-                                    num = np.where(pres > 0, self.sn.nparticles, np.zeros(6,dtype=np.longlong)).sum()
+                                num = np.where(pres > 0, self.sn.npart_loaded, np.zeros(6,dtype=np.longlong)).sum()
                 
                                 #get propertiers of dataset
                                 datatype = d.dtype
@@ -203,9 +220,15 @@ class Format3:
                                         
                                 self.sn.data[name] = np.empty(s, dtype=datatype)
                                     
-                            self.sn.data[name][n2[0:gr].sum()+n1[gr]:n2[0:gr].sum()+n1[gr]+shape[0]] = d
+                            if selector == None:
+                                self.sn.data[name][n2[0:gr].sum()+n1[gr]:n2[0:gr].sum()+n1[gr]+shape[0]] = d
+                                elements = d.shape[0]
+                            else:
+                                self.sn.data[name][n2[0:gr].sum()+n1[gr]:n2[0:gr].sum()+n1[gr]+shape[0]] = d[indices[gr][i],...]
+                                elements = len(indices[gr][i])
+                    loaded[gr] += elements
             
-            self.sn.npart_loaded[self.sn.__parttype__] += self.sn.nparticles[self.sn.__parttype__]
+            #self.sn.npart_loaded[self.sn.__parttype__] += self.sn.nparticles[self.sn.__parttype__]
        
             self.file.close()
             del self.file

@@ -238,22 +238,6 @@ class Loader(object):
     def close(self):
         self.__backend__.close()
         
-        self.__rmconvenience__()
-        
-        #TODO keep groups, only clean data
-        if isinstance(self, Snapshot):    
-            del self.part0
-            del self.part1
-            del self.part2
-            del self.part3
-            del self.part4
-            del self.part5
-        else:
-            del self.group
-            del self.subhalo
-            
-        del self.groups
-        
         if hasattr(self,"data"):
             for i in self.data.keys():
                 if isinstance(self.data[i], np.ndarray): 
@@ -268,7 +252,7 @@ class Snapshot(Loader):
     """
     This class loads Gadget snapshots. Currently file format 2 and 3 (hdf5) are supported.
     """
-    def __init__(self,filename, format=None, fields=None, parttype=None, combineFiles=False, toDouble=False, onlyHeader=False, verbose=False, **param):     
+    def __init__(self,filename, format=None, fields=None, parttype=None, combineFiles=False, toDouble=False, onlyHeader=False, verbose=False, selector=None, **param):     
         """
         *filename* : The name of the snapshot file
         *format* : (optional) file format of the snapshot, otherwise this is guessed from the file name
@@ -283,6 +267,8 @@ class Snapshot(Loader):
         *masses* : (ic generation, optinal) array with masses of each particle species, (0 if specified in the mass array)
         """
         super(Snapshot,self).__init__(filename, format=format, fields=fields, parttype=parttype, combineFiles=combineFiles, toDouble=toDouble, onlyHeader=onlyHeader, verbose=verbose, **param)
+    
+        self.__selector__ = selector
     
         self.__backend__.load()
         
@@ -318,6 +304,33 @@ class Snapshot(Loader):
                 self.__longids__ = False
         else:
              self.__longids__ = False
+             
+    def newSelection(self,selector):
+        self.close()
+        
+        self.__selector__ = selector
+
+        #open next file
+        self.__backend__.load()
+        
+        if self.__onlyHeader__: 
+            if  isinstance(self, Snapshot):       
+                self.part0 = PartGroup(self,0)
+                self.part1 = PartGroup(self,1)
+                self.part2 = PartGroup(self,2)
+                self.part3 = PartGroup(self,3)
+                self.part4 = PartGroup(self,4)
+                self.part5 = PartGroup(self,5)
+                self.groups = [self.part0, self.part1, self.part2, self.part3, self.part4, self.part5]
+            else:
+                self.group = PartGroup(self,0)
+                self.subhalo = PartGroup(self,1)
+                self.groups = [self.group, self.subhalo]   
+        
+        self.__onlyHeader__ = False
+
+        return True
+
 
 
 class ICs(Loader):

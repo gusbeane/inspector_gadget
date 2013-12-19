@@ -52,6 +52,8 @@ hdf5toformat2 = {
     'Vorticity' : 'vort'
     }
 
+rev_hdf5toformat2 = dict((v,k) for k, v in hdf5toformat2.iteritems())
+
 default = [
     'id',
     'pos',
