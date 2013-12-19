@@ -38,5 +38,19 @@ class Sphere(Selector):
 
         return ind
         
-    
+        
+class Halo(Selector):
+    def __init__(self, catalog, halo=None, subhalo=None):
+        self.catalog = catalog
+        self.halo = halo
+        self.subhalo = subhalo
+        self.requieredFields=[]
+        
+    def setHalo(self,halo=None, subhalo=None):
+        self.halo = halo
+        self.subhalo = subhalo
+        
+        
+    def getIndices(self, data):
+        pass
     
