@@ -12,7 +12,7 @@ class Selector(object):
 class Rectangle(Selector):
     def __init__(self, center, boxsize):
         center = np.array(center)
-        boxszie = np.array(boxsize)
+        boxsize = np.array(boxsize)
         
         self.lower = center-boxsize/2.
         self.upper = center+boxsize/2.

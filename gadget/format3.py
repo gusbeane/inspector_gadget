@@ -224,7 +224,7 @@ class Format3:
                                 self.sn.data[name][n2[0:gr].sum()+n1[gr]:n2[0:gr].sum()+n1[gr]+shape[0]] = d
                                 elements = d.shape[0]
                             else:
-                                self.sn.data[name][n2[0:gr].sum()+n1[gr]:n2[0:gr].sum()+n1[gr]+shape[0]] = d[indices[gr][i],...]
+                                self.sn.data[name][n2[0:gr].sum()+n1[gr]:n2[0:gr].sum()+n1[gr]+shape[0]] = d[...][indices[gr][i],...]
                                 elements = len(indices[gr][i])
                     loaded[gr] += elements
             
