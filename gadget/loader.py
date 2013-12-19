@@ -49,24 +49,25 @@ class Loader(object):
 
         for i in np.arange(len(self.__fields__)):
             self.__fields__[i] = self.__normalizeName__(self.__fields__[i])
-    
-    def __convenience__(self):
-        for i in  self.data.keys():
-            setattr(self,i,self.data[i])
-            if flds.shortnames.has_key(i):
-                setattr(self,flds.shortnames[i],self.data[i])
-                
-        if hasattr(self, "groups"):
-            for gr in self.groups:
-                gr.__convenience__()
-                
+                    
+    def __getattr__(self,attr):       
+        attr = self.__normalizeName__(attr)
 
-    def __rmconvenience__(self):
-        if hasattr(self,"data"):
+        if attr in self.data:
+            return self.data[attr]
+        else:
+            raise AttributeError
+        
+    def __dir__(self):
+        dir = self.__dict__.keys()
+        
+        if hasattr(self, "data"):
             for i in self.data.keys():
-                delattr(self,i)
+                dir.append(i)
                 if flds.shortnames.has_key(i):
-                    delattr(self,flds.shortnames[i])
+                    dir.append(flds.shortnames[i])
+        
+        return dir 
 
     def __getitem__(self, item):
         item = self.__normalizeName__(item)
@@ -158,11 +159,6 @@ class Loader(object):
             
         self.data[name] = f
         
-        for gr in (self.part0,self.part1,self.part2,self.part3,self.part4, self.part5):
-            gr.__update_data__(name)
-            
-        self.__convenience__()
-        
     def write(self, filename=None, format=None):
         if not self.__writeable__:
             raise Exception("This snapshot can not be written")
@@ -212,8 +208,8 @@ class Loader(object):
         #open next file
         self.__backend__.load(num)
         
-        if not self.__onlyHeader__: 
-            if not isinstance(self, Subfind):       
+        if self.__onlyHeader__: 
+            if  isinstance(self, Snapshot):       
                 self.part0 = PartGroup(self,0)
                 self.part1 = PartGroup(self,1)
                 self.part2 = PartGroup(self,2)
@@ -225,9 +221,6 @@ class Loader(object):
                 self.group = PartGroup(self,0)
                 self.subhalo = PartGroup(self,1)
                 self.groups = [self.group, self.subhalo]   
-            
-                
-        self.__convenience__()
         
         self.__onlyHeader__ = False
 
@@ -303,8 +296,7 @@ class Snapshot(Loader):
             self.part4 = PartGroup(self,4)
             self.part5 = PartGroup(self,5)
             self.groups = [self.part0, self.part1, self.part2, self.part3, self.part4, self.part5]
-        
-        self.__convenience__()
+
 
         self.__precision__ = None
         
@@ -405,8 +397,6 @@ class ICs(Loader):
         if self.__fields__ != None:
             for field in self.__fields__:
                 self.addField(field)
-        
-        self.__convenience__()
 
 class Subfind(Loader):
     def __init__(self,filename, format=None, fields=None, parttype=None, combineFiles=False, toDouble=False, onlyHeader=False, verbose=False, **param):
@@ -433,7 +423,6 @@ class Subfind(Loader):
             self.groups = [self.group, self.subhalo]   
     
         self.__writeable__ = False
-        self.__convenience__()
 
     def __getitem__(self, item):
         raise KeyError()
@@ -446,14 +435,12 @@ class Header(object):
         for entry in flds.headerfields:
             if hasattr(parent,entry):
                 self.__attrs__.append(entry)
+                
     def __getattr__(self,name):
-        #we can't handle these
-        if name in ["__parent__","__attrs__"]:
-            return super(Header,self).__getattr__(name)
-        elif name in self.__attrs__:
+        if name in self.__attrs__:
             return getattr(self.__parent__,name)
         else:
-            raise KeyError()
+            raise AttributeError
             
     def __setattr__(self,name, value):
         #we can't handle these
@@ -464,10 +451,10 @@ class Header(object):
                 value = np.array(value)
             setattr(self.__parent__,name,value)
         else:
-            raise KeyError()
+            raise AttributeError
         
     def __dir__(self):
-        return self.__attrs__
+        return self.__dict__.keys() + self.__attrs__
     
     def __str__(self):
         if isinstance(self.__parent__, Snapshot):
@@ -496,34 +483,6 @@ class PartGroup(object):
     def __init__(self,parent,num):
         self.__parent__ = parent
         self.__num__ = num
-        self.data = {}
-        
-        if parent.npart_loaded[num]>0:
-            if hasattr(parent,"data"):
-                for key in parent.data.iterkeys():
-                    pres = parent.__isPresent__(key)
-                    if pres[num]>0:
-                        f = parent.data[key]
-                        n1 = np.where(pres>0, parent.npart_loaded,np.zeros(6,dtype=np.longlong))
-                        tmp = np.sum(n1[0:num])
-                        self.data[key] = f[tmp:tmp+parent.npart_loaded[num]]
-                        
-    def __update_data__(self,name):
-        if self.__parent__.npart_loaded[self.__num__]>0:
-            pres = self.__parent__.__isPresent__(name)
-            if pres[self.__num__]>0:
-                f = self.__parent__.data[name]
-                n1 = np.where(pres>0, self.__parent__.npart_loaded,np.zeros(6,dtype=np.longlong))
-                tmp = np.sum(n1[0:self.__num__])
-                self.data[name] = f[tmp:tmp+self.__parent__.npart_loaded[self.__num__]]
-                        
-    def __convenience__(self):
-        items = self.data.keys()
-        for i in items:
-            setattr(self,i,self.data[i])
-            if flds.shortnames.has_key(i):
-                setattr(self,flds.shortnames[i],self.data[i])
-
 
     def __str__(self):
         if isinstance(self.__parent__, Snapshot):
@@ -553,5 +512,49 @@ class PartGroup(object):
     def __getitem__(self, item):
         item = self.__parent__.__normalizeName__(item)
         return self.data[item]
+    
+    def __getattr__(self,attr):       
+        parent = self.__parent__
+        num = self.__num__
+        attr = self.__parent__.__normalizeName__(attr)
         
+        if attr == "data":
+            data = {}
+            if parent.npart_loaded[num]>0:
+                if hasattr(parent,"data"):
+                    for key in parent.data.iterkeys():
+                        pres = parent.__isPresent__(key)
+                        if pres[num]>0:
+                            f = parent.data[key]
+                            n1 = np.where(pres>0, parent.npart_loaded,np.zeros(6,dtype=np.longlong))
+                            tmp = np.sum(n1[0:num])
+                            data[key] = f[tmp:tmp+parent.npart_loaded[num]]
+            return data  
+        elif attr in parent.data:
+            pres = parent.__isPresent__(attr)
+            if pres[num]>0:
+                f = parent.data[attr]
+                n1 = np.where(pres>0, parent.npart_loaded,np.zeros(6,dtype=np.longlong))
+                tmp = np.sum(n1[0:num])
+                return f[tmp:tmp+parent.npart_loaded[num]]
+            else:
+                raise AttributeError
+        else:
+            raise AttributeError
+        
+    def __dir__(self):
+        parent = self.__parent__
+        num = self.__num__
+        
+        dir = self.__dict__.keys()
+        dir.append('data')
+        if parent.npart_loaded[num]>0:
+            if hasattr(parent,"data"):
+                for key in parent.data.iterkeys():
+                    pres = parent.__isPresent__(key)
+                    if pres[num]>0:
+                        dir.append(key)
+                        if flds.shortnames.has_key(key):
+                            dir.append(flds.shortnames[key])
+        return dir   
         
