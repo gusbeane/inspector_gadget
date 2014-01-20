@@ -136,6 +136,9 @@ class Format3:
             
         #learn about present fields
         for i in np.arange(filesA,filesB):
+            if self.sn.__verbose__:
+                print("Learning about file %d"%i)
+
             filename = re.sub("\.[0-9]*\.hdf5",".%d.hdf5"%i, self.sn.filename)
             filename = re.sub("\.[0-9]*\.h5",".%d.h5"%i, filename)
             self.sn.filename = filename
@@ -153,8 +156,9 @@ class Format3:
                     for item in self.file["PartType%d"%gr].keys():
                         if not self.dict.has_key(item):
                             if self.sn.__verbose__:
-                                print "warning: hdf5 key '%s' could not translated"%key
-                                
+                                print "warning: hdf5 key '%s' could not translated"%item
+                                self.dict[item] = item
+
                         name  = self.dict.get(item,item)
                         if self.sn.__fields__==None or name in self.sn.__fields__:
                             d = self.file["PartType%d/%s"%(gr,item)]
@@ -183,6 +187,9 @@ class Format3:
                                 
         #now load the requested data                        
         for i in np.arange(filesA,filesB):
+            if self.sn.__verbose__:
+                print("Reading file %d"%i)
+
             filename = re.sub("\.[0-9]*\.hdf5",".%d.hdf5"%i, self.sn.filename)
             filename = re.sub("\.[0-9]*\.h5",".%d.h5"%i, filename)
             self.sn.filename = filename
@@ -224,7 +231,7 @@ class Format3:
                                 self.sn.data[name][n2[0:gr].sum()+n1[gr]:n2[0:gr].sum()+n1[gr]+shape[0]] = d
                                 elements = d.shape[0]
                             else:
-                                self.sn.data[name][n2[0:gr].sum()+n1[gr]:n2[0:gr].sum()+n1[gr]+shape[0]] = d[indices[gr][i],...]
+                                self.sn.data[name][n2[0:gr].sum()+n1[gr]:n2[0:gr].sum()+n1[gr]+shape[0]] = d[...][indices[gr][i],...]
                                 elements = len(indices[gr][i])
                     loaded[gr] += elements
             
