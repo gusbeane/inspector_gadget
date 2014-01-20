@@ -153,7 +153,7 @@ class Format3:
                     for item in self.file["PartType%d"%gr].keys():
                         if not self.dict.has_key(item):
                             if self.sn.__verbose__:
-                                print "warning: hdf5 key '%s' could not translated"%key
+                                print "warning: hdf5 key '%s' could not translated"%item
                                 
                         name  = self.dict.get(item,item)
                         if self.sn.__fields__==None or name in self.sn.__fields__:
@@ -223,8 +223,8 @@ class Format3:
                             if selector == None:
                                 self.sn.data[name][n2[0:gr].sum()+n1[gr]:n2[0:gr].sum()+n1[gr]+shape[0]] = d
                                 elements = d.shape[0]
-                            else:
-                                self.sn.data[name][n2[0:gr].sum()+n1[gr]:n2[0:gr].sum()+n1[gr]+shape[0]] = d[...][indices[gr][i],...]
+                            elif len(indices[gr][i]) > 0:
+                                self.sn.data[name][n2[0:gr].sum()+n1[gr]:n2[0:gr].sum()+n1[gr]+len(indices[gr][i])] = d[...][indices[gr][i],...]
                                 elements = len(indices[gr][i])
                     loaded[gr] += elements
             
@@ -265,7 +265,7 @@ class Format3:
                     for item in self.file[groupnames[gr]].keys():
                         if not self.dict.has_key(item):
                             if self.sn.__verbose__:
-                                print "warning: hdf5 key '%s' could not translated"%key
+                                print "warning: hdf5 key '%s' could not translated"%item
                                 
                         name  = self.dict.get(item,item)
                         if self.sn.__fields__==None or name in self.sn.__fields__:
