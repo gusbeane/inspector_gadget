@@ -121,11 +121,11 @@ class Format3:
         
         loaded = np.zeros(6,dtype=np.longlong)
         
-        if hasattr(self.sn,"__selector__"):
-            selector = self.sn.__selector__
+        if hasattr(self.sn,"__filter__"):
+            filter = self.sn.__filter__
             indices = [[],[],[],[],[],[]]
         else:
-            selector = None
+            filter = None
 
         if self.sn.__combineFiles__:
             filesA = 0
@@ -136,6 +136,9 @@ class Format3:
             
         #learn about present fields
         for i in np.arange(filesA,filesB):
+            if self.sn.__verbose__:
+                print("Learning about file %d"%i)
+
             filename = re.sub("\.[0-9]*\.hdf5",".%d.hdf5"%i, self.sn.filename)
             filename = re.sub("\.[0-9]*\.h5",".%d.h5"%i, filename)
             self.sn.filename = filename
@@ -154,7 +157,8 @@ class Format3:
                         if not self.dict.has_key(item):
                             if self.sn.__verbose__:
                                 print "warning: hdf5 key '%s' could not translated"%item
-                                
+                                self.dict[item] = item
+
                         name  = self.dict.get(item,item)
                         if self.sn.__fields__==None or name in self.sn.__fields__:
                             d = self.file["PartType%d/%s"%(gr,item)]
@@ -164,14 +168,14 @@ class Format3:
                                 elem=shape[1]
                                 
                             pres = self.sn.__learnPresent__(name,gr=gr,shape=elem)
-                if selector != None:
+                if filter != None:
                     if "PartType%d"%gr in self.file.keys():
                         data = {}
-                        for fld in selector.requieredFields:
+                        for fld in filter.requieredFields:
                             fld2 = self.rev_dict.get(fld,fld)
                             data[fld] = self.file["PartType%d"%gr][fld2][...]
                             
-                        ind = selector.getIndices(data)
+                        ind = filter.getIndices(data)
                         indices[gr].append(ind)
                         self.sn.npart_loaded[gr] += len(ind)
                         
@@ -183,6 +187,9 @@ class Format3:
                                 
         #now load the requested data                        
         for i in np.arange(filesA,filesB):
+            if self.sn.__verbose__:
+                print("Reading file %d"%i)
+
             filename = re.sub("\.[0-9]*\.hdf5",".%d.hdf5"%i, self.sn.filename)
             filename = re.sub("\.[0-9]*\.h5",".%d.h5"%i, filename)
             self.sn.filename = filename
@@ -220,12 +227,14 @@ class Format3:
                                         
                                 self.sn.data[name] = np.empty(s, dtype=datatype)
                                     
-                            if selector == None:
+                            if filter == None:
                                 self.sn.data[name][n2[0:gr].sum()+n1[gr]:n2[0:gr].sum()+n1[gr]+shape[0]] = d
                                 elements = d.shape[0]
                             elif len(indices[gr][i]) > 0:
                                 self.sn.data[name][n2[0:gr].sum()+n1[gr]:n2[0:gr].sum()+n1[gr]+len(indices[gr][i])] = d[...][indices[gr][i],...]
                                 elements = len(indices[gr][i])
+                            else:
+                                elements = 0
                     loaded[gr] += elements
             
             #self.sn.npart_loaded[self.sn.__parttype__] += self.sn.nparticles[self.sn.__parttype__]

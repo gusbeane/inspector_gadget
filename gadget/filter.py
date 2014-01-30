@@ -1,6 +1,6 @@
 import numpy as np
 
-class Selector(object):
+class Filter(object):
     def __init__(self):
         self.requieredFields = []
     def getIndices(self, data):
@@ -9,7 +9,7 @@ class Selector(object):
 
     
     
-class Rectangle(Selector):
+class Rectangle(Filter):
     def __init__(self, center, boxsize):
         center = np.array(center)
         boxsize = np.array(boxsize)
@@ -27,7 +27,7 @@ class Rectangle(Selector):
         return ind
         
         
-class Sphere(Selector):
+class Sphere(Filter):
     def __init__(self, center, radius):
         self.center = np.array(center)
         self.radius = radius
@@ -42,7 +42,7 @@ class Sphere(Selector):
         return ind
         
         
-class Halo(Selector):
+class Halo(Filter):
     def __init__(self, catalog, halo=None, subhalo=None):
         self.catalog = catalog
         self.halo = halo
@@ -57,7 +57,7 @@ class Halo(Selector):
     def getIndices(self, data):
         pass
     
-class Stars(Selector):
+class Stars(Filter):
     def __init__(self):
         self.requieredFields=['GFM_StellarFormationTime']
         self.parttype = [5]

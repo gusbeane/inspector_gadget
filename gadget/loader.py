@@ -252,7 +252,7 @@ class Snapshot(Loader):
     """
     This class loads Gadget snapshots. Currently file format 2 and 3 (hdf5) are supported.
     """
-    def __init__(self,filename, format=None, fields=None, parttype=None, combineFiles=False, toDouble=False, onlyHeader=False, verbose=False, selector=None, **param):     
+    def __init__(self,filename, format=None, fields=None, parttype=None, combineFiles=False, toDouble=False, onlyHeader=False, verbose=False, filter=None, **param):     
         """
         *filename* : The name of the snapshot file
         *format* : (optional) file format of the snapshot, otherwise this is guessed from the file name
@@ -262,13 +262,14 @@ class Snapshot(Loader):
         *toDouble* : (optinal) converts all values of type float to double precision
         *onlyHeader* : (optinal) load only the snapshot header
         *verbose* : (optional) enable debug output
-        
+        *filter* : Only load a filtered subset of the snapshot, specified by the filter object.
+
         *num_part* : (ic generation) generate an empty snapshot instead; num_part must be an array with 6 integers, giving the number of particles for each particle species
         *masses* : (ic generation, optinal) array with masses of each particle species, (0 if specified in the mass array)
         """
         super(Snapshot,self).__init__(filename, format=format, fields=fields, parttype=parttype, combineFiles=combineFiles, toDouble=toDouble, onlyHeader=onlyHeader, verbose=verbose, **param)
     
-        self.__selector__ = selector
+        self.__filter__ = filter
     
         self.__backend__.load()
         
@@ -305,10 +306,10 @@ class Snapshot(Loader):
         else:
              self.__longids__ = False
              
-    def newSelection(self,selector):
+    def newFilter(self,filter):
         self.close()
         
-        self.__selector__ = selector
+        self.__filter__ = filter
 
         #open next file
         self.__backend__.load()
