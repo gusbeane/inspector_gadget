@@ -148,8 +148,6 @@ class Format3:
                 raise Exception("could not open file %s"%filename)
            
             self.load_header()
-            #self.sn.header = loader.Header(self.sn)
-                
 
             for gr in self.sn.__parttype__:
                 if "PartType%d"%gr in self.file.keys():
@@ -199,8 +197,6 @@ class Format3:
                 raise Exception("could not open file %s"%filename)
                 
             self.load_header()
-            #self.sn.header = loader.Header(self.sn)
-                
 
             for gr in self.sn.__parttype__:
                 if "PartType%d"%gr in self.file.keys():
@@ -257,6 +253,9 @@ class Format3:
             
         #learn about present fields
         for i in np.arange(filesA,filesB):
+            if self.sn.__verbose__:
+                print("Learning about file %d"%i)
+                
             filename = re.sub("\.[0-9]*\.hdf5",".%d.hdf5"%i, filename)
             filename = re.sub("\.[0-9]*\.h5",".%d.h5"%i, filename)
             self.sn.filename = filename
@@ -275,6 +274,7 @@ class Format3:
                         if not self.dict.has_key(item):
                             if self.sn.__verbose__:
                                 print "warning: hdf5 key '%s' could not translated"%item
+                                self.dict[item] = item
                                 
                         name  = self.dict.get(item,item)
                         if self.sn.__fields__==None or name in self.sn.__fields__:
@@ -289,6 +289,9 @@ class Format3:
                                 
         #now load the requested data                    
         for i in np.arange(filesA,filesB):
+            if self.sn.__verbose__:
+                print("Reading file %d"%i)
+                
             filename = re.sub("\.[0-9]*\.hdf5",".%d.hdf5"%i, self.sn.filename)
             filename = re.sub("\.[0-9]*\.h5",".%d.h5"%i, filename)
             self.sn.filename = filename
