@@ -16,7 +16,9 @@ class Rectangle(Selector):
         
         self.lower = center-boxsize/2.
         self.upper = center+boxsize/2.
+        
         self.requieredFields = ['pos']
+        self.parttype = [0,1,2,3,4,5]
     
         
     def getIndices(self, data):
@@ -29,8 +31,9 @@ class Sphere(Selector):
     def __init__(self, center, radius):
         self.center = np.array(center)
         self.radius = radius
-
+        
         self.requieredFields = ['pos']
+        self.parttype = [0,1,2,3,4,5]
     
         
     def getIndices(self, data):
@@ -53,4 +56,14 @@ class Halo(Selector):
         
     def getIndices(self, data):
         pass
+    
+class Stars(Selector):
+    def __init__(self):
+        self.requieredFields=['GFM_StellarFormationTime']
+        self.parttype = [5]
+
+        
+    def getIndices(self, data):
+        ind = np.where( data['GFM_StellarFormationTime'] > 0.)[0]
+        return ind
     
