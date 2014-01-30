@@ -121,11 +121,11 @@ class Format3:
         
         loaded = np.zeros(6,dtype=np.longlong)
         
-        if hasattr(self.sn,"__selector__"):
-            selector = self.sn.__selector__
+        if hasattr(self.sn,"__filter__"):
+            filter = self.sn.__filter__
             indices = [[],[],[],[],[],[]]
         else:
-            selector = None
+            filter = None
 
         if self.sn.__combineFiles__:
             filesA = 0
@@ -168,14 +168,14 @@ class Format3:
                                 elem=shape[1]
                                 
                             pres = self.sn.__learnPresent__(name,gr=gr,shape=elem)
-                if selector != None:
+                if filter != None:
                     if "PartType%d"%gr in self.file.keys():
                         data = {}
-                        for fld in selector.requieredFields:
+                        for fld in filter.requieredFields:
                             fld2 = self.rev_dict.get(fld,fld)
                             data[fld] = self.file["PartType%d"%gr][fld2][...]
                             
-                        ind = selector.getIndices(data)
+                        ind = filter.getIndices(data)
                         indices[gr].append(ind)
                         self.sn.npart_loaded[gr] += len(ind)
                         
@@ -227,7 +227,7 @@ class Format3:
                                         
                                 self.sn.data[name] = np.empty(s, dtype=datatype)
                                     
-                            if selector == None:
+                            if filter == None:
                                 self.sn.data[name][n2[0:gr].sum()+n1[gr]:n2[0:gr].sum()+n1[gr]+shape[0]] = d
                                 elements = d.shape[0]
                             elif len(indices[gr][i]) > 0:
