@@ -122,7 +122,7 @@ class Format3:
         loaded = np.zeros(6,dtype=np.longlong)
         
         if hasattr(self.sn,"__filter__"):
-            filter = self.sn.__filter__
+            filter = np.array(self.sn.__filter__)
             indices = [[],[],[],[],[],[]]
         else:
             filter = None
@@ -168,12 +168,19 @@ class Format3:
                             pres = self.sn.__learnPresent__(name,gr=gr,shape=elem)
                 if filter != None:
                     if "PartType%d"%gr in self.file.keys():
-                        data = {}
-                        for fld in filter.requieredFields:
-                            fld2 = self.rev_dict.get(fld,fld)
-                            data[fld] = self.file["PartType%d"%gr][fld2][...]
+                        ind = np.arange(self.sn.nparticles[gr])
+                        for f in filter:
+                            if gr in f.parttype:
+                                data = {}
+                                data['nparticles'] = np.longlong(file['/Header'].attrs['NumPart_ThisFile'])[gr]
+                                data['group'] = gr
+                                
+                                for fld in f.requieredFields:
+                                    fld2 = self.rev_dict.get(fld,fld)
+                                    data[fld] = self.file["PartType%d"%gr][fld2][...][ind]
                             
-                        ind = filter.getIndices(data)
+                                ind = ind[f.getIndices(data)]
+                            
                         indices[gr].append(ind)
                         self.sn.npart_loaded[gr] += len(ind)
                         

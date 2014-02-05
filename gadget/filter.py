@@ -3,9 +3,12 @@ import numpy as np
 class Filter(object):
     def __init__(self):
         self.requieredFields = []
+        self.parttype = []
     def getIndices(self, data):
         return []
     
+    def reset(self):
+        pass
 
     
     
@@ -44,10 +47,11 @@ class Sphere(Filter):
         
 class Halo(Filter):
     def __init__(self, catalog, halo=None, subhalo=None):
-        self.catalog = catalog
+        self.cat = catalog
         self.halo = halo
         self.subhalo = subhalo
         self.requieredFields=[]
+        self.parttype = [0,1,2,3,4,5]
         
     def setHalo(self,halo=None, subhalo=None):
         self.halo = halo
@@ -55,7 +59,47 @@ class Halo(Filter):
         
         
     def getIndices(self, data):
-        pass
+        ind = None
+        if self.offset[gr] + self.len[gr] > self.sn_offset[gr] and self.offset[gr] < self.sn_offset[gr]+data['nparticles'][gr]:
+              start = np.max(0, self.offset[gr] - self.sn_offset[gr])
+              stop = np.max ((self.offset[gr]+self.len[gr])-self.sn_offset[gr], data['ngroups'][gr])
+              
+              ind = slice(start,stop)
+        else
+            ind = slice(0,0)
+    
+        self.sn_offset[gr] += data['nparticles']
+        
+        return ind
+    
+    def reset(self):
+        self.sn_offset = np.zeros(6)
+        
+        self.halo_offset = np.zeros((self.cat.ngroupsall,6))
+        self.sub_offset = np.zeros((self.cat.nsubgroupsall,6))
+        
+        self.halo_offset[1:,:] = np.cumsum(self.cat.group.GroupLenType[:-1,:], axis=0, dtype=np.uint64)
+        
+        if self.halo != None:
+            self.offset = self.halo_offset[self.halo,:]
+            self.len = self.cat.GroupLenType[halo,:]
+            return
+        
+        halo = 0
+        for i in np.arange(self.cat.groupsall):
+            if self.cat.group.GroupNsubs[i] > 0:
+                tmp = self.halo_offset[i,:]
+                self.sub_offset[halo,:] = tmp
+                self.sub_offset[halo+1:halo+self.cat.group.GroupNsubs,:] = tmp + np.cumsum(self.cat.subhalo.SubhaloLenType[halo:halo+self.cat.group.GroupNsubs-1,:], axis=0, dtype=np.uint64)
+                halo += self.cat.group.GroupNsubs
+                
+        if self.subhalo != None:
+            self.offset = self.sub_offset[self.subhalo,:]
+            self.len = self.cat.subhalo.SubhaloLenType[self.subhalo,:]
+                
+        
+        
+        
     
 class Stars(Filter):
     def __init__(self):
