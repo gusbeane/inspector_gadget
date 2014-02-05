@@ -200,6 +200,7 @@ class Format3:
 
             for gr in self.sn.__parttype__:
                 if "PartType%d"%gr in self.file.keys():
+                    elements = 0
                     for item in self.file["PartType%d"%gr].keys():
                         name  = self.dict.get(item,item)
                         if self.sn.__fields__==None or name in self.sn.__fields__:
@@ -229,8 +230,6 @@ class Format3:
                             elif len(indices[gr][i]) > 0:
                                 self.sn.data[name][n2[0:gr].sum()+n1[gr]:n2[0:gr].sum()+n1[gr]+len(indices[gr][i])] = d[...][indices[gr][i],...]
                                 elements = len(indices[gr][i])
-                            else:
-                                elements = 0
                     loaded[gr] += elements
             
             #self.sn.npart_loaded[self.sn.__parttype__] += self.sn.nparticles[self.sn.__parttype__]
