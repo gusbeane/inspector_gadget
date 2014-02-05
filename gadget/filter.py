@@ -60,12 +60,13 @@ class Halo(Filter):
         
     def getIndices(self, data):
         ind = None
-        if self.offset[gr] + self.len[gr] > self.sn_offset[gr] and self.offset[gr] < self.sn_offset[gr]+data['nparticles'][gr]:
-              start = np.max(0, self.offset[gr] - self.sn_offset[gr])
-              stop = np.max ((self.offset[gr]+self.len[gr])-self.sn_offset[gr], data['ngroups'][gr])
+        gr = data['group']
+        if self.offset[gr] + self.len[gr] > self.sn_offset[gr] and self.offset[gr] < self.sn_offset[gr]+data['nparticles']:
+              start = np.max([0, self.offset[gr] - self.sn_offset[gr]])
+              stop = np.min([(self.offset[gr]+self.len[gr])-self.sn_offset[gr], data['nparticles']])
               
               ind = slice(start,stop)
-        else
+        else:
             ind = slice(0,0)
     
         self.sn_offset[gr] += data['nparticles']
@@ -82,11 +83,11 @@ class Halo(Filter):
         
         if self.halo != None:
             self.offset = self.halo_offset[self.halo,:]
-            self.len = self.cat.GroupLenType[halo,:]
+            self.len = self.cat.GroupLenType[self.halo,:]
             return
         
         halo = 0
-        for i in np.arange(self.cat.groupsall):
+        for i in np.arange(self.cat.nparticlesall[0]):
             if self.cat.group.GroupNsubs[i] > 0:
                 tmp = self.halo_offset[i,:]
                 self.sub_offset[halo,:] = tmp

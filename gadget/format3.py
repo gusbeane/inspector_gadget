@@ -122,8 +122,13 @@ class Format3:
         loaded = np.zeros(6,dtype=np.longlong)
         
         if hasattr(self.sn,"__filter__"):
-            filter = np.array(self.sn.__filter__)
+            filter = np.array([self.sn.__filter__])
+            filter = filter.reshape(len(filter))
             indices = [[],[],[],[],[],[]]
+
+            for f in filter:
+                f.reset()
+
         else:
             filter = None
 
@@ -172,7 +177,7 @@ class Format3:
                         for f in filter:
                             if gr in f.parttype:
                                 data = {}
-                                data['nparticles'] = np.longlong(file['/Header'].attrs['NumPart_ThisFile'])[gr]
+                                data['nparticles'] = np.longlong(self.file['/Header'].attrs['NumPart_ThisFile'])[gr]
                                 data['group'] = gr
                                 
                                 for fld in f.requieredFields:
@@ -181,7 +186,7 @@ class Format3:
                             
                                 ind = ind[f.getIndices(data)]
                             
-                        indices[gr].append(ind)
+                        indices[gr].append(np.copy(ind))
                         self.sn.npart_loaded[gr] += len(ind)
                         
                     else:
