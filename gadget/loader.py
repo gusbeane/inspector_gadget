@@ -28,8 +28,12 @@ class Loader(object):
         self.__toDouble__ = toDouble
         
         if parttype == None:
-            parttype = [0,1,2,3,4,5]
-        self.__parttype__ = np.array(parttype)
+            parttype = np.array([0,1,2,3,4,5])
+        elif type(parttype) == list:
+            parttype = np.array(parttype)
+        elif type(parttype) != np.ndarray:
+            parttype = np.array([parttype])
+        self.__parttype__ = parttype
 
 
         if format==3:
@@ -415,8 +419,12 @@ class ICs(Loader):
 class Subfind(Loader):
     def __init__(self,filename, format=None, fields=None, parttype=None, combineFiles=False, toDouble=False, onlyHeader=False, verbose=False, **param):
         if parttype == None:
-            parttype = [0,1]
-	
+            parttype = np.array([0,1])
+        elif type(parttype) == list:
+            parttype = np.array(parttype)
+        elif type(parttype) != np.ndarray:
+            parttype = np.array([parttype])
+
         parttype_filter = []
         for i in parttype:
             if i!=0 and i!=1:

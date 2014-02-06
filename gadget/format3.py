@@ -121,9 +121,12 @@ class Format3:
         
         loaded = np.zeros(6,dtype=np.longlong)
         
-        if hasattr(self.sn,"__filter__"):
-            filter = np.array([self.sn.__filter__])
-            filter = filter.reshape(len(filter))
+        if hasattr(self.sn,"__filter__") and self.sn.__filter__ != None:
+            filter = self.sn.__filter__
+            if type(filter) == list:
+                filter = np.array(filter)
+            elif type(filter) != np.ndarray:
+                filter = np.array([filter])
             indices = [[],[],[],[],[],[]]
 
             for f in filter:

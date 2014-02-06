@@ -105,7 +105,7 @@ class Halo(Filter):
 class Stars(Filter):
     def __init__(self):
         self.requieredFields=['GFM_StellarFormationTime']
-        self.parttype = [5]
+        self.parttype = [4]
 
         
     def getIndices(self, data):
