@@ -91,8 +91,8 @@ class Halo(Filter):
             if self.cat.group.GroupNsubs[i] > 0:
                 tmp = self.halo_offset[i,:]
                 self.sub_offset[halo,:] = tmp
-                self.sub_offset[halo+1:halo+self.cat.group.GroupNsubs,:] = tmp + np.cumsum(self.cat.subhalo.SubhaloLenType[halo:halo+self.cat.group.GroupNsubs-1,:], axis=0, dtype=np.uint64)
-                halo += self.cat.group.GroupNsubs
+                self.sub_offset[halo+1:halo+self.cat.group.GroupNsubs[i],:] = tmp + np.cumsum(self.cat.subhalo.SubhaloLenType[halo:halo+self.cat.group.GroupNsubs[i]-1,:], axis=0, dtype=np.uint64)
+                halo += self.cat.group.GroupNsubs[i]
                 
         if self.subhalo != None:
             self.offset = self.sub_offset[self.subhalo,:]
