@@ -76,8 +76,8 @@ class Halo(Filter):
     def reset(self):
         self.sn_offset = np.zeros(6)
         
-        self.halo_offset = np.zeros((self.cat.ngroupsall,6))
-        self.sub_offset = np.zeros((self.cat.nsubgroupsall,6))
+        self.halo_offset = np.zeros((self.cat.npart_loaded[0],6))
+        self.sub_offset = np.zeros((self.cat.npart_loaded[1],6))
         
         self.halo_offset[1:,:] = np.cumsum(self.cat.group.GroupLenType[:-1,:], axis=0, dtype=np.uint64)
         
@@ -87,7 +87,7 @@ class Halo(Filter):
             return
         
         halo = 0
-        for i in np.arange(self.cat.nparticlesall[0]):
+        for i in np.arange(self.cat.npart_loaded[0]):
             if self.cat.group.GroupNsubs[i] > 0:
                 tmp = self.halo_offset[i,:]
                 self.sub_offset[halo,:] = tmp
