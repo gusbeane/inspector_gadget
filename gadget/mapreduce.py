@@ -62,7 +62,11 @@ class MapReduce(object):
         for i in np.arange(len(self.__myitems__)):
             self.__dicts__.append({})
             
-        self.__currdict__ = self.__dicts__[0]
+        if len(self.__myitems__) > 0:
+            self.__currdict__ = self.__dicts__[0]
+        else:
+            self.__currdict__ = None
+            
         self.__mapped__ = False
         self.__collected__ = False
 
