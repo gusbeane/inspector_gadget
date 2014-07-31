@@ -256,7 +256,7 @@ class Snapshot(Loader):
     """
     This class loads Gadget snapshots. Currently file format 2 and 3 (hdf5) are supported.
     """
-    def __init__(self,filename, format=None, fields=None, parttype=None, combineFiles=False, toDouble=False, onlyHeader=False, verbose=False, filter=None, **param):     
+    def __init__(self,filename, format=None, fields=None, parttype=None, combineFiles=False, toDouble=False, onlyHeader=False, verbose=False, filter=None, sortID=False, **param):     
         """
         *filename* : The name of the snapshot file
         *format* : (optional) file format of the snapshot, otherwise this is guessed from the file name
@@ -267,6 +267,7 @@ class Snapshot(Loader):
         *onlyHeader* : (optinal) load only the snapshot header
         *verbose* : (optional) enable debug output
         *filter* : Only load a filtered subset of the snapshot, specified by the filter object.
+        *sortID* : sort all loaded data in each group by particle id
 
         *num_part* : (ic generation) generate an empty snapshot instead; num_part must be an array with 6 integers, giving the number of particles for each particle species
         *masses* : (ic generation, optinal) array with masses of each particle species, (0 if specified in the mass array)
@@ -288,9 +289,15 @@ class Snapshot(Loader):
             self.part5 = PartGroup(self,5)
             self.groups = [self.part0, self.part1, self.part2, self.part3, self.part4, self.part5]
 
+        self.__sortID__ = sortID
+        if sortID:
+            for gr in self.groups:
+                if gr.data.has_key("id"):
+                    ind = np.argsort(gr.data['id'])
+                    for d in gr.data.values():
+                        d[...] = d[ind,...]
 
         self.__precision__ = None
-        
         #set these two, in case we want to add fields to an existing snapshot
         if toDouble:
            self.__precision__ = np.float64
@@ -318,19 +325,17 @@ class Snapshot(Loader):
         #open next file
         self.__backend__.load()
         
-        if self.__onlyHeader__: 
-            if  isinstance(self, Snapshot):       
-                self.part0 = PartGroup(self,0)
-                self.part1 = PartGroup(self,1)
-                self.part2 = PartGroup(self,2)
-                self.part3 = PartGroup(self,3)
-                self.part4 = PartGroup(self,4)
-                self.part5 = PartGroup(self,5)
-                self.groups = [self.part0, self.part1, self.part2, self.part3, self.part4, self.part5]
-            else:
-                self.group = PartGroup(self,0)
-                self.subhalo = PartGroup(self,1)
-                self.groups = [self.group, self.subhalo]   
+        if self.__onlyHeader__:        
+            self.part0 = PartGroup(self,0)
+            self.part1 = PartGroup(self,1)
+            self.part2 = PartGroup(self,2)
+            self.part3 = PartGroup(self,3)
+            self.part4 = PartGroup(self,4)
+            self.part5 = PartGroup(self,5)
+            self.groups = [self.part0, self.part1, self.part2, self.part3, self.part4, self.part5]
+        else:
+            self.groups = []
+
         
         self.__onlyHeader__ = False
 
