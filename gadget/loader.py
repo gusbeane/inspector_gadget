@@ -6,7 +6,9 @@ import gadget.fields as flds
 
 class Loader(object):
        
-    def __init__(self,filename, format=None, fields=None, parttype=None, combineFiles=False, toDouble=False, onlyHeader=False, verbose=False, **param):     
+    def __init__(self,filename, format=None, fields=None, parttype=None, combineFiles=False, toDouble=False, onlyHeader=False, verbose=False, **param): 
+        self.data = {}
+                    
         #detect backend
         if format==None:
             if filename.endswith('.hdf5') or filename.endswith('.h5'):
@@ -44,7 +46,7 @@ class Loader(object):
             import format2
             self.__backend__=format2.Format2(self, **param)
                 
-        self.data = {}
+
             
         
     def __normalizeFields__(self):
@@ -60,7 +62,18 @@ class Loader(object):
         if attr in self.data:
             return self.data[attr]
         else:
-            raise AttributeError
+            raise AttributeError("unknown field '%s'"%attr)
+        
+    def __setattr__(self,attr,val):
+        attr = self.__normalizeName__(attr)
+        
+        if attr =='data':
+            object.__setattr__(self,attr,val)
+        
+        if attr in self.data:
+            raise AttributeError("you can not exchange the array %s with your own object , write into the array using %s[...] instead"%(attr,attr))
+        
+        object.__setattr__(self,attr,val)
         
     def __dir__(self):
         dir = self.__dict__.keys()
@@ -538,7 +551,33 @@ class PartGroup(object):
 
     def __getitem__(self, item):
         item = self.__parent__.__normalizeName__(item)
-        return self.data[item]
+        parent = self.__parent__
+        num = self.__num__
+        
+        if item in parent.data:
+            pres = parent.__isPresent__(item)
+            if pres[num]>0:
+                f = parent.data[item]
+                n1 = np.where(pres>0, parent.npart_loaded,np.zeros(6,dtype=np.longlong))
+                tmp = np.sum(n1[0:num])
+                return f[tmp:tmp+parent.npart_loaded[num]]
+            else:
+                raise AttributeError("'%s' is not available for part type %d"%(item,num))
+        else:
+            raise AttributeError("unknown field '%s'"%item)
+    
+    def __setattr__(self,attr,val):
+        if attr =='__parent__':
+            object.__setattr__(self,attr,val)
+        elif attr =='data':
+            raise AttributeError("you are not allowed to set attribute 'data'")
+        
+        attr = self.__parent__.__normalizeName__(attr)
+        
+        if attr in self.__parent__.data:
+            raise AttributeError("you can not exchange the array '%s' with your own object, write into the array using %s[...] instead"%(attr,attr))
+        
+        object.__setattr__(self,attr,val)
     
     def __getattr__(self,attr):       
         parent = self.__parent__
@@ -565,9 +604,9 @@ class PartGroup(object):
                 tmp = np.sum(n1[0:num])
                 return f[tmp:tmp+parent.npart_loaded[num]]
             else:
-                raise AttributeError
+                raise AttributeError("'%s' is not available for part type %d"%(attr,num))
         else:
-            raise AttributeError
+            raise AttributeError("unknown field '%s'"%attr)
         
     def __dir__(self):
         parent = self.__parent__
