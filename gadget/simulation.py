@@ -133,7 +133,7 @@ class Simulation(Snapshot):
         if log:
             p.loglog(xpos, profile, **params)
         else:
-            p.plot(xpos, profle, **params)
+            p.plot(xpos, profile, **params)
 
     def plot_radprof(self, value, weights=None, center=None, bins=100, range=None, log=False, periodic=True, group=None, **params):
         (profile, xpos) = self.get_radprof(value=value, weights=weights, center=center, bins=bins, range=range, log=log, periodic=periodic, group=group)
