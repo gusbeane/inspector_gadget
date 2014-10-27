@@ -129,14 +129,14 @@ class Simulation(Snapshot):
         return (profile,xpos)
     
     def plot_raddens(self, value='mass', center=None, bins=100, range=None, log=False, periodic=True, group=None, **params):
-        (profile, xpos) = self.__get_radhist__(value=value, center=center, bins=bins, range=range, log=log, periodic=periodic, group=group)
+        (profile, xpos) = self.get_raddens(value=value, center=center, bins=bins, range=range, log=log, periodic=periodic, group=group)
         if log:
             p.loglog(xpos, profile, **params)
         else:
             p.plot(xpos, profle, **params)
 
     def plot_radprof(self, value, weights=None, center=None, bins=100, range=None, log=False, periodic=True, group=None, **params):
-        (profile, xpos) = self.__get_radhist__(value=value, weights=weights, center=center, bins=bins, range=range, log=log, periodic=periodic, group=group)
+        (profile, xpos) = self.get_radprof(value=value, weights=weights, center=center, bins=bins, range=range, log=log, periodic=periodic, group=group)
         if log:
             p.loglog(xpos,profile, **params)
         else:
