@@ -373,7 +373,7 @@ class ICs(Loader):
         if masses != None:
             masses = np.array(masses)
         
-        super(ICs,self).__init__(filename, format=format, fields=fields,  verbose=verbose, **param)
+        super(ICs,self).__init__(filename, format=format, verbose=verbose, **param)
         
         if format==2:
             raise Exception( "Creating format2 snapshots is not supported yet")
@@ -428,10 +428,18 @@ class ICs(Loader):
         self.part5 = PartGroup(self,5)
         self.groups = [ self.part0, self.part1, self.part2, self.part3, self.part4, self.part5]
         
+        self.__fields__ = []
+        
         for field in flds.default:
-            self.addField(field)
-        if self.__fields__ != None:
-            for field in self.__fields__:
+            self.__fields__.append(field)
+            
+        if fields != None:
+            for field in fields:
+                f = self.__normalizeName__(field)
+                if not f in self.__fields__:
+                    self.__fields__.append(f)
+                
+        for field in self.__fields__:
                 self.addField(field)
 
 class Subfind(Loader):
