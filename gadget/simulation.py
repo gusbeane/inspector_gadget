@@ -176,7 +176,7 @@ class Simulation(Snapshot):
             z = np.where(z - c[2] > self.boxsize/2, z-self.boxsize/2,z)
             z = np.where(z - c[2] < -self.boxsize/2, z+self.boxsize/2,z)
 
-        pp, = np.where( (np.abs(x-c[0]) < 0.5*box[0]) & (np.abs(y-c[1]) < 0.5*box[1]) & (np.abs(z-c[2]) < 0.5*box[2]) )
+        pp, = np.where( (np.abs(x-c[0]) <= 0.5*box[0]) & (np.abs(y-c[1]) <= 0.5*box[1]) & (np.abs(z-c[2]) <= 0.5*box[2]) )
         
         axes.scatter(x[pp], y[pp], **params)
         axes.axis( "scaled" )
@@ -203,7 +203,7 @@ class Simulation(Snapshot):
 
         zdist = 2. * group['vol'].astype('float64')**(1./3.)
 
-        pp, = np.where( (px < 0.5*box[0]) & (py < 0.5*box[1]) & (pz < zdist) )
+        pp, = np.where( (px <= 0.5*box[0]) & (py <= 0.5*box[1]) & (pz <= zdist) )
         print "Selected %d of %d particles." % (pp.size,self.npart)
 
         posdata = pos[pp,:]
@@ -215,6 +215,7 @@ class Simulation(Snapshot):
             data = calcGrid.calcASlice(posdata, valdata, res, res, box[0], box[1], c[0], c[1], c[2], axis0, axis1, group[gradient][pp].astype('float64'), boxz=box[2])
         data[ "neighbours" ] = pp[ data["neighbours"] ]
         
+        data['name'] = value
         data['x'] = np.arange( res+1, dtype="float64" ) / res * box[0] - .5 * box[0] + c[0]
         data['y'] = np.arange( res+1, dtype="float64" ) / res * box[1] - .5 * box[1] + c[1]
         data['x2'] = (np.arange( res, dtype="float64" ) + 0.5) / res * box[0] - .5 * box[0] + center[0]
@@ -222,14 +223,19 @@ class Simulation(Snapshot):
         
         return data
     
-    def plot_Aslice(self, value, gradient=None, log=False, res=1024, center=None, axis=[0,1], box=None, group=None, vmin=None, vmax=None, colorbar=True, cblabel=None, contour=False, newlabels=False, newfig=True, axes=None, **params):
+    def plot_Aslice(self, value, gradient=None, log=False, res=1024, center=None, axis=[0,1], box=None, group=None, vmin=None, vmax=None, dvalue=None, dgradient=None, colorbar=True, cblabel=None, contour=False, newlabels=False, newfig=True, axes=None, **params):
         result = self.get_Aslice(value=value, gradient=gradient, res=res, center=center, axis=axis, box=box, group=group)
-        self.__plot_Slice__(result,log=log, vmin=vmin, vmax=vmax, colorbar=colorbar, cblabel=cblabel, contour=contour, newlabels=newlabels, newfig=newfig, axes=axes)
+        
+        dresult = None
+        if dvalue != None:
+            dresult = self.get_Aslice(value=dvalue, gradient=dgradient, res=res, center=center, axis=axis, box=box, group=group)
+            
+        self.__plot_Slice__(result,log=log, vmin=vmin, vmax=vmax, dresult=dresult, colorbar=colorbar, cblabel=cblabel, contour=contour, newlabels=newlabels, newfig=newfig, axes=axes)
 
         
     def get_AMRslice(self, value, gradient=None, res=1024, center=None, axis=[0,1], box=None, group=None):
         if group == None:
-            group = self 
+            group = self.part0
                
         center = self.__validate_vector__(center, self.center)
         box = self.__validate_vector__(box, self.boxsize,len=2)
@@ -260,6 +266,7 @@ class Simulation(Snapshot):
             graddata = group[gradient].astype('float64')
             data = calcGrid.calcAMRSlice( posdata, valdata, res, res, box[0], box[1], c[0], c[1], c[2], domainc[0], domainc[1], domainc[2], domainlen, axis0, axis1, graddata, boxz=box[2])
         
+        data['name'] = value
         data['x'] = np.arange( res+1, dtype="float64" ) / res * box[0] - .5 * box[0] + c[0]
         data['y'] = np.arange( res+1, dtype="float64" ) / res * box[1] - .5 * box[1] + c[1]
         data['x2'] = (np.arange( res, dtype="float64" ) + 0.5) / res * box[0] - .5 * box[0] + center[0]
@@ -268,16 +275,72 @@ class Simulation(Snapshot):
         return data
     
 
-    def plot_AMRslice(self, value, gradient=None, log=False, res=1024, center=None, axis=[0,1], box=None, group=None, vmin=None, vmax=None, colorbar=True, cblabel=None, contour=False, newlabels=False, newfig=True, axes=None, **params):
+    def plot_AMRslice(self, value, gradient=None, log=False, res=1024, center=None, axis=[0,1], box=None, group=None, vmin=None, vmax=None, dvalue=None, dgradient=None, colorbar=True, cblabel=None, contour=False, newlabels=False, newfig=True, axes=None, **params):
         result = self.get_AMRslice(value, gradient=gradient, res=res, center=center, axis=axis, box=box, group=group)
-        self.__plot_Slice__(result,log=log, vmin=vmin, vmax=vmax, colorbar=colorbar, cblabel=cblabel, contour=contour, newlabels=newlabels, newfig=newfig, axes=axes)
         
-        
-    def __plot_Slice__(self, result, log=False, vmin=None, vmax=None, colorbar=True, cblabel=None, contour=False, newlabels=False, newfig=True, axes=None, **params):
-        contours = result['contours']
-        x2 = result['x2']
-        y2 = result['y2']
+        dresult = None
+        if dvalue != None:
+            dresult = self.get_AMRslice(dvalue, gradient=dgradient, res=res, center=center, axis=axis, box=box, group=group)
             
+        self.__plot_Slice__(result,log=log, vmin=vmin, vmax=vmax, dresult=dresult, colorbar=colorbar, cblabel=cblabel, contour=contour, newlabels=newlabels, newfig=newfig, axes=axes)
+        
+        
+    def get_SPHproj( self, value, hsml="hsml", weights=None, normalized=True, res=1024, center=None, axis=[0,1], box=None, group=None):
+        if group == None:
+            group = self
+               
+        center = self.__validate_vector__(center, self.center)
+        box = self.__validate_vector__(box, self.boxsize)
+            
+        axis0 = axis[0]
+        axis1 = axis[1]
+
+        c = np.zeros( 3 )
+        c[0] = center[axis0]
+        c[1] = center[axis1]
+        c[2] = center[3 - axis0 - axis1]
+
+        pos = group.pos.astype( 'float64' )
+        px = np.abs( pos[:,axis0] - c[0] )
+        py = np.abs( pos[:,axis1] - c[1] )
+        pz = np.abs( pos[:,3 - axis0 - axis1] - c[2] )
+
+        pp, = np.where( (px <= 0.5*box[0]) & (py <= 0.5*box[1]) & (pz <= 0.5*box[2]) )
+        print "Selected %d of %d particles." % (pp.size,self.npart)
+
+        posdata = pos[pp,:]
+        valdata = group[value][pp].astype('float64')
+        hsmldata = group[hsml].astype("float64")
+
+        
+        if weights==None:
+            grid = calcGrid.calcGrid(posdata, hsmldata, valdata, res, res, res, box[0], box[1], box[2], c[0], c[1], c[2], proj=True, norm=normalized )
+        else:
+            weightdata = group[weights].astype("float64")
+            grid = calcGrid.calcGrid(posdata, hsmldata, valdata, res, res, res, box[0], box[1], box[2], c[0], c[1], c[2], proj=True, norm=normalized, weights=weightdata )
+            
+        data = {}
+        data['grid'] = grid
+        
+        data['name'] = value
+        data['x'] = np.arange( res+1, dtype="float64" ) / res * box[0] - .5 * box[0] + c[0]
+        data['y'] = np.arange( res+1, dtype="float64" ) / res * box[1] - .5 * box[1] + c[1]
+        data['x2'] = (np.arange( res, dtype="float64" ) + 0.5) / res * box[0] - .5 * box[0] + center[0]
+        data['y2'] = (np.arange( res, dtype="float64" ) + 0.5) / res * box[1] - .5 * box[1] + center[1]
+        
+        return data
+    
+    def plot_SPHproj(self, value, hsml="hsml", weights=None, normalized=True, log=False, res=1024, center=None, axis=[0,1], box=None, group=None, vmin=None, vmax=None, dvalue=None, dweights=None, colorbar=True, cblabel=None, contour=False, newlabels=False, newfig=True, axes=None, **params):
+        result = self.get_SPHproj(value, hsml=hsml, weights=weights, normalized=normalized, res=res, center=center, axis=axis, box=box, group=group)
+        
+        dresult = None
+        if dvalue != None:
+            dresult = self.get_SPHproj(dvalue, hsml=hsml, weights=dweights, normalized=normalized, res=res, center=center, axis=axis, box=box, group=group)
+            
+        self.__plot_Slice__(result,log=log, vmin=vmin, vmax=vmax, dresult=dresult, colorbar=colorbar, cblabel=cblabel, contour=contour, newlabels=newlabels, newfig=newfig, axes=axes)
+        
+        
+    def __plot_Slice__(self, result, log=False, vmin=None, vmax=None, dresult=None, colorbar=True, cblabel=None, contour=False, newlabels=False, newfig=True, axes=None, **params):          
         slice = result['grid']
         x = result['x']
         y = result['y']
@@ -294,6 +357,9 @@ class Simulation(Snapshot):
             
         if vmax == None:
             vmax = np.max(slice)
+            
+        if dresult == None:
+            dresult = result
         
         if log:
             pc = axes.imshow(slice.T, origin='lower', interpolation='nearest', extent=[x.min(), x.max(), y.min(), y.max()], norm=matplotlib.colors.LogNorm(vmin=vmin, vmax=vmax), **params)
@@ -312,9 +378,34 @@ class Simulation(Snapshot):
                 cb.set_label(cblabel)
         
         if contour:
+            x2 = result['x2']
+            y2 = result['y2']
+            contours = result['contours']
             axes.contour(x2, y2, contours.T, levels=[0.99], colors="w")
         
         axes.axis( "image" )
+        
+            
+        dval = dresult["grid"].T
+        dxmin = dresult["x"].min()
+        dymin = dresult["y"].min()
+            
+        ddx = dresult["x"][1] - dresult["x"][0]
+        ddy = dresult["y"][1] - dresult["y"][0]
+            
+        dxmax = dval.shape[0]
+        dymax = dval.shape[1]
+            
+        def format_coord(x, y):
+            col = int((x-dxmin)/ddx+0.5)
+            row = int((y-dymin)/ddy+0.5)
+            if col>=0 and col<dxmax and row>=0 and row<dymax:
+                z = dval[row,col]
+                return 'x=%1.4f, y=%1.4f, %s=%.4g'%(x, y, dresult["name"], z)
+            else:
+                return 'x=%1.4f, y=%1.4f'%(x, y)
+
+        axes.format_coord = format_coord
         
         if newlabels:
             xticklabels = []
@@ -364,8 +455,10 @@ class Simulation(Snapshot):
             data = calcGrid.calcASlice(posdata, valdata, res, res, box[0], box[1], c[0], c[1], c[2], 0, 1, boxz=box[2], grid3D=True)
         else:
             data = calcGrid.calcASlice(posdata, valdata, res, res, box[0], box[1], c[0], c[1], c[2], 0, 1, group[gradient][pp].astype('float64'), boxz=box[2], grid3D=True)
+        
         data[ "neighbours" ] = pp[ data["neighbours"] ]
-
+        
+        data["name"] = value
         
         return data
 
@@ -374,7 +467,7 @@ class Simulation(Snapshot):
             raise Exception( "not supported" )
         
         if group == None:
-            group = self
+            group = self.part0
             
         center = self.__validate_vector__(center, self.center)
         box = self.__validate_vector__(box, self.boxsize)
@@ -398,5 +491,43 @@ class Simulation(Snapshot):
         else:
             data = calcGrid.calcAMRSlice( posdata, valdata, res, res, box[0], box[1], c[0], c[1], c[2], domainc[0], domainc[1], domainc[2], domainlen, 0, 1, group[gradient][pp].astype('float64'), boxz=box[2], grid3D=True)
 
+        data["name"] = value
+        
         return data
+    
+    def get_SPHgrid( self, value, hsml="hsml", weights=None, normalized=True, res=1024, center=None, box=None, group=None):
+        if self.numdims != 3:
+            raise Exception( "not supported" )
+        
+        if group == None:
+            group = self
+            
+        center = self.__validate_vector__(center, self.center)
+        box = self.__validate_vector__(box, self.boxsize)
+
+        c = center
+        
+        domainlen = self.boxsize
+        
+        domainc = np.zeros(3)
+        domainc[0] = self.boxsize/2
+        domainc[1] = self.boxsize/2.
+        
+        if self.numdims >2:
+            domainc[2] = self.boxsize/2.
+
+        posdata = group.pos.astype( 'float64' )
+        valdata = group[value].astype('float64')
+        hsmldata = group[hsml].astype("float64")
+
+        
+        if weights==None:
+            grid = calcGrid.calcGrid(posdata, hsmldata, valdata, res, res, res, box[0], box[1], box[2], c[0], c[1], c[2], proj=False, norm=normalized )
+        else:
+            weightdata = group[weights].astype("float64")
+            grid = calcGrid.calcGrid(posdata, hsmldata, valdata, res, res, res, box[0], box[1], box[2], c[0], c[1], c[2], proj=False, norm=normalized, weights=weightdata )
+        
+        return grid
+    
+    
     

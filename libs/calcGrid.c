@@ -1,3 +1,5 @@
+//#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+
 #include <Python.h>
 #include <numpy/arrayobject.h>
 #include <math.h>
@@ -33,27 +35,33 @@ inline double _getkernel( double h, double r2 ) {
 	}
 }
 
-PyObject* _calcGrid(PyObject *self, PyObject *args) {
-	PyArrayObject *pos, *hsml, *mass, *rho, *value, *pyGrid;
+PyObject* _calcGrid(PyObject *self, PyObject *args, PyObject *kwargs) {
+	PyArrayObject *pos, *hsml,*value, *weights, *pyGrid, *pyWeightGrid;
 	int npart, nx, ny, nz, cells;
 	int dims[3];
 	double bx, by, bz, cx, cy, cz;
-	double *data_pos, *data_hsml, *data_mass, *data_rho, *data_value;
-	double *grid;
+	double *data_pos, *data_hsml, *data_weights, *data_value;
+	double *grid, *weightGrid;
 	int part, proj, norm;
-	double px, py, pz, h, h2, m, r, v, cpx, cpy, cpz, r2, sum;
+	double px, py, pz, h, h2, weight, v, cpx, cpy, cpz, r2, sum;
 	int x, y, z0, z1;
 	int xmin, xmax, ymin, ymax, zmin, zmax, zmid;
 	double cellsizex, cellsizey, cellsizez;
 	clock_t start;
 	
+	int w;
+
 	start = clock();
 
 	proj = 0;
 	norm = 0;
-	if (!PyArg_ParseTuple( args, "O!O!O!O!O!iiidddddd|ii:calcGrid( pos, hsml, mass, rho, value, nx, ny, nz, boxx, boxy, boxz, centerx, centery, centerz, [proj, norm] )", &PyArray_Type, &pos, &PyArray_Type, &hsml, &PyArray_Type, &mass, &PyArray_Type, &rho, &PyArray_Type, &value, &nx, &ny, &nz, &bx, &by, &bz, &cx, &cy, &cz, &proj, &norm )) {
+	weights = 0;
+
+	char *kwlist[] = {"pos", "hsml", "value", "nx", "ny", "nz", "boxx", "boxy", "boxz", "centerx", "centery", "centerz", "proj", "norm", "weights", NULL} ;
+	if (!PyArg_ParseTupleAndKeywords( args, kwargs, "O!O!O!iiidddddd|iiO!:calcGrid( pos, hsml, value, nx, ny, nz, boxx, boxy, boxz, centerx, centery, centerz, [proj, norm, weights] )", kwlist, &PyArray_Type, &pos, &PyArray_Type, &hsml, &PyArray_Type, &value, &nx, &ny, &nz, &bx, &by, &bz, &cx, &cy, &cz, &proj, &norm,&PyArray_Type, &weights))
+	  {
 		return 0;
-	}
+	  }
 
 	if (pos->nd != 2 || pos->dimensions[1] != 3 || pos->descr->type_num != PyArray_DOUBLE) {
 		PyErr_SetString( PyExc_ValueError, "pos has to be of dimensions [n,3] and type double" );
@@ -65,24 +73,14 @@ PyObject* _calcGrid(PyObject *self, PyObject *args) {
 		return 0;
 	}
 
-	if (mass->nd != 1 || mass->descr->type_num != PyArray_DOUBLE) {
-		PyErr_SetString( PyExc_ValueError, "mass has to be of dimension [n] and type double" );
-		return 0;
-	}
-
-	if (rho->nd != 1 || rho->descr->type_num != PyArray_DOUBLE) {
-		PyErr_SetString( PyExc_ValueError, "rho has to be of dimension [n] and type double" );
-		return 0;
-	}
-
 	if (value->nd != 1 || value->descr->type_num != PyArray_DOUBLE) {
 		PyErr_SetString( PyExc_ValueError, "value has to be of dimension [n] and type double" );
 		return 0;
 	}
 
 	npart = pos->dimensions[0];
-	if (npart != hsml->dimensions[0] || npart != mass->dimensions[0]  || npart != rho->dimensions[0] || npart != value->dimensions[0]) {
-		PyErr_SetString( PyExc_ValueError, "pos, hsml, rho and value have to have the same size in the first dimension" );
+	if (npart != hsml->dimensions[0]  || npart != value->dimensions[0]) {
+		PyErr_SetString( PyExc_ValueError, "pos and hsml have to have the same size in the first dimension" );
 		return 0;
 	}
 
@@ -100,6 +98,32 @@ PyObject* _calcGrid(PyObject *self, PyObject *args) {
 		grid = (double*)pyGrid->data;
 		cells = nx*ny*nz;		
 	}
+
+	if(weights)
+	  {
+	    w = 1;
+
+	    if (proj) {
+	        pyWeightGrid = (PyArrayObject *)PyArray_FromDims( 2, dims, PyArray_DOUBLE );
+	    } else {
+	        pyWeightGrid = (PyArrayObject *)PyArray_FromDims( 3, dims, PyArray_DOUBLE );
+	    }
+	    weightGrid = (double*)pyWeightGrid->data;
+	    memset( weightGrid, 0, cells*sizeof(double) );
+
+	    data_weights = (double*) weights->data;
+
+	    if (npart != weights->dimensions[0] )
+	      {
+	        PyErr_SetString( PyExc_ValueError, "weights and pos have to have the same size in the first dimension" );
+	        return 0;
+	      }
+	  }
+	else
+	  {
+	    w = 0;
+	  }
+
 	memset( grid, 0, cells*sizeof(double) );
 
 	cellsizex = bx / nx;
@@ -108,8 +132,6 @@ PyObject* _calcGrid(PyObject *self, PyObject *args) {
 
 	data_pos = (double*)pos->data;
 	data_hsml = (double*)hsml->data;
-	data_mass = (double*)mass->data;
-	data_rho = (double*)rho->data;
 	data_value = (double*)value->data;
 
 	for (part=0; part<npart; part++) {
@@ -124,14 +146,14 @@ PyObject* _calcGrid(PyObject *self, PyObject *args) {
 		data_hsml = (double*)((char*)data_hsml + hsml->strides[0]);
 		h2 = h*h;
 
-		m = *data_mass;
-		data_mass = (double*)((char*)data_mass + mass->strides[0]);
-
-		r = *data_rho;
-		data_rho = (double*)((char*)data_rho + rho->strides[0]);
-
 		v = *data_value;
 		data_value = (double*)((char*)data_value + value->strides[0]);
+
+		if(w)
+		  {
+		    weight = *data_weights;
+		    data_weights = (double*)((char*)data_weights + weights->strides[0]);
+		  }
 
 		xmin = max( floor( (px - h - cx + 0.5*bx) / cellsizex ), 0 );
 		xmax = min( ceil( (px + h - cx + 0.5*bx) / cellsizex ), nx-1 );
@@ -184,21 +206,47 @@ PyObject* _calcGrid(PyObject *self, PyObject *args) {
 					if (proj) {
 						r2 = ( sqr(px-cpx-cx) + sqr(py-cpy-cy) );
 						if (r2 < h2) {
-							grid[x*ny + y] += h * _getkernel( h, r2 ) * m * v / r / sum;
+						    if(w)
+						      {
+						        grid[x*ny + y] += h * _getkernel( h, r2 ) * v * weight / sum;
+						        weightGrid[x*ny + y] += h * _getkernel( h, r2 ) * weight / sum;
+						      }
+						    else
+						      {
+							grid[x*ny + y] += h * _getkernel( h, r2 ) * v / sum;
+						      }
 						}
 					} else {				
-						for (z0=zmid; z0>=zmin; z0--) {
-							cpz = -0.5*bz + bz*(z0+0.5)/nz;
-							r2 = ( sqr(px-cpx-cx) + sqr(py-cpy-cy) + sqr(pz-cpz-cz) );
-							if (r2 > h2) break;
-							grid[(x*ny + y)*nz + z0] += _getkernel( h, r2 ) * m * v / r / sum;
+					    for (z0=zmid; z0>=zmin; z0--) {
+					        cpz = -0.5*bz + bz*(z0+0.5)/nz;
+					        r2 = ( sqr(px-cpx-cx) + sqr(py-cpy-cy) + sqr(pz-cpz-cz) );
+					        if (r2 > h2) break;
+
+
+					        if(w)
+					          {
+					            grid[(x*ny + y)*nz + z0] += _getkernel( h, r2 ) * v * weight / sum;
+					            weightGrid[(x*ny + y)*nz + z0] += _getkernel( h, r2 ) * weight / sum;
+					          }
+					        else
+					          {
+					            grid[x*ny + y] += _getkernel( h, r2 ) * v / sum;
+					          }
 						}
 
 						for (z1=zmid+1; z1<=zmax; z1++) {
 							cpz = -0.5*bz + bz*(z1+0.5)/nz;
 							r2 = ( sqr(px-cpx-cx) + sqr(py-cpy-cy) + sqr(pz-cpz-cz) );
 							if (r2 > h2) break;
-							grid[(x*ny + y)*nz + z1] += _getkernel( h, r2 ) * m * v / r / sum;
+	                                                if(w)
+	                                                  {
+	                                                    grid[(x*ny + y)*nz + z1] += _getkernel( h, r2 ) * v * weight / sum;
+	                                                    weightGrid[(x*ny + y)*nz + z1] += _getkernel( h, r2 ) * weight / sum;
+	                                                  }
+	                                                else
+	                                                  {
+	                                                    grid[(x*ny + y)*nz + z1] += _getkernel( h, r2 ) * v / sum;
+	                                                  }
 						}
 					}
 				}
@@ -206,465 +254,21 @@ PyObject* _calcGrid(PyObject *self, PyObject *args) {
 		}
 	}
 
-	printf( "Calculation took %gs\n", ((double)clock()-(double)start)/CLOCKS_PER_SEC );
-	return PyArray_Return( pyGrid );
-}
+	if(w)
+	  {
+	    for(int i = 0; i < cells; i++)
+	      {
+	        if(weightGrid[i] > 0.)
+	          {
+	            grid[i] = grid[i] / weightGrid[i];
+	          }
+	      }
 
-PyObject* _calcSlice(PyObject *self, PyObject *args) {
-	PyArrayObject *pos, *hsml, *mass, *rho, *value, *pyGrid;
-	int npart, nx, ny, cells;
-	int dims[2];
-	double bx, by, cx, cy, cz;
-	double *data_pos, *data_hsml, *data_mass, *data_rho, *data_value;
-	double *grid;
-	int part;
-	double px, py, pz, h, m, r, v, cpx, cpy, r2, h2;
-	double p[3];
-	int x, y;
-	int xmin, xmax, ymin, ymax, axis0, axis1;
-	double cellsizex, cellsizey;
-	clock_t start;
-	
-	start = clock();
-
-	axis0 = 0;
-	axis1 = 1;
-	if (!PyArg_ParseTuple( args, "O!O!O!O!O!iiddddd|ii:calcSlice( pos, hsml, mass, rho, value, nx, ny, boxx, boxy, centerx, centery, centerz, [axis0, axis1] )", &PyArray_Type, &pos, &PyArray_Type, &hsml, &PyArray_Type, &mass, &PyArray_Type, &rho, &PyArray_Type, &value, &nx, &ny, &bx, &by, &cx, &cy, &cz, &axis0, &axis1 )) {
-		return 0;
-	}
-
-	if (pos->nd != 2 || pos->dimensions[1] != 3 || pos->descr->type_num != PyArray_DOUBLE) {
-		PyErr_SetString( PyExc_ValueError, "pos has to be of dimensions [n,3] and type double" );
-		return 0;
-	}
-
-	if (hsml->nd != 1 || hsml->descr->type_num != PyArray_DOUBLE) {
-		PyErr_SetString( PyExc_ValueError, "hsml has to be of dimension [n] and type double" );
-		return 0;
-	}
-
-	if (mass->nd != 1 || mass->descr->type_num != PyArray_DOUBLE) {
-		PyErr_SetString( PyExc_ValueError, "mass has to be of dimension [n] and type double" );
-		return 0;
-	}
-
-	if (rho->nd != 1 || rho->descr->type_num != PyArray_DOUBLE) {
-		PyErr_SetString( PyExc_ValueError, "rho has to be of dimension [n] and type double" );
-		return 0;
-	}
-
-	if (value->nd != 1 || value->descr->type_num != PyArray_DOUBLE) {
-		PyErr_SetString( PyExc_ValueError, "value has to be of dimension [n] and type double" );
-		return 0;
-	}
-
-	npart = pos->dimensions[0];
-	if (npart != hsml->dimensions[0] || npart != mass->dimensions[0]  || npart != rho->dimensions[0] || npart != value->dimensions[0]) {
-		PyErr_SetString( PyExc_ValueError, "pos, hsml, mass, rho and value have to have the same size in the first dimension" );
-		return 0;
-	}
-	dims[0] = nx;
-	dims[1] = ny;
-	pyGrid = (PyArrayObject *)PyArray_FromDims( 2, dims, PyArray_DOUBLE );
-	grid = (double*)pyGrid->data;
-	cells = nx*ny;
-	memset( grid, 0, cells*sizeof(double) );
-
-	cellsizex = bx / nx;
-	cellsizey = by / ny;
-
-	data_pos = (double*)pos->data;
-	data_hsml = (double*)hsml->data;
-	data_mass = (double*)mass->data;
-	data_rho = (double*)rho->data;
-	data_value = (double*)value->data;
-
-	for (part=0; part<npart; part++) {
-		p[0] = *data_pos;
-		data_pos = (double*)((char*)data_pos + pos->strides[1]);
-		p[1] = *data_pos;
-		data_pos = (double*)((char*)data_pos + pos->strides[1]);
-		p[2] = *data_pos;
-		data_pos = (double*)((char*)data_pos - 2*pos->strides[1] + pos->strides[0]);
-		
-		px = p[ axis0 ];
-		py = p[ axis1 ];
-		pz = p[ 3 - axis0 - axis1 ];
-		
-		h = *data_hsml;
-		data_hsml = (double*)((char*)data_hsml + hsml->strides[0]);
-		h2 = h*h;
-
-		m = *data_mass;
-		data_mass = (double*)((char*)data_mass + mass->strides[0]);
-
-		r = *data_rho;
-		data_rho = (double*)((char*)data_rho + rho->strides[0]);
-
-		v = *data_value;
-		data_value = (double*)((char*)data_value + value->strides[0]);
-
-		xmin = max( floor( (px - h - cx + 0.5*bx) / cellsizex ), 0 );
-		xmax = min( ceil( (px + h - cx + 0.5*bx) / cellsizex ), nx-1 );
-		ymin = max( floor( (py - h - cy + 0.5*by) / cellsizey ), 0 );
-		ymax = min( ceil( (py + h - cy + 0.5*by) / cellsizey ), ny-1 );
-
-		if (xmin < nx && ymin < ny && xmax >= 0 && ymax >= 0 && abs(pz-cz) < h) {
-			for (x=xmin; x<=xmax; x++) {
-				cpx = -0.5*bx + bx*(x+0.5)/nx;
-				for (y=ymin; y<=ymax; y++) {
-					cpy = -0.5*by + by*(y+0.5)/ny;
-					r2 = sqr(px-cpx-cx) + sqr(py-cpy-cy) + sqr(pz-cz);
-					if (r2 > h2) continue;
-					grid[x*ny + y] += _getkernel( h, r2 ) * m * v / r;
-				}
-			}	
-		}
-	}
+	  }
 
 	printf( "Calculation took %gs\n", ((double)clock()-(double)start)/CLOCKS_PER_SEC );
 	return PyArray_Return( pyGrid );
 }
-
-PyObject* _calcGridMassWeight(PyObject *self, PyObject *args) {
-	PyArrayObject *pos, *hsml, *mass, *value, *pyGridMass, *pyGridValue;
-	int npart, nx, ny, nz, cells;
-	int dims[3];
-	double bx, by, bz, cx, cy, cz;
-	double *data_pos, *data_hsml, *data_mass, *data_value;
-	double *gridmass, *gridvalue, *massend, *massiter, *valueiter;
-	int part;
-	double px, py, pz, h, h2, m, v, cpx, cpy, cpz, r2, dmass;
-	int x, y, z0, z1;
-	int xmin, xmax, ymin, ymax, zmin, zmax, zmid;
-	double cellsizex, cellsizey, cellsizez;
-
-	if (!PyArg_ParseTuple( args, "O!O!O!O!O!iiidddddd:calcGridMassWeight( pos, hsml, mass, value, massgrid, nx, ny, nz, boxx, boxy, boxz, centerx, centery, centerz )", &PyArray_Type, &pos, &PyArray_Type, &hsml, &PyArray_Type, &mass, &PyArray_Type, &value, &PyArray_Type, &pyGridMass, &nx, &ny, &nz, &bx, &by, &bz, &cx, &cy, &cz )) {
-		return 0;
-	}
-
-	if (pos->nd != 2 || pos->dimensions[1] != 3 || pos->descr->type_num != PyArray_DOUBLE) {
-		PyErr_SetString( PyExc_ValueError, "pos has to be of dimensions [n,3] and type double" );
-		return 0;
-	}
-
-	if (hsml->nd != 1 || hsml->descr->type_num != PyArray_DOUBLE) {
-		PyErr_SetString( PyExc_ValueError, "hsml has to be of dimension [n] and type double" );
-		return 0;
-	}
-
-	if (mass->nd != 1 || mass->descr->type_num != PyArray_DOUBLE) {
-		PyErr_SetString( PyExc_ValueError, "mass has to be of dimension [n] and type double" );
-		return 0;
-	}
-
-	if (value->nd != 1 || value->descr->type_num != PyArray_DOUBLE) {
-		PyErr_SetString( PyExc_ValueError, "value has to be of dimension [n] and type double" );
-		return 0;
-	}
-
-	npart = pos->dimensions[0];
-	if (npart != hsml->dimensions[0] || npart != mass->dimensions[0] || npart != value->dimensions[0]) {
-		PyErr_SetString( PyExc_ValueError, "pos, hsml and value have to have the same size in the first dimension" );
-		return 0;
-	}
-
-	if (pyGridMass->nd != 3 || pyGridMass->dimensions[0] != nx || pyGridMass->dimensions[1] != ny || pyGridMass->dimensions[2] != nz) {
-		PyErr_SetString( PyExc_ValueError, "massgrid has to have 3 dimensions: [nx,ny,nz]" );
-		return 0;
-	}
-
-	dims[0] = nx;
-	dims[1] = ny;
-	dims[2] = nz;
-	cells = nx*ny*nz;
-	
-	gridmass = (double*)pyGridMass->data;
-	
-	pyGridValue = (PyArrayObject *)PyArray_FromDims( 3, dims, PyArray_DOUBLE );
-	gridvalue = (double*)pyGridValue->data;
-	memset( gridvalue, 0, cells*sizeof(double) );
-
-	cellsizex = bx / nx;
-	cellsizey = by / ny;
-	cellsizez = bz / nz;
-
-	data_pos = (double*)pos->data;
-	data_hsml = (double*)hsml->data;
-	data_mass = (double*)mass->data;
-	data_value = (double*)value->data;
-
-	for (part=0; part<npart; part++) {
-		px = *data_pos;
-		data_pos = (double*)((char*)data_pos + pos->strides[1]);
-		py = *data_pos;
-		data_pos = (double*)((char*)data_pos + pos->strides[1]);
-		pz = *data_pos;
-		data_pos = (double*)((char*)data_pos - 2*pos->strides[1] + pos->strides[0]);
-		
-		h = *data_hsml;
-		data_hsml = (double*)((char*)data_hsml + hsml->strides[0]);
-		h2 = h*h;
-
-		m = *data_mass;
-		data_mass = (double*)((char*)data_mass + mass->strides[0]);
-
-		v = *data_value;
-		data_value = (double*)((char*)data_value + value->strides[0]);
-
-		xmin = max( floor( (px - h - cx + 0.5*bx) / cellsizex ), 0 );
-		xmax = min( ceil( (px + h - cx + 0.5*bx) / cellsizex ), nx-1 );
-		ymin = max( floor( (py - h - cy + 0.5*by) / cellsizey ), 0 );
-		ymax = min( ceil( (py + h - cy + 0.5*by) / cellsizey ), ny-1 );
-		zmin = max( floor( (pz - h - cz + 0.5*bz) / cellsizez ), 0 );
-		zmax = min( ceil( (pz + h - cz + 0.5*bz) / cellsizez ), nz-1 );
-
-		zmid = floor( 0.5 * (zmin+zmax) + 0.5 );
-
-		if (xmin < nx && ymin < ny && xmax >= 0 && ymax >= 0 && zmin < nz && zmax >= 0) {
-			for (x=xmin; x<=xmax; x++) {
-				cpx = -0.5*bx + bx*(x+0.5)/nx;
-				for (y=ymin; y<=ymax; y++) {
-					cpy = -0.5*by + by*(y+0.5)/ny;
-					for (z0=zmid; z0>=zmin; z0--) {
-						cpz = -0.5*bz + bz*(z0+0.5)/nz;
-						r2 = ( sqr(px-cpx-cx) + sqr(py-cpy-cy) + sqr(pz-cpz-cz) );
-						if (r2 > h2) break;
-						
-						dmass = _getkernel( h, r2 ) * m;
-						gridvalue[(x*ny + y)*nz + z0] += dmass * v;
-					}
-
-					for (z1=zmid+1; z1<=zmax; z1++) {
-						cpz = -0.5*bz + bz*(z1+0.5)/nz;
-						r2 = ( sqr(px-cpx-cx) + sqr(py-cpy-cy) + sqr(pz-cpz-cz) );
-						if (r2 > h2) break;
-						
-						dmass = _getkernel( h, r2 ) * m;
-						gridvalue[(x*ny + y)*nz + z1] += dmass * v;
-					}
-				}
-			}	
-		}
-	}
-	
-	massend = &gridmass[ cells ];
-	for (massiter = gridmass, valueiter = gridvalue; massiter != massend; massiter++, valueiter++) {
-		if (*massiter > 0)
-			*valueiter /= *massiter;
-	}
-	
-	return PyArray_Return( pyGridValue );
-}
-
-PyObject* _calcDensGrid(PyObject *self, PyObject *args) {
-	PyArrayObject *pos, *hsml, *mass, *pyGrid;
-	int npart, nx, ny, nz, cells;
-	int dims[3];
-	double bx, by, bz, cx, cy, cz;
-	double *data_pos, *data_hsml, *data_mass;
-	double *grid;
-	int part;
-	double px, py, pz, h, h2, v, cpx, cpy, cpz, r2;
-	int x, y, z0, z1;
-	int xmin, xmax, ymin, ymax, zmin, zmax, zmid;
-	double cellsizex, cellsizey, cellsizez;
-	clock_t start;
-	
-	start = clock();
-	
-	if (!PyArg_ParseTuple( args, "O!O!O!iiidddddd:calcDensGrid( pos, hsml, mass, nx, ny, nz, boxx, boxy, boxz, centerx, centery, centerz )", &PyArray_Type, &pos, &PyArray_Type, &hsml, &PyArray_Type, &mass, &nx, &ny, &nz, &bx, &by, &bz, &cx, &cy, &cz )) {
-		return 0;
-	}
-
-	if (pos->nd != 2 || pos->dimensions[1] != 3 || pos->descr->type_num != PyArray_DOUBLE) {
-		PyErr_SetString( PyExc_ValueError, "pos has to be of dimensions [n,3] and type double" );
-		return 0;
-	}
-
-	if (hsml->nd != 1 || hsml->descr->type_num != PyArray_DOUBLE) {
-		PyErr_SetString( PyExc_ValueError, "hsml has to be of dimension [n] and type double" );
-		return 0;
-	}
-
-	if (mass->nd != 1 || mass->descr->type_num != PyArray_DOUBLE) {
-		PyErr_SetString( PyExc_ValueError, "mass has to be of dimension [n] and type double" );
-		return 0;
-	}
-
-	npart = pos->dimensions[0];
-	if (npart != hsml->dimensions[0] || npart != mass->dimensions[0]) {
-		PyErr_SetString( PyExc_ValueError, "pos, hsml and mass have to have the same size in the first dimension" );
-		return 0;
-	}
-
-	dims[0] = nx;
-	dims[1] = ny;
-	dims[2] = nz;
-	pyGrid = (PyArrayObject *)PyArray_FromDims( 3, dims, PyArray_DOUBLE );
-	grid = (double*)pyGrid->data;
-	cells = nx*ny*nz;
-	memset( grid, 0, cells*sizeof(double) );
-
-	cellsizex = bx / nx;
-	cellsizey = by / ny;
-	cellsizez = bz / nz;
-
-	data_pos = (double*)pos->data;
-	data_hsml = (double*)hsml->data;
-	data_mass = (double*)mass->data;
-	
-	for (part=0; part<npart; part++) {
-		px = *data_pos;
-		data_pos = (double*)((char*)data_pos + pos->strides[1]);
-		py = *data_pos;
-		data_pos = (double*)((char*)data_pos + pos->strides[1]);
-		pz = *data_pos;
-		data_pos = (double*)((char*)data_pos - 2*pos->strides[1] + pos->strides[0]);
-		
-		h = *data_hsml;
-		data_hsml = (double*)((char*)data_hsml + hsml->strides[0]);
-		h2 = h*h;
-
-		v = *data_mass;
-		data_mass = (double*)((char*)data_mass + mass->strides[0]);
-
-		xmin = max( floor( (px - h - cx + 0.5*bx) / cellsizex ), 0 );
-		xmax = min( ceil( (px + h - cx + 0.5*bx) / cellsizex ), nx-1 );
-		ymin = max( floor( (py - h - cy + 0.5*by) / cellsizey ), 0 );
-		ymax = min( ceil( (py + h - cy + 0.5*by) / cellsizey ), ny-1 );
-		zmin = max( floor( (pz - h - cz + 0.5*bz) / cellsizez ), 0 );
-		zmax = min( ceil( (pz + h - cz + 0.5*bz) / cellsizez ), nz-1 );
-
-		zmid = floor( 0.5 * (zmin+zmax) + 0.5 );
-
-		if (xmin < nx && ymin < ny && xmax >= 0 && ymax >= 0 && zmin < nz && zmax >= 0) {
-			for (x=xmin; x<=xmax; x++) {
-				cpx = -0.5*bx + bx*(x+0.5)/nx;
-				for (y=ymin; y<=ymax; y++) {
-					cpy = -0.5*by + by*(y+0.5)/ny;
-					for (z0=zmid; z0>=zmin; z0--) {
-						cpz = -0.5*bz + bz*(z0+0.5)/nz;
-						r2 = ( sqr(px-cpx-cx) + sqr(py-cpy-cy) + sqr(pz-cpz-cz) );
-						if (r2 > h2) break;
-						grid[(x*ny + y)*nz + z0] += _getkernel( h, r2 ) * v;
-					}
-
-					for (z1=zmid+1; z1<=zmax; z1++) {
-						cpz = -0.5*bz + bz*(z1+0.5)/nz;
-						r2 = ( sqr(px-cpx-cx) + sqr(py-cpy-cy) + sqr(pz-cpz-cz) );
-						if (r2 > h2) break;
-						grid[(x*ny + y)*nz + z1] += _getkernel( h, r2 ) * v;
-					}
-				}
-			}	
-		}
-	}
-
-	printf( "Calculation took %gs\n", ((double)clock()-(double)start)/CLOCKS_PER_SEC );
-	return PyArray_Return( pyGrid );
-}
-
-PyObject* _calcDensSlice(PyObject *self, PyObject *args) {
-	PyArrayObject *pos, *hsml, *mass, *pyGrid;
-	int npart, nx, ny, cells;
-	int dims[2];
-	double bx, by, cx, cy, cz;
-	double *data_pos, *data_hsml, *data_mass;
-	double *grid;
-	int part;
-	double px, py, pz, h, v, cpx, cpy, r2, h2;
-	double p[3];
-	int x, y;
-	int xmin, xmax, ymin, ymax, axis0, axis1;
-	double cellsizex, cellsizey;
-	clock_t start;
-	
-	start = clock();
-
-	axis0 = 0;
-	axis1 = 1;
-	if (!PyArg_ParseTuple( args, "O!O!O!iiddddd|ii:calcDensSlice( pos, hsml, mass, nx, ny, boxx, boxy, centerx, centery, centerz, [axis0, axis1] )", &PyArray_Type, &pos, &PyArray_Type, &hsml, &PyArray_Type, &mass, &nx, &ny, &bx, &by, &cx, &cy, &cz, &axis0, &axis1 )) {
-		return 0;
-	}
-
-	if (pos->nd != 2 || pos->dimensions[1] != 3 || pos->descr->type_num != PyArray_DOUBLE) {
-		PyErr_SetString( PyExc_ValueError, "pos has to be of dimensions [n,3] and type double" );
-		return 0;
-	}
-
-	if (hsml->nd != 1 || hsml->descr->type_num != PyArray_DOUBLE) {
-		PyErr_SetString( PyExc_ValueError, "hsml has to be of dimension [n] and type double" );
-		return 0;
-	}
-
-	if (mass->nd != 1 || mass->descr->type_num != PyArray_DOUBLE) {
-		PyErr_SetString( PyExc_ValueError, "mass has to be of dimension [n] and type double" );
-		return 0;
-	}
-
-	npart = pos->dimensions[0];
-	if (npart != hsml->dimensions[0] || npart != mass->dimensions[0]) {
-		PyErr_SetString( PyExc_ValueError, "pos, hsml and mass have to have the same size in the first dimension" );
-		return 0;
-	}
-
-	dims[0] = nx;
-	dims[1] = ny;
-	pyGrid = (PyArrayObject *)PyArray_FromDims( 2, dims, PyArray_DOUBLE );
-	grid = (double*)pyGrid->data;
-	cells = nx*ny;
-	memset( grid, 0, cells*sizeof(double) );
-
-	cellsizex = bx / nx;
-	cellsizey = by / ny;
-
-	data_pos = (double*)pos->data;
-	data_hsml = (double*)hsml->data;
-	data_mass = (double*)mass->data;
-
-	for (part=0; part<npart; part++) {
-		p[0] = *data_pos;
-		data_pos = (double*)((char*)data_pos + pos->strides[1]);
-		p[1] = *data_pos;
-		data_pos = (double*)((char*)data_pos + pos->strides[1]);
-		p[2] = *data_pos;
-		data_pos = (double*)((char*)data_pos - 2*pos->strides[1] + pos->strides[0]);
-		
-		px = p[ axis0 ];
-		py = p[ axis1 ];
-		pz = p[ 3 - axis0 - axis1 ];
-		
-		h = *data_hsml;
-		data_hsml = (double*)((char*)data_hsml + hsml->strides[0]);
-		h2 = h*h;
-
-		v = *data_mass;
-		data_mass = (double*)((char*)data_mass + mass->strides[0]);
-
-		xmin = max( floor( (px - h - cx + 0.5*bx) / cellsizex ), 0 );
-		xmax = min( ceil( (px + h - cx + 0.5*bx) / cellsizex ), nx-1 );
-		ymin = max( floor( (py - h - cy + 0.5*by) / cellsizey ), 0 );
-		ymax = min( ceil( (py + h - cy + 0.5*by) / cellsizey ), ny-1 );
-
-		if (xmin < nx && ymin < ny && xmax >= 0 && ymax >= 0 && abs(pz-cz) < h) {
-			for (x=xmin; x<=xmax; x++) {
-				cpx = -0.5*bx + bx*(x+0.5)/nx;
-				for (y=ymin; y<=ymax; y++) {
-					cpy = -0.5*by + by*(y+0.5)/ny;
-					r2 = sqr(px-cpx-cx) + sqr(py-cpy-cy) + sqr(pz-cz);
-					if (r2 > h2) continue;
-					grid[x*ny + y] += _getkernel( h, r2 ) * v;
-				}
-			}	
-		}
-	}
-
-	printf( "Calculation took %gs\n", ((double)clock()-(double)start)/CLOCKS_PER_SEC );
-	return PyArray_Return( pyGrid );
-}
-
-
 
 
 PyObject* _calcASlice(PyObject *self, PyObject *args, PyObject *kwargs) {
@@ -1036,128 +640,11 @@ PyObject* _calcAMRSlice(PyObject *self, PyObject *args, PyObject *kwargs) {
         return dict;
 }
 
-PyObject* _calcDensProjection(PyObject *self, PyObject *args) {
-	PyArrayObject *pos, *hsml, *mass, *pyGrid;
-	int npart, nx, ny, cells;
-	int dims[2];
-	double bx, by, bz, cx, cy, cz;
-	double *data_pos, *data_hsml, *data_mass;
-	double *grid;
-	int part;
-	double px, py, pz, h, v, cpx, cpy, r2, h2;
-	double p[3], weight;
-	int x, y;
-	int xmin, xmax, ymin, ymax, axis0, axis1;
-	double cellsizex, cellsizey;
-	clock_t start;
-	
-	start = clock();
-
-	axis0 = 0;
-	axis1 = 1;
-	if (!PyArg_ParseTuple( args, "O!O!O!iidddddd|ii:calcDensProjection( pos, hsml, mass, nx, ny, boxx, boxy, boxz, centerx, centery, centerz, [axis0, axis1] )", &PyArray_Type, &pos, &PyArray_Type, &hsml, &PyArray_Type, &mass, &nx, &ny, &bx, &by, &bz, &cx, &cy, &cz, &axis0, &axis1 )) {
-		return 0;
-	}
-
-	if (pos->nd != 2 || pos->dimensions[1] != 3 || pos->descr->type_num != PyArray_DOUBLE) {
-		PyErr_SetString( PyExc_ValueError, "pos has to be of dimensions [n,3] and type double" );
-		return 0;
-	}
-
-	if (hsml->nd != 1 || hsml->descr->type_num != PyArray_DOUBLE) {
-		PyErr_SetString( PyExc_ValueError, "hsml has to be of dimension [n] and type double" );
-		return 0;
-	}
-
-	if (mass->nd != 1 || mass->descr->type_num != PyArray_DOUBLE) {
-		PyErr_SetString( PyExc_ValueError, "mass has to be of dimension [n] and type double" );
-		return 0;
-	}
-
-	npart = pos->dimensions[0];
-	if (npart != hsml->dimensions[0] || npart != mass->dimensions[0]) {
-		PyErr_SetString( PyExc_ValueError, "pos, hsml and mass have to have the same size in the first dimension" );
-		return 0;
-	}
-
-	dims[0] = nx;
-	dims[1] = ny;
-	pyGrid = (PyArrayObject *)PyArray_FromDims( 2, dims, PyArray_DOUBLE );
-	grid = (double*)pyGrid->data;
-	cells = nx*ny;
-	memset( grid, 0, cells*sizeof(double) );
-
-	cellsizex = bx / nx;
-	cellsizey = by / ny;
-
-	data_pos = (double*)pos->data;
-	data_hsml = (double*)hsml->data;
-	data_mass = (double*)mass->data;
-
-	for (part=0; part<npart; part++) {
-		p[0] = *data_pos;
-		data_pos = (double*)((char*)data_pos + pos->strides[1]);
-		p[1] = *data_pos;
-		data_pos = (double*)((char*)data_pos + pos->strides[1]);
-		p[2] = *data_pos;
-		data_pos = (double*)((char*)data_pos - 2*pos->strides[1] + pos->strides[0]);
-		
-		px = p[ axis0 ];
-		py = p[ axis1 ];
-		pz = p[ 3 - axis0 - axis1 ];
-		
-		h = *data_hsml;
-		data_hsml = (double*)((char*)data_hsml + hsml->strides[0]);
-		h2 = h*h;
-
-		v = *data_mass;
-		data_mass = (double*)((char*)data_mass + mass->strides[0]);
-
-		xmin = max( floor( (px - h - cx + 0.5*bx) / cellsizex ), 0 );
-		xmax = min( ceil( (px + h - cx + 0.5*bx) / cellsizex ), nx-1 );
-		ymin = max( floor( (py - h - cy + 0.5*by) / cellsizey ), 0 );
-		ymax = min( ceil( (py + h - cy + 0.5*by) / cellsizey ), ny-1 );
-		
-		if (xmin < nx && ymin < ny && xmax >= 0 && ymax >= 0 && pz > cz - 0.5*bz && pz < cz + 0.5*bz) {
-                        weight = 0;
-			for (x=xmin; x<=xmax; x++) {
-				cpx = -0.5*bx + bx*(x+0.5)/nx;
-				for (y=ymin; y<=ymax; y++) {
-					cpy = -0.5*by + by*(y+0.5)/ny;
-					r2 = sqr(px-cpx-cx) + sqr(py-cpy-cy);
-					if (r2 > h2) continue;
-					weight += h * _getkernel( h, r2 );
-				}
-			}
-			
-			if (weight > 0)
-			  {
-    			for (x=xmin; x<=xmax; x++) {
-    				cpx = -0.5*bx + bx*(x+0.5)/nx;
-    				for (y=ymin; y<=ymax; y++) {
-    					cpy = -0.5*by + by*(y+0.5)/ny;
-    					r2 = sqr(px-cpx-cx) + sqr(py-cpy-cy);
-    					if (r2 > h2) continue;
-    					grid[x*ny + y] += h * _getkernel( h, r2 ) * v / weight;
-    				}
-    			}
-    	  }
-		}
-	}
-
-	printf( "Calculation took %gs\n", ((double)clock()-(double)start)/CLOCKS_PER_SEC );
-	return PyArray_Return( pyGrid );
-}
 
 static PyMethodDef calcGridmethods[] = {
-	{ "calcGrid", _calcGrid, METH_VARARGS, "" },
-	{ "calcSlice", _calcSlice, METH_VARARGS, "" },
-	{ "calcDensGrid", _calcDensGrid, METH_VARARGS, "" },
-	{ "calcDensSlice", _calcDensSlice, METH_VARARGS, "" },
-	{ "calcGridMassWeight", _calcGridMassWeight, METH_VARARGS, "" },
+	{ "calcGrid", (PyCFunction)_calcGrid, METH_VARARGS | METH_KEYWORDS, "" },
 	{ "calcASlice", (PyCFunction)_calcASlice, METH_VARARGS | METH_KEYWORDS, "" },
         { "calcAMRSlice", (PyCFunction)_calcAMRSlice, METH_VARARGS | METH_KEYWORDS, "" },
-	{ "calcDensProjection", _calcDensProjection, METH_VARARGS, "" },
 	{ NULL, NULL, 0, NULL }
 };
 
