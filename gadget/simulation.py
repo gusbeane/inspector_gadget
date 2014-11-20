@@ -310,7 +310,7 @@ class Simulation(Snapshot):
 
         posdata = pos[pp,:]
         valdata = group[value][pp].astype('float64')
-        hsmldata = group[hsml].astype("float64")
+        hsmldata = group[hsml][pp].astype("float64")
 
         
         if weights==None:
