@@ -401,7 +401,10 @@ class Simulation(Snapshot):
             row = int((y-dymin)/ddy+0.5)
             if col>=0 and col<dxmax and row>=0 and row<dymax:
                 z = dval[row,col]
-                return 'x=%1.4f, y=%1.4f, %s=%.4g'%(x, y, dresult["name"], z)
+                if dresult["name"] == "id":
+                    return 'x=%1.4f, y=%1.4f, %s=%d'%(x, y, dresult["name"], int(z))
+                else:
+                    return 'x=%1.4f, y=%1.4f, %s=%.4e'%(x, y, dresult["name"], z)
             else:
                 return 'x=%1.4f, y=%1.4f'%(x, y)
 
