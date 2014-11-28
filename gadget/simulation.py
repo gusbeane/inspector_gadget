@@ -381,7 +381,7 @@ class Simulation(Snapshot):
             x2 = result['x2']
             y2 = result['y2']
             contours = result['contours']
-            axes.contour(x2, y2, contours.T, levels=[0.99], colors="w")
+            axes.contour(x2, y2, contours.T, levels=[0.99], colors="black")
         
         axes.axis( "image" )
         
