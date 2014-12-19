@@ -1,6 +1,7 @@
 import numpy as np
 import re
 import functools
+import os
 
 import gadget.fields as flds
 
@@ -505,10 +506,15 @@ class Header(object):
         return self.__dict__.keys() + self.__attrs__
     
     def __str__(self):
+        filename = os.path.abspath(self.__parent__.filename)
         if isinstance(self.__parent__, Snapshot):
-            tmp = "snapshot "+self.__parent__.filename+":\n"
+            tmp = "snapshot "+filename+"\n"
+        elif isinstance(self.__parent__, ICs):
+            tmp = "ICs "+filename+"\n"
         else:
-            tmp = "subfind output "+self.__parent__.filename+":\n"
+            tmp = "subfind output "+filename+"\n"
+            
+        tmp += "header:\n"
             
         for entry in flds.headerfields:
             if hasattr(self,entry):
@@ -522,10 +528,13 @@ class Header(object):
         return tmp
 
     def __repr__(self):
+        filename = os.path.abspath(self.__parent__.filename)
         if isinstance(self.__parent__, Snapshot):
-            return "snapshot "+self.__parent__.filename
+            return "snapshot "+filename
+        elif isinstance(self.__parent__, ICs):
+            return "ICs "+filename
         else:
-            return "subfind output "+self.__parent__.filename
+            return "subfind output "+filename
 
 class PartGroup(object):
     def __init__(self,parent,num):
@@ -533,13 +542,16 @@ class PartGroup(object):
         self.__num__ = num
 
     def __str__(self):
+        filename = os.path.abspath(self.__parent__.filename)
         if isinstance(self.__parent__, Snapshot):
-            tmp = "snapshot "+self.__parent__.filename+"\nparticle group %d contains %d particles:\n"%(self.__num__,self.__parent__.npart_loaded[self.__num__])
+            tmp = "snapshot "+filename+"\nparticle group %d (%d particles):\n"%(self.__num__,self.__parent__.npart_loaded[self.__num__])
+        elif isinstance(self.__parent__, ICs):
+            tmp = "ICs "+filename+"\nparticle group %d (%d particles):\n"%(self.__num__,self.__parent__.npart_loaded[self.__num__])
         else:
             if self.__num__ == 0:
-                tmp = "subfind output "+self.__parent__.filename+"\ncontains %d groups:\n"%(self.__parent__.npart_loaded[self.__num__])
+                tmp = "subfind output "+filename+"\groups (%d groups):\n"%(self.__parent__.npart_loaded[self.__num__])
             else:
-                tmp = "subfind output "+self.__parent__.filename+"\ncontains %d subhalos:\n"%(self.__parent__.npart_loaded[self.__num__])
+                tmp = "subfind output "+filename+"\subhalos (%d subhalos):\n"%(self.__parent__.npart_loaded[self.__num__])
             
         for i in self.data.keys():
             if flds.shortnames.has_key(i):
@@ -549,13 +561,16 @@ class PartGroup(object):
         return tmp
         
     def __repr__(self):
+        filename = os.path.abspath(self.__parent__.filename)
         if isinstance(self.__parent__, Snapshot):
-            return "snapshot "+self.__parent__.filename+", particle group %d contains %d particles"%(self.__num__,self.__parent__.npart_loaded[self.__num__])
+            return "snapshot "+filename+", particle group %d contains %d particles"%(self.__num__,self.__parent__.npart_loaded[self.__num__])
+        elif isinstance(self.__parent__, ICs):
+            return "ICs "+filename+", particle group %d contains %d particles"%(self.__num__,self.__parent__.npart_loaded[self.__num__])
         else:
             if self.__num__ == 0:
-                return "subfind output "+self.__parent__.filename+", contains %d groups"%(self.__parent__.npart_loaded[self.__num__])
+                return "subfind output "+filename+", contains %d groups"%(self.__parent__.npart_loaded[self.__num__])
             else:
-                return "subfind output "+self.__parent__.filename+", contains %d subhalos"%(self.__parent__.npart_loaded[self.__num__])
+                return "subfind output "+filename+", contains %d subhalos"%(self.__parent__.npart_loaded[self.__num__])
 
     def __getitem__(self, item):
         item = self.__parent__.__normalizeName__(item)
