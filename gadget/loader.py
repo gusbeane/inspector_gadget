@@ -58,13 +58,8 @@ class Loader(object):
             self.__fields__[i] = self.__normalizeName__(self.__fields__[i])
                     
     def __getattr__(self,attr):       
-        attr = self.__normalizeName__(attr)
+        return self.__getitem__(attr)
 
-        if attr in self.data:
-            return self.data[attr]
-        else:
-            raise AttributeError("unknown field '%s'"%attr)
-        
     def __setattr__(self,attr,val):
         attr = self.__normalizeName__(attr)
         
@@ -89,8 +84,30 @@ class Loader(object):
 
     def __getitem__(self, item):
         item = self.__normalizeName__(item)
-        return self.data[item]
-    
+        
+        if item in self.data:
+            return self.data[item]
+        else:
+            m = re.match("([^_]*)_([0-9xyz][0-9]*)",item)
+
+            if m != None:
+                g = m.groups()
+                if len(g) == 2:
+                    it = self.__normalizeName__(g[0])
+                    if it in self.data:
+                        if g[1] == 'x':
+                            i = 0
+                        elif g[1] == 'y':
+                            i = 1
+                        elif g[1] == 'z':
+                            i = 2
+                        else:
+                            i = int(g[1])
+                        d = self.data[it]
+                        if d.ndim == 2 and d.shape[1] > i:
+                            return d[:,i]
+        
+        raise AttributeError("unknown field '%s'"%item)
     
     def __normalizeName__(self, name):
         name = flds.hdf5toformat2.get(name,name)
@@ -577,17 +594,39 @@ class PartGroup(object):
         parent = self.__parent__
         num = self.__num__
         
+        f = None
+        
         if item in parent.data:
-            pres = parent.__isPresent__(item)
-            if pres[num]>0:
-                f = parent.data[item]
+            f = parent.data[item]
+            it = item
+        else:
+            m = re.match("([^_]*)_([0-9xyz][0-9]*)",item)
+
+            if m != None:
+                g = m.groups()
+                if len(g) == 2:
+                    it = self.__parent__.__normalizeName__(g[0])
+                    if it in parent.data:
+                        if g[1] == 'x':
+                            i = 0
+                        elif g[1] == 'y':
+                            i = 1
+                        elif g[1] == 'z':
+                            i = 2
+                        else:
+                            i = int(g[1])
+                            
+                        d = parent.data[it]
+                        if d.ndim == 2 and d.shape[1] > i:
+                            f = d[:,i]
+        if not f is None:
+            pres = parent.__isPresent__(it)
+            if pres[num]>0:       
                 n1 = np.where(pres>0, parent.npart_loaded,np.zeros(6,dtype=np.longlong))
                 tmp = np.sum(n1[0:num])
                 return f[tmp:tmp+parent.npart_loaded[num]]
-            else:
-                raise AttributeError("'%s' is not available for part type %d"%(item,num))
-        else:
-            raise AttributeError("unknown field '%s'"%item)
+        
+        raise AttributeError("unknown field '%s'"%item)
     
     def __setattr__(self,attr,val):
         if attr =='__parent__':
@@ -619,17 +658,8 @@ class PartGroup(object):
                             tmp = np.sum(n1[0:num])
                             data[key] = f[tmp:tmp+parent.npart_loaded[num]]
             return data  
-        elif attr in parent.data:
-            pres = parent.__isPresent__(attr)
-            if pres[num]>0:
-                f = parent.data[attr]
-                n1 = np.where(pres>0, parent.npart_loaded,np.zeros(6,dtype=np.longlong))
-                tmp = np.sum(n1[0:num])
-                return f[tmp:tmp+parent.npart_loaded[num]]
-            else:
-                raise AttributeError("'%s' is not available for part type %d"%(attr,num))
         else:
-            raise AttributeError("unknown field '%s'"%attr)
+            return self.__getitem__(attr)
         
     def __dir__(self):
         parent = self.__parent__
