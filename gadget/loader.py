@@ -30,7 +30,7 @@ class Loader(object):
         self.__combineFiles__ = combineFiles
         self.__toDouble__ = toDouble
         
-        if parttype == None:
+        if parttype is None:
             parttype = np.array([0,1,2,3,4,5])
         elif type(parttype) == list:
             parttype = np.array(parttype)
@@ -51,7 +51,7 @@ class Loader(object):
             
         
     def __normalizeFields__(self):
-        if self.__fields__ == None:
+        if self.__fields__ is None:
             return
 
         for i in np.arange(len(self.__fields__)):
@@ -201,9 +201,9 @@ class Loader(object):
                 raise Exception( "Creating format2 snapshots is not supported yet")
     
     def nextFile(self, num=None):
-        if self.currFile == None:
+        if self.currFile is None:
             return False
-        if num == None:
+        if num is None:
             if self.currFile < self.num_files-1:
                 num = self.currFile+1
             else:
@@ -245,7 +245,7 @@ class Loader(object):
         return True
 
     def iterFiles(self):
-        if self.currFile == None:
+        if self.currFile is None:
             yield self
             return
 
@@ -381,10 +381,10 @@ class ICs(Loader):
         
         self.__parttype__ = np.where(num_part>0)[0]
         
-        if masses == None:
+        if masses is None:
             masses = np.zeros(6)
             
-        if precision == None:
+        if precision is None:
             precision = np.float32
             
         self.__precision__ = precision
@@ -445,7 +445,7 @@ class ICs(Loader):
 
 class Subfind(Loader):
     def __init__(self,filename, format=None, fields=None, parttype=None, combineFiles=False, toDouble=False, onlyHeader=False, verbose=False, **param):
-        if parttype == None:
+        if parttype is None:
             parttype = np.array([0,1])
         elif type(parttype) == list:
             parttype = np.array(parttype)

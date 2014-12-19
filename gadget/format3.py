@@ -239,7 +239,7 @@ class Format3:
                                         
                                 self.sn.data[name] = np.empty(s, dtype=datatype)
                                     
-                            if filter == None:
+                            if filter is None:
                                 self.sn.data[name][n2[0:gr].sum()+n1[gr]:n2[0:gr].sum()+n1[gr]+shape[0]] = d
                                 elements = d.shape[0]
                             elif len(indices[gr][i]) > 0:
