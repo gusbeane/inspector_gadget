@@ -8,6 +8,7 @@
 #include <string.h>
 #include <time.h>
 #include "sph.h"
+#include "dg.h"
 
 #define min(x,y) ((x) < (y) ? (x) : (y))
 #define max(x,y) ((x) > (y) ? (x) : (y))
@@ -641,11 +642,209 @@ PyObject* _calcAMRSlice(PyObject *self, PyObject *args, PyObject *kwargs) {
         return dict;
 }
 
+PyObject* _calcDGSlice(PyObject *self, PyObject *args, PyObject *kwargs) {
+        PyArrayObject *pos, *value, *amrlevel, *pyGrid, *pyNeighbours, *pyContours;
+        int npart, nx, ny, nz, axis0, axis1, proj, grid3D, ngbs;
+        int x, y, z, i, j, cell;;
+        double bx, by, bz, cx, cy, cz;
+        double domainx, domainy, domainz, domainlen;
+        double *real_pos, *real_value;
+        double *grid, coord[3];
+        int *real_level;
+        double cellsizex, cellsizey, cellsizez;
+        int neighbour, *neighbours, *contours;
+        t_sph_tree tree;
+        PyObject *dict;
+        clock_t start;
+        char *kwlist[] = {"pos", "value", "amrlevel", "nx", "ny", "boxx", "boxy", "centerx", "centery", "centerz", "domainx", "domainy", "domainz", "domainlen", "axis0", "axis1", "proj", "nz", "boxz", "grid3D", "ngbs", NULL} ;
+
+        start = clock();
+
+        axis0 = 0;
+        axis1 = 1;
+        proj = 0;
+        nz = 0;
+        bz = 0;
+        grid3D = 0;
+        ngbs = 1;
+        if (!PyArg_ParseTupleAndKeywords( args, kwargs, "O!O!O!iiddddddddd|iiiidii:calcDGSlice( pos, value, amrlevel, nx, ny, boxx, boxy, centerx, centery, centerz, domainx, domainy, domainz, domainlen, [axis0, axis1, proj, nz, boxz, grid3D, ngbs] )", kwlist, &PyArray_Type, &pos, &PyArray_Type, &value, &PyArray_Type, &amrlevel, &nx, &ny, &bx, &by, &cx, &cy, &cz, &domainx, &domainy, &domainz, &domainlen, &axis0, &axis1, &proj, &nz, &bz, &grid3D, &ngbs )) {
+                return 0;
+        }
+
+        if (proj || grid3D)
+        {
+                if (nz == 0)
+                        nz = max( nx, ny );
+                if (bz == 0)
+                        bz = max( bx, by );
+        }
+        else
+        {
+                nz = 1;
+                bz = 0;
+        }
+
+        if (proj || grid3D)
+                ngbs = 0;
+
+        if (pos->nd != 2 || pos->dimensions[1] != 3 || pos->descr->type_num != PyArray_DOUBLE) {
+                PyErr_SetString( PyExc_ValueError, "pos has to be of dimensions [n,3] and type double" );
+                return 0;
+        }
+
+        if (value->nd != 2 || value->descr->type_num != PyArray_DOUBLE) {
+                PyErr_SetString( PyExc_ValueError, "value has to be of dimension [n,no_of_degrees] and type double" );
+                return 0;
+        }
+
+        if (amrlevel->nd != 1 || !PyArray_ISINTEGER(amrlevel)) {
+                PyErr_SetString( PyExc_ValueError, "value has to be of dimension [n] and type int" );
+                return 0;
+        }
+
+        double amr_length[40];
+        amr_length[0] = domainlen;
+        for(i = 1; i < 40; i++)
+          {
+            amr_length[i] = amr_length[i - 1] / 2;
+
+          }
+
+        int degree = pos->dimensions[1];
+
+        npart = pos->dimensions[0];
+        if (npart != value->dimensions[0]) {
+                PyErr_SetString( PyExc_ValueError, "pos and value have to have the same size in the first dimension" );
+                return 0;
+        }
+
+        if (grid3D) {
+                npy_intp dims[3];
+                dims[0] = nx;
+                dims[1] = ny;
+                dims[2] = nz;
+                pyGrid = (PyArrayObject *)PyArray_SimpleNew( 3, (npy_intp*)dims, NPY_DOUBLE );
+                grid = (double*)pyGrid->data;
+                memset( grid, 0, nx * ny * nz * sizeof(double) );
+                printf( "Doing 3D Grid of size %d x %d x %d\n", nx, ny, nz );
+        } else {
+                npy_intp dims[2];
+                dims[0] = nx;
+                dims[1] = ny;
+                pyGrid = (PyArrayObject *)PyArray_SimpleNew( 2, (npy_intp*)dims, NPY_DOUBLE );
+                grid = (double*)pyGrid->data;
+                memset( grid, 0, nx * ny * sizeof(double) );
+
+                if (ngbs) {
+                        pyNeighbours = (PyArrayObject *)PyArray_SimpleNew( 2, (npy_intp*)dims, NPY_INT );
+                        neighbours = (int*)pyNeighbours->data;
+                        pyContours = (PyArrayObject *)PyArray_SimpleNew( 2, (npy_intp*)dims, NPY_INT );
+                        contours = (int*)pyContours->data;
+                        memset( contours, 0, nx * ny * sizeof(int) );
+                }
+        }
+
+        real_pos = (double*)malloc( 3 * npart * sizeof( double ) );
+        real_value = (double*)malloc( npart * degree * sizeof( double ) );
+        real_level = (int*)malloc( npart * sizeof(int));
+
+        for (i=0; i<npart; i++) {
+          for (j=0; j<3; j++) {
+            real_pos[i*3+j] = *(double*)((char*)pos->data + i*pos->strides[0] + j*pos->strides[1]);
+          }
+          for(j = 0; j < 3; j++)
+            {
+              real_value[i*degree + j] = *(double*)((char*)value->data + i*value->strides[0] + j*value->strides[1]);
+            }
+
+          real_level[i] = *(int*)((char*)amrlevel->data + i*amrlevel->strides[0]);
+        }
+
+        double center[3];
+        center[0] = domainx;
+        center[1] = domainy;
+        center[2] = domainz;
+
+        createTree( &tree, npart, real_pos , domainlen, center);
+
+        cellsizex = bx / nx;
+        cellsizey = by / ny;
+
+        if (proj || grid3D)
+                cellsizez = bz / nz;
+        else
+                cellsizez = 0;
+
+        coord[ 3 - axis0 - axis1 ] = cz;
+        neighbour = 0;
+        cell = 0;
+
+        for (x=0; x<nx; x++) {
+          coord[ axis0 ] = cx - 0.5 * bx + cellsizex * (0.5 + x);
+          for (y=0; y<ny; y++) {
+            coord[ axis1 ] = cy - 0.5 * by + cellsizey * (0.5 + y);
+            for (z=0; z<nz; z++) {
+              coord[ 3-axis0-axis1 ] = cz - 0.5 * bz + cellsizez * (0.5 + z);
+
+              neighbour = getNearestNode( &tree, coord );
+
+              grid[ cell ] += dg_get_value(&real_value[ degree * neighbour ], degree, real_pos[3 * neighbour + 0],  real_pos[3 * neighbour + 1], amr_length[real_level[neighbour]], coord[ axis0 ], coord[ axis1 ]  );
+
+              if (ngbs) neighbours[ cell ] = neighbour;
+
+              if (grid3D) cell++; /* 3d grid */
+            }
+            if (!grid3D) cell++; /* 2d projection or grid */
+          }
+
+          if (ngbs) neighbour = neighbours[ cell - ny ];
+        }
+
+        freeTree( &tree );
+
+        free(real_level);
+        free( real_pos );
+        free( real_value );
+
+        if (ngbs)
+          for (x=1; x<nx-1; x++) {
+            for (y=1; y<ny-1; y++) {
+              neighbour = neighbours[ x*ny + y ];
+              if (neighbours[ (x-1)*ny + y-1 ] != neighbour ||
+                  neighbours[  x   *ny + y-1 ] != neighbour ||
+                  neighbours[ (x+1)*ny + y-1 ] != neighbour ||
+                  neighbours[ (x-1)*ny + y   ] != neighbour ||
+                  neighbours[ (x+1)*ny + y   ] != neighbour ||
+                  neighbours[ (x-1)*ny + y+1 ] != neighbour ||
+                  neighbours[  x   *ny + y+1 ] != neighbour ||
+                  neighbours[ (x+1)*ny + y+1 ] != neighbour) {
+                contours[ x*ny + y ] = 1;
+              } else {
+                contours[ x*ny + y ] = 0;
+              }
+            }
+          }
+
+        dict = PyDict_New();
+        PyDict_SetStolenItem( dict, "grid", (PyObject*)pyGrid );
+
+        if (ngbs)
+        {
+                PyDict_SetStolenItem( dict, "neighbours", (PyObject*)pyNeighbours );
+                PyDict_SetStolenItem( dict, "contours", (PyObject*)pyContours );
+        }
+
+        printf( "Calculation took %gs\n", ((double)clock()-(double)start)/CLOCKS_PER_SEC );
+        return dict;
+}
+
+
 
 static PyMethodDef calcGridmethods[] = {
 	{ "calcGrid", (PyCFunction)_calcGrid, METH_VARARGS | METH_KEYWORDS, "" },
 	{ "calcASlice", (PyCFunction)_calcASlice, METH_VARARGS | METH_KEYWORDS, "" },
         { "calcAMRSlice", (PyCFunction)_calcAMRSlice, METH_VARARGS | METH_KEYWORDS, "" },
+        { "calcDGSlice", (PyCFunction)_calcDGSlice, METH_VARARGS | METH_KEYWORDS, "" },
 	{ NULL, NULL, 0, NULL }
 };
 
