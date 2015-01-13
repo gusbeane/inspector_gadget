@@ -1,6 +1,7 @@
 import numpy as np
 import re
 import functools
+import os
 
 import gadget.fields as flds
 
@@ -29,7 +30,7 @@ class Loader(object):
         self.__combineFiles__ = combineFiles
         self.__toDouble__ = toDouble
         
-        if parttype == None:
+        if parttype is None:
             parttype = np.array([0,1,2,3,4,5])
         elif type(parttype) == list:
             parttype = np.array(parttype)
@@ -50,20 +51,15 @@ class Loader(object):
             
         
     def __normalizeFields__(self):
-        if self.__fields__ == None:
+        if self.__fields__ is None:
             return
 
         for i in np.arange(len(self.__fields__)):
             self.__fields__[i] = self.__normalizeName__(self.__fields__[i])
                     
     def __getattr__(self,attr):       
-        attr = self.__normalizeName__(attr)
+        return self.__getitem__(attr)
 
-        if attr in self.data:
-            return self.data[attr]
-        else:
-            raise AttributeError("unknown field '%s'"%attr)
-        
     def __setattr__(self,attr,val):
         attr = self.__normalizeName__(attr)
         
@@ -88,8 +84,30 @@ class Loader(object):
 
     def __getitem__(self, item):
         item = self.__normalizeName__(item)
-        return self.data[item]
-    
+        
+        if item in self.data:
+            return self.data[item]
+        else:
+            m = re.match("([^_]*)_([0-9xyz][0-9]*)",item)
+
+            if m != None:
+                g = m.groups()
+                if len(g) == 2:
+                    it = self.__normalizeName__(g[0])
+                    if it in self.data:
+                        if g[1] == 'x':
+                            i = 0
+                        elif g[1] == 'y':
+                            i = 1
+                        elif g[1] == 'z':
+                            i = 2
+                        else:
+                            i = int(g[1])
+                        d = self.data[it]
+                        if d.ndim == 2 and d.shape[1] > i:
+                            return d[:,i]
+        
+        raise AttributeError("unknown field '%s'"%item)
     
     def __normalizeName__(self, name):
         name = flds.hdf5toformat2.get(name,name)
@@ -200,9 +218,9 @@ class Loader(object):
                 raise Exception( "Creating format2 snapshots is not supported yet")
     
     def nextFile(self, num=None):
-        if self.currFile == None:
+        if self.currFile is None:
             return False
-        if num == None:
+        if num is None:
             if self.currFile < self.num_files-1:
                 num = self.currFile+1
             else:
@@ -244,7 +262,7 @@ class Loader(object):
         return True
 
     def iterFiles(self):
-        if self.currFile == None:
+        if self.currFile is None:
             yield self
             return
 
@@ -380,10 +398,10 @@ class ICs(Loader):
         
         self.__parttype__ = np.where(num_part>0)[0]
         
-        if masses == None:
+        if masses is None:
             masses = np.zeros(6)
             
-        if precision == None:
+        if precision is None:
             precision = np.float32
             
         self.__precision__ = precision
@@ -444,7 +462,7 @@ class ICs(Loader):
 
 class Subfind(Loader):
     def __init__(self,filename, format=None, fields=None, parttype=None, combineFiles=False, toDouble=False, onlyHeader=False, verbose=False, **param):
-        if parttype == None:
+        if parttype is None:
             parttype = np.array([0,1])
         elif type(parttype) == list:
             parttype = np.array(parttype)
@@ -505,10 +523,15 @@ class Header(object):
         return self.__dict__.keys() + self.__attrs__
     
     def __str__(self):
+        filename = os.path.abspath(self.__parent__.filename)
         if isinstance(self.__parent__, Snapshot):
-            tmp = "snapshot "+self.__parent__.filename+":\n"
+            tmp = "snapshot "+filename+"\n"
+        elif isinstance(self.__parent__, ICs):
+            tmp = "ICs "+filename+"\n"
         else:
-            tmp = "subfind output "+self.__parent__.filename+":\n"
+            tmp = "subfind output "+filename+"\n"
+            
+        tmp += "header:\n"
             
         for entry in flds.headerfields:
             if hasattr(self,entry):
@@ -522,10 +545,13 @@ class Header(object):
         return tmp
 
     def __repr__(self):
+        filename = os.path.abspath(self.__parent__.filename)
         if isinstance(self.__parent__, Snapshot):
-            return "snapshot "+self.__parent__.filename
+            return "snapshot "+filename
+        elif isinstance(self.__parent__, ICs):
+            return "ICs "+filename
         else:
-            return "subfind output "+self.__parent__.filename
+            return "subfind output "+filename
 
 class PartGroup(object):
     def __init__(self,parent,num):
@@ -533,13 +559,16 @@ class PartGroup(object):
         self.__num__ = num
 
     def __str__(self):
+        filename = os.path.abspath(self.__parent__.filename)
         if isinstance(self.__parent__, Snapshot):
-            tmp = "snapshot "+self.__parent__.filename+"\nparticle group %d contains %d particles:\n"%(self.__num__,self.__parent__.npart_loaded[self.__num__])
+            tmp = "snapshot "+filename+"\nparticle group %d (%d particles):\n"%(self.__num__,self.__parent__.npart_loaded[self.__num__])
+        elif isinstance(self.__parent__, ICs):
+            tmp = "ICs "+filename+"\nparticle group %d (%d particles):\n"%(self.__num__,self.__parent__.npart_loaded[self.__num__])
         else:
             if self.__num__ == 0:
-                tmp = "subfind output "+self.__parent__.filename+"\ncontains %d groups:\n"%(self.__parent__.npart_loaded[self.__num__])
+                tmp = "subfind output "+filename+"\groups (%d groups):\n"%(self.__parent__.npart_loaded[self.__num__])
             else:
-                tmp = "subfind output "+self.__parent__.filename+"\ncontains %d subhalos:\n"%(self.__parent__.npart_loaded[self.__num__])
+                tmp = "subfind output "+filename+"\subhalos (%d subhalos):\n"%(self.__parent__.npart_loaded[self.__num__])
             
         for i in self.data.keys():
             if flds.shortnames.has_key(i):
@@ -549,30 +578,55 @@ class PartGroup(object):
         return tmp
         
     def __repr__(self):
+        filename = os.path.abspath(self.__parent__.filename)
         if isinstance(self.__parent__, Snapshot):
-            return "snapshot "+self.__parent__.filename+", particle group %d contains %d particles"%(self.__num__,self.__parent__.npart_loaded[self.__num__])
+            return "snapshot "+filename+", particle group %d contains %d particles"%(self.__num__,self.__parent__.npart_loaded[self.__num__])
+        elif isinstance(self.__parent__, ICs):
+            return "ICs "+filename+", particle group %d contains %d particles"%(self.__num__,self.__parent__.npart_loaded[self.__num__])
         else:
             if self.__num__ == 0:
-                return "subfind output "+self.__parent__.filename+", contains %d groups"%(self.__parent__.npart_loaded[self.__num__])
+                return "subfind output "+filename+", contains %d groups"%(self.__parent__.npart_loaded[self.__num__])
             else:
-                return "subfind output "+self.__parent__.filename+", contains %d subhalos"%(self.__parent__.npart_loaded[self.__num__])
+                return "subfind output "+filename+", contains %d subhalos"%(self.__parent__.npart_loaded[self.__num__])
 
     def __getitem__(self, item):
         item = self.__parent__.__normalizeName__(item)
         parent = self.__parent__
         num = self.__num__
         
+        f = None
+        
         if item in parent.data:
-            pres = parent.__isPresent__(item)
-            if pres[num]>0:
-                f = parent.data[item]
+            f = parent.data[item]
+            it = item
+        else:
+            m = re.match("([^_]*)_([0-9xyz][0-9]*)",item)
+
+            if m != None:
+                g = m.groups()
+                if len(g) == 2:
+                    it = self.__parent__.__normalizeName__(g[0])
+                    if it in parent.data:
+                        if g[1] == 'x':
+                            i = 0
+                        elif g[1] == 'y':
+                            i = 1
+                        elif g[1] == 'z':
+                            i = 2
+                        else:
+                            i = int(g[1])
+                            
+                        d = parent.data[it]
+                        if d.ndim == 2 and d.shape[1] > i:
+                            f = d[:,i]
+        if not f is None:
+            pres = parent.__isPresent__(it)
+            if pres[num]>0:       
                 n1 = np.where(pres>0, parent.npart_loaded,np.zeros(6,dtype=np.longlong))
                 tmp = np.sum(n1[0:num])
                 return f[tmp:tmp+parent.npart_loaded[num]]
-            else:
-                raise AttributeError("'%s' is not available for part type %d"%(item,num))
-        else:
-            raise AttributeError("unknown field '%s'"%item)
+        
+        raise AttributeError("unknown field '%s'"%item)
     
     def __setattr__(self,attr,val):
         if attr =='__parent__':
@@ -604,17 +658,8 @@ class PartGroup(object):
                             tmp = np.sum(n1[0:num])
                             data[key] = f[tmp:tmp+parent.npart_loaded[num]]
             return data  
-        elif attr in parent.data:
-            pres = parent.__isPresent__(attr)
-            if pres[num]>0:
-                f = parent.data[attr]
-                n1 = np.where(pres>0, parent.npart_loaded,np.zeros(6,dtype=np.longlong))
-                tmp = np.sum(n1[0:num])
-                return f[tmp:tmp+parent.npart_loaded[num]]
-            else:
-                raise AttributeError("'%s' is not available for part type %d"%(attr,num))
         else:
-            raise AttributeError("unknown field '%s'"%attr)
+            return self.__getitem__(attr)
         
     def __dir__(self):
         parent = self.__parent__

@@ -29,10 +29,10 @@ class Simulation(Snapshot):
         self.set_center(None)
         
     def __validate_vector__(self, vector, default, len=None):
-        if len == None:
+        if len is None:
             len = self.numdims
 
-        if vector == None:
+        if vector is None:
             if type(default) == np.ndarray or type(default) == list:
                 default = default[:len]
             vector = default
@@ -42,19 +42,22 @@ class Simulation(Snapshot):
         if len == 0:
             return v
         
-        v[:len] = vector
+        if type(vector) == np.ndarray or type(vector) == list:
+            v[:len] = vector[:len]
+        else:
+            v[:len] = vector
         
         return v
         
     def set_center(self, center):
-        self.center = self.__validate_vector__(center, self.boxsize/2)
+        self.center = self.__validate_vector__(center, self.boxsize/2, len=3)
         return
     
     def r(self, center=None, periodic=True, group=None):
-        if group == None:
+        if group is None:
             group = self
             
-        center = self.__validate_vector__(center, self.center)
+        center = self.__validate_vector__(center, self.center, len=3)
 
         dx = group["pos"][:,0]-center[0]
         dy = group["pos"][:,1]-center[1]
@@ -73,7 +76,7 @@ class Simulation(Snapshot):
         return radius
     
     def centerat(self, center, group=None):
-        if group == None:
+        if group is None:
             group = self
             
         center = self.__validate_vector__(center, self.center)
@@ -84,7 +87,7 @@ class Simulation(Snapshot):
         return
     
     def __get_radhist__(self, value, center=None, bins=100, range=None, log=False, periodic=True, group=None):
-        if group == None:
+        if group is None:
             group = self
 
         center = self.__validate_vector__(center, self.center)
@@ -93,7 +96,7 @@ class Simulation(Snapshot):
         
         if type(range) == list:
             range = np.array( range )    
-        if range == None:
+        if range is None:
             range = np.array([np.min(radius),np.max(radius)])
             
         if log:
@@ -105,7 +108,7 @@ class Simulation(Snapshot):
             xbins = np.linspace(range[0], range[1], bins+1)
             xpos = 0.5 * (xbins[:-1] + xbins[1:])
             
-        if value == None:
+        if value is None:
             val = None
         else:
             val = group[value].astype('float64')
@@ -144,7 +147,7 @@ class Simulation(Snapshot):
 
 
     def plot_pos(self, center=None, axis=[0,1], box=None, periodic=True, group=None, newfig=True, axes=None, **params):
-        if group == None:
+        if group is None:
             group = self
                
         center = self.__validate_vector__(center,self.center)
@@ -182,7 +185,7 @@ class Simulation(Snapshot):
         axes.axis( "scaled" )
         
     def get_Aslice( self, value, gradient=None, res=1024, center=None, axis=[0,1], box=None, group=None):
-        if group == None:
+        if group is None:
             group = self
                
         center = self.__validate_vector__(center, self.center)
@@ -234,7 +237,7 @@ class Simulation(Snapshot):
 
         
     def get_AMRslice(self, value, gradient=None, res=1024, center=None, axis=[0,1], box=None, group=None):
-        if group == None:
+        if group is None:
             group = self.part0
                
         center = self.__validate_vector__(center, self.center)
@@ -286,7 +289,7 @@ class Simulation(Snapshot):
         
         
     def get_SPHproj( self, value, hsml="hsml", weights=None, normalized=True, res=1024, center=None, axis=[0,1], box=None, group=None):
-        if group == None:
+        if group is None:
             group = self
                
         center = self.__validate_vector__(center, self.center)
@@ -352,13 +355,13 @@ class Simulation(Snapshot):
         elif axes==None:
             axes = p.gca()
 
-        if vmin == None:
+        if vmin is None:
             vmin = np.min(slice)
             
-        if vmax == None:
+        if vmax is None:
             vmax = np.max(slice)
             
-        if dresult == None:
+        if dresult is None:
             dresult = result
         
         if log:
@@ -435,7 +438,7 @@ class Simulation(Snapshot):
         if self.numdims != 3:
             raise Exception( "not supported" )
         
-        if group == None:
+        if group is None:
             group = self
             
         center = self.__validate_vector__(center, self.center)
@@ -454,7 +457,7 @@ class Simulation(Snapshot):
         posdata = pos[pp,:]
         valdata = group[value][pp].astype('float64')
         
-        if  gradient == None:
+        if  gradient is None:
             data = calcGrid.calcASlice(posdata, valdata, res, res, box[0], box[1], c[0], c[1], c[2], 0, 1, boxz=box[2], grid3D=True)
         else:
             data = calcGrid.calcASlice(posdata, valdata, res, res, box[0], box[1], c[0], c[1], c[2], 0, 1, group[gradient][pp].astype('float64'), boxz=box[2], grid3D=True)
@@ -469,7 +472,7 @@ class Simulation(Snapshot):
         if self.numdims != 3:
             raise Exception( "not supported" )
         
-        if group == None:
+        if group is None:
             group = self.part0
             
         center = self.__validate_vector__(center, self.center)
@@ -502,7 +505,7 @@ class Simulation(Snapshot):
         if self.numdims != 3:
             raise Exception( "not supported" )
         
-        if group == None:
+        if group is None:
             group = self
             
         center = self.__validate_vector__(center, self.center)

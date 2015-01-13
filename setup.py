@@ -14,7 +14,7 @@ libs = ['m']
 calcGrid = Extension(   'gadget.calcGrid',
             include_dirs = incl_dirs,
             libraries    = libs,
-            sources = ['libs/calcGrid.c','libs/sph.c'])
+            sources = ['libs/calcGrid.c','libs/sph.c', 'libs/dg.c'])
 
 
 setup(name='gadget',
