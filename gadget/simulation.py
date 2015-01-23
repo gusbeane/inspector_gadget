@@ -286,6 +286,52 @@ class Simulation(Snapshot):
             dresult = self.get_AMRslice(dvalue, gradient=dgradient, res=res, center=center, axis=axis, box=box, group=group)
             
         self.__plot_Slice__(result,log=log, vmin=vmin, vmax=vmax, dresult=dresult, colorbar=colorbar, cblabel=cblabel, contour=contour, newlabels=newlabels, newfig=newfig, axes=axes, **params)
+
+
+    def get_AMRline(self, value, gradient=None, res=1024, center=None, axis=[0,1], box=None, group=None):
+        if group is None:
+            group = self.part0
+               
+        center = self.__validate_vector__(center, self.center)
+        box = self.__validate_vector__(box, self.boxsize,len=2)
+        
+        axis0 = axis[0]
+        axis1 = axis[1]
+
+        resx=res
+        resy=1
+
+        c = np.zeros( 3 )
+        c[0] = center[axis0]
+        c[1] = center[axis1]
+        c[2] = center[3 - axis0 - axis1]
+        
+
+        domainlen = self.boxsize        
+        domainc = np.zeros(3)
+        domainc[0] = self.boxsize/2
+        domainc[1] = self.boxsize/2.
+        
+        if self.numdims >2:
+            domainc[2] = self.boxsize/2.
+
+        posdata = group['pos'].astype('float64')
+        valdata = group[value].astype('float64')
+        
+        if not gradient:
+            data = calcGrid.calcAMRSlice( posdata, valdata, resx, resy, box[0], box[1], c[0], c[1], c[2], domainc[0], domainc[1], domainc[2], domainlen, axis0, axis1, boxz=box[2])
+        else:
+            graddata = group[gradient].astype('float64')
+            data = calcGrid.calcAMRSlice( posdata, valdata, resx, resy, box[0], box[1], c[0], c[1], c[2], domainc[0], domainc[1], domainc[2], domainlen, axis0, axis1, graddata, boxz=box[2])
+        
+        data['name'] = value
+        data['grid'] = data['grid'][:,0]
+        data['x'] = np.arange( resx+1, dtype="float64" ) / resx * box[0] - .5 * box[0] + c[0]
+        data['y'] = np.arange( resy+1, dtype="float64" ) / resy * box[1] - .5 * box[1] + c[1]
+        data['x2'] = (np.arange( resx, dtype="float64" ) + 0.5) / resx * box[0] - .5 * box[0] + center[0]
+        data['y2'] = (np.arange( resy, dtype="float64" ) + 0.5) / resy * box[1] - .5 * box[1] + center[1]
+        
+        return data
         
         
     def get_SPHproj( self, value, hsml="hsml", weights=None, normalized=True, res=1024, center=None, axis=[0,1], box=None, group=None):
@@ -534,6 +580,5 @@ class Simulation(Snapshot):
             grid = calcGrid.calcGrid(posdata, hsmldata, valdata, res, res, res, box[0], box[1], box[2], c[0], c[1], c[2], proj=False, norm=normalized, weights=weightdata )
         
         return grid
-    
     
     
