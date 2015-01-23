@@ -79,6 +79,8 @@ class Loader(object):
                 dir.append(i)
                 if flds.shortnames.has_key(i):
                     dir.append(flds.shortnames[i])
+                if flds.rev_hdf5toformat2.has_key(i):
+                    dir.append(flds.rev_hdf5toformat2[i])
         
         return dir 
 
@@ -167,7 +169,7 @@ class Loader(object):
         if not self.__writeable__:
             raise Exception("This snapshot can not be modified")
         
-        name = flds.hdf5toformat2.get(name,name)
+        name = self.__normalizeName__(name)
 
         if pres != None:
             pres = self.__learnPresent__(name,shape=pres)
@@ -571,10 +573,12 @@ class PartGroup(object):
                 tmp = "subfind output "+filename+"\subhalos (%d subhalos):\n"%(self.__parent__.npart_loaded[self.__num__])
             
         for i in self.data.keys():
+            tmp += "  " + i
             if flds.shortnames.has_key(i):
-                tmp += "  "+i +'/'+flds.shortnames.get(i,i)+"\n"
-            elif not i in flds.shortnames.values():
-                tmp += "  "+i+"\n"
+                tmp += '/'+flds.shortnames[i]
+            if flds.rev_hdf5toformat2.has_key(i):
+                tmp += '/'+flds.rev_hdf5toformat2[i]
+            tmp += "\n"
         return tmp
         
     def __repr__(self):
@@ -675,5 +679,7 @@ class PartGroup(object):
                         dir.append(key)
                         if flds.shortnames.has_key(key):
                             dir.append(flds.shortnames[key])
+                        if flds.rev_hdf5toformat2.has_key(key):
+                            dir.append(flds.rev_hdf5toformat2[key])
         return dir   
         
