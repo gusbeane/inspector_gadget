@@ -131,7 +131,7 @@ class DGSimulation(Simulation):
 		    
 		self.__plot_Slice__(result,log=log, vmin=vmin, vmax=vmax, dresult=dresult, colorbar=colorbar, cblabel=cblabel, contour=contour, newlabels=newlabels, newfig=newfig, axes=axes, **params)
 
-	def plot_DGline(self, res=1024, res_per_cell=100, box=None, center=None,newfig=True, axes=None,colorful=False,**params):
+	def plot_DGline(self, res=1024, res_per_cell=100, ylim=None, box=None, center=None,newfig=True, axes=None,colorful=False,**params):
 
 		if newfig and axes==None:
 		    fig = p.figure()
@@ -145,6 +145,9 @@ class DGSimulation(Simulation):
 		for i in ids:
 			index=np.where(self.id==i)[0][0]
 			self.__plot_1dsolution(cell_index=index,res=res_per_cell, axes=axes,colorful=colorful,**params)
+
+		if(ylim!=None):
+			p.ylim(ylim[0],ylim[1])
 
 		p.show()
 
