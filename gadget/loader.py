@@ -491,9 +491,6 @@ class Subfind(Loader):
             self.groups = [self.group, self.subhalo]   
     
         self.__writeable__ = False
-
-    def __getitem__(self, item):
-        raise KeyError()
     
 
 class Header(object):
