@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as p
 import matplotlib
 import time
+import sys
 
 from gadget.loader import Snapshot
 from gadget.simulation import Simulation
@@ -131,48 +132,70 @@ class DGSimulation(Simulation):
 		    
 		self.__plot_Slice__(result,log=log, vmin=vmin, vmax=vmax, dresult=dresult, colorbar=colorbar, cblabel=cblabel, contour=contour, newlabels=newlabels, newfig=newfig, axes=axes, **params)
 
-	def plot_DGline(self, res=1024, res_per_cell=100, ylim=None, box=None, center=None,newfig=True, axes=None,colorful=False,**params):
+	def plot_DGline(self, value="dgw0", res=1024, res_per_cell=100, ylim=None, box=None, center=None,axis=[0,1], newfig=True, axes=None,colorful=False,**params):
 
 		if newfig and axes==None:
 		    fig = p.figure()
 		    axes = p.gca()
 		elif axes==None:
 		    axes = p.gca()
-		    #print axes
 
-		ids=np.unique(self.get_AMRline("id",box=box,center=center,res=res)["grid"])
+		ids=np.unique(self.get_AMRline("id",box=box,center=center,axis=axis,res=res)["grid"])
 
 		for i in ids:
 			index=np.where(self.id==i)[0][0]
-			self.__plot_1dsolution(cell_index=index,res=res_per_cell, axes=axes,colorful=colorful,**params)
+			self.__plot_1dsolution(cell_index=index, value=value, axis=axis, res=res_per_cell, axes=axes,colorful=colorful,**params)
 
 		if(ylim!=None):
 			p.ylim(ylim[0],ylim[1])
 
 		p.show()
 
-	def __plot_1dsolution(self, cell_index, axes, res, colorful=False,**params):
+	def __plot_1dsolution(self, cell_index, value, axis, axes, res, colorful=False,**params):
 
 		nof_base_functions=np.shape(self.dgw0)[1]
 		cell_x=self.pos[cell_index][0]
 		cell_y=self.pos[cell_index][1]
 		cell_dl=self.boxsize/(2.**self.amrlevel[cell_index])
 
-		X=np.linspace(cell_x-0.5*cell_dl,cell_x+0.5*cell_dl,res)
-		Y=np.zeros(res)
-		yval=cell_y
+		#line in x-direction
+		if(axis==[0,1]):
+			X=np.linspace(cell_x-0.5*cell_dl,cell_x+0.5*cell_dl,res)
+			Y=np.zeros(res)
+			yval=cell_y
 
-		j=0
+			j=0
 
-		for xval in X:
-			result = 0
+			for xval in X:
+				result = 0
 
-			for i in np.arange(0,nof_base_functions):
-				result = result + self.dgw0[cell_index][i] * self.base_function_value(i, cell_x, cell_y, cell_dl, xval, yval)
+				for i in np.arange(0,nof_base_functions):
+					result = result + self.data[value][cell_index][i] * self.base_function_value(i, cell_x, cell_y, cell_dl, xval, yval)
 
-			Y[j]=result
-			j=j+1
+				Y[j]=result
+				j=j+1
 
+
+		#line in y-direction
+		elif(axis==[1,0]):
+			X=np.linspace(cell_y-0.5*cell_dl,cell_y+0.5*cell_dl,res)
+			Y=np.zeros(res)
+			xval=cell_x
+
+			j=0
+
+			for yval in X:
+				result = 0
+
+				for i in np.arange(0,nof_base_functions):
+					result = result + self.data[value][cell_index][i] * self.base_function_value(i, cell_x, cell_y, cell_dl, xval, yval)
+
+				Y[j]=result
+				j=j+1
+
+		else:	
+			sys.exit("axis not valid!")
+			
 	
 		if not 'color' in params and colorful==False:
 			params['color']="black"
