@@ -90,24 +90,25 @@ class Loader(object):
         if item in self.data:
             return self.data[item]
         else:
-            m = re.match("([^_]*)_([0-9xyz][0-9]*)",item)
+	    s=item[::-1]
+            s=s.split("_",1)
 
-            if m != None:
-                g = m.groups()
-                if len(g) == 2:
-                    it = self.__normalizeName__(g[0])
-                    if it in self.data:
-                        if g[1] == 'x':
-                            i = 0
-                        elif g[1] == 'y':
-                            i = 1
-                        elif g[1] == 'z':
-                            i = 2
-                        else:
-                            i = int(g[1])
-                        d = self.data[it]
-                        if d.ndim == 2 and d.shape[1] > i:
-                            return d[:,i]
+            if(s[0]!=item[::-1]): #string contains an underscore
+                g=[s[1][::-1],s[0]]
+                                
+	        it = self.__normalizeName__(g[0])
+                if it in self.data:
+	       	    if g[1] == 'x':
+		        i = 0
+		    elif g[1] == 'y':
+		        i = 1
+		    elif g[1] == 'z':
+		        i = 2
+		    else:
+		        i = int(g[1])
+		    d = self.data[it]
+	    	    if d.ndim == 2 and d.shape[1] > i:
+		        return d[:,i]
         
         raise AttributeError("unknown field '%s'"%item)
     
@@ -590,6 +591,9 @@ class PartGroup(object):
             else:
                 return "subfind output "+filename+", contains %d subhalos"%(self.__parent__.npart_loaded[self.__num__])
 
+
+
+
     def __getitem__(self, item):
         item = self.__parent__.__normalizeName__(item)
         parent = self.__parent__
@@ -601,21 +605,22 @@ class PartGroup(object):
             f = parent.data[item]
             it = item
         else:
-            m = re.match("([^_]*)_([0-9xyz][0-9]*)",item)
+            s=item[::-1]
+            s=s.split("_",1)
 
-            if m != None:
-                g = m.groups()
-                if len(g) == 2:
-                    it = self.__parent__.__normalizeName__(g[0])
-                    if it in parent.data:
-                        if g[1] == 'x':
-                            i = 0
-                        elif g[1] == 'y':
-                            i = 1
-                        elif g[1] == 'z':
-                            i = 2
-                        else:
-                            i = int(g[1])
+            if(s[0]!=item[::-1]): #string contains an underscore
+                g=[s[1][::-1],s[0]]
+
+                it = parent.__normalizeName__(g[0])
+                if it in parent.data:
+                    if g[1] == 'x':
+                        i = 0
+                    elif g[1] == 'y':
+                        i = 1
+                    elif g[1] == 'z':
+                        i = 2
+                    else:
+                        i = int(g[1])
                             
                         d = parent.data[it]
                         if d.ndim == 2 and d.shape[1] > i:
