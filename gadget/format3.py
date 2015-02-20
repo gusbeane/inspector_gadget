@@ -6,7 +6,6 @@ import re
 import gadget.loader as loader
 import gadget.fields as fields
 
-
 class Format3:
 
 
@@ -88,7 +87,15 @@ class Format3:
 
             self.sn.npart = np.array( self.sn.nparticles ).sum()
             self.sn.npartall = np.array( self.sn.nparticlesall ).sum()
-
+            
+            header_list = ['NumPart_ThisFile', 'NumPart_Total', 'NumPart_Total_HighWord', 'MassTable', 'NumFilesPerSnapshot', 'Flag_Sfr', 'Flag_Cooling', \
+            'Flag_Feedback', 'Flag_StellarAge', 'Flag_Metals', 'Time', 'Redshift', 'BoxSize', 'Omega0', 'OmegaLambda', 'HubbleParam', 'Flag_DoublePrecision']
+           
+            for i in file['/Header'].attrs:
+                if(not (i in header_list)):           
+                    setattr(self.sn, i, file['/Header'].attrs[i])
+                    fields.headerfields.append(i)
+      
         else:
             self.sn.ngroups =  file['/Header'].attrs['Ngroups_ThisFile']
             self.sn.ngroupsall =  file['/Header'].attrs['Ngroups_Total']
@@ -404,6 +411,19 @@ class Format3:
         header.attrs['Flag_Feedback'] =  self.sn.flag_feedback
         if hasattr(self.sn, "flag_doubleprecision"):
             header.attrs['Flag_DoublePrecision'] = self.sn.flag_doubleprecision
+            
+        header_list = ['NumPart_ThisFile', 'NumPart_Total', 'NumPart_Total_HighWord', 'MassTable', 'Time', \
+        'NumFilesPerSnapshot', 'Redshift', 'BoxSize', 'Omega0', 'OmegaLambda', 'HubbleParam', 'Flag_Sfr', 'Flag_Cooling', \
+        'Flag_StellarAge', 'Flag_Metals', 'Flag_Feedback']
+           
+        for i in fields.headerfields:
+            if(not (i in header_list)):       
+               try:
+                   header.attrs[i] = getattr(self.sn, i) 
+               except AttributeError:
+                   continue                      
+           
+  
         
         
     def write_particles(self,file):
