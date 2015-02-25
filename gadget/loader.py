@@ -285,6 +285,7 @@ class Loader(object):
                         pass
         
             del self.data
+            self.data = {}
 
 class Snapshot(Loader):
     """
