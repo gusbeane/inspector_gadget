@@ -48,6 +48,21 @@ class Simulation(Snapshot):
             v[:len] = vector
         
         return v
+    
+    def __validate_value__(self, value, length, group=None):
+        if value is None:
+            return None
+        elif type(value) == str:
+            if group is None:
+                group = self
+            return group[value]
+        elif type(value) == np.ndarray:
+            if value.shape[0] != length:
+                raise Exception("wrong array length: %s\n"%str(value.shape))
+            return value
+        else:
+            return np.ones(length) * value
+        
         
     def set_center(self, center):
         self.center = self.__validate_vector__(center, self.boxsize/2, len=3)
@@ -59,9 +74,9 @@ class Simulation(Snapshot):
             
         center = self.__validate_vector__(center, self.center, len=3)
 
-        dx = group["pos"][:,0]-center[0]
-        dy = group["pos"][:,1]-center[1]
-        dz = group["pos"][:,2]-center[2]
+        dx = group.pos[:,0]-center[0]
+        dy = group.pos[:,1]-center[1]
+        dz = group.pos[:,2]-center[2]
         
         if periodic:
             dx = np.where(dx > self.boxsize/2, dx-self.boxsize/2,dx)
@@ -81,7 +96,7 @@ class Simulation(Snapshot):
             
         center = self.__validate_vector__(center, self.center)
         
-        group['pos'] -= center[None,:]
+        group.pos -= center[None,:]
         self.center = np.zeros( 3 )
         
         return
@@ -111,7 +126,7 @@ class Simulation(Snapshot):
         if value is None:
             val = None
         else:
-            val = group[value].astype('float64')
+            val = self.__validate_value__(value, radius.shape[0], group).astype('float64')
             
         profile, xbins = np.histogram(radius,bins=xbins,weights=val)
         
@@ -167,9 +182,9 @@ class Simulation(Snapshot):
         c[1] = center[axis1]
         c[2] = center[3 - axis0 - axis1]
 
-        x = group["pos"][:,axis0]
-        y = group["pos"][:,axis1]
-        z = group["pos"][:,3 - axis0 - axis1]
+        x = group.pos[:,axis0]
+        y = group.pos[:,axis1]
+        z = group.pos[:,3 - axis0 - axis1]
         
         if periodic:
             x = np.where(x - c[0] > self.boxsize/2, x-self.boxsize/2,x)
@@ -204,18 +219,18 @@ class Simulation(Snapshot):
         py = np.abs( pos[:,axis1] - c[1] )
         pz = np.abs( pos[:,3 - axis0 - axis1] - c[2] )
 
-        zdist = 2. * group['vol'].astype('float64')**(1./3.)
+        zdist = 2. * group.vol.astype('float64')**(1./3.)
 
         pp, = np.where( (px <= 0.5*box[0]) & (py <= 0.5*box[1]) & (pz <= zdist) )
         print "Selected %d of %d particles." % (pp.size,self.npart)
 
         posdata = pos[pp,:]
-        valdata = group[value][pp].astype('float64')
+        valdata = self.__validate_value__(value, posdata.shape[0], group)[pp].astype('float64')
         
         if gradient==None:
             data = calcGrid.calcASlice(posdata, valdata, res, res, box[0], box[1], c[0], c[1], c[2], axis0, axis1, boxz=box[2])
         else:
-            data = calcGrid.calcASlice(posdata, valdata, res, res, box[0], box[1], c[0], c[1], c[2], axis0, axis1, group[gradient][pp].astype('float64'), boxz=box[2])
+            data = calcGrid.calcASlice(posdata, valdata, res, res, box[0], box[1], c[0], c[1], c[2], axis0, axis1, self.__validate_value__(gradient, posdata.shape[0], group)[pp].astype('float64'), boxz=box[2])
         data[ "neighbours" ] = pp[ data["neighbours"] ]
         
         data['name'] = value
@@ -260,13 +275,13 @@ class Simulation(Snapshot):
         if self.numdims >2:
             domainc[2] = self.boxsize/2.
 
-        posdata = group['pos'].astype('float64')
-        valdata = group[value].astype('float64')
+        posdata = group.pos.astype('float64')
+        valdata = self.__validate_value__(value, posdata.shape[0], group).astype('float64')
         
         if not gradient:
             data = calcGrid.calcAMRSlice( posdata, valdata, res, res, box[0], box[1], c[0], c[1], c[2], domainc[0], domainc[1], domainc[2], domainlen, axis0, axis1, boxz=box[2])
         else:
-            graddata = group[gradient].astype('float64')
+            graddata = self.__validate_value__(gradient, posdata.shape[0], group).astype('float64')
             data = calcGrid.calcAMRSlice( posdata, valdata, res, res, box[0], box[1], c[0], c[1], c[2], domainc[0], domainc[1], domainc[2], domainlen, axis0, axis1, graddata, boxz=box[2])
         
         data['name'] = value
@@ -315,13 +330,13 @@ class Simulation(Snapshot):
         if self.numdims >2:
             domainc[2] = self.boxsize/2.
 
-        posdata = group['pos'].astype('float64')
-        valdata = group[value].astype('float64')
+        posdata = group.pos.astype('float64')
+        valdata = self.__validate_value__(value, posdata.shape[0], group).astype('float64')
         
         if not gradient:
             data = calcGrid.calcAMRSlice( posdata, valdata, resx, resy, box[0], box[1], c[0], c[1], c[2], domainc[0], domainc[1], domainc[2], domainlen, axis0, axis1, boxz=box[2])
         else:
-            graddata = group[gradient].astype('float64')
+            graddata = self.__validate_value__(gradient, posdata.shape[0], group).astype('float64')
             data = calcGrid.calcAMRSlice( posdata, valdata, resx, resy, box[0], box[1], c[0], c[1], c[2], domainc[0], domainc[1], domainc[2], domainlen, axis0, axis1, graddata, boxz=box[2])
         
         data['name'] = value
@@ -358,14 +373,14 @@ class Simulation(Snapshot):
         print "Selected %d of %d particles." % (pp.size,self.npart)
 
         posdata = pos[pp,:]
-        valdata = group[value][pp].astype('float64')
-        hsmldata = group[hsml][pp].astype("float64")
+        valdata = self.__validate_value__(value, posdata.shape[0], group)[pp].astype('float64')
+        hsmldata = self.__validate_value__(hsml, posdata.shape[0], group)[pp].astype("float64")
 
         
         if weights==None:
             grid = calcGrid.calcGrid(posdata, hsmldata, valdata, res, res, res, box[0], box[1], box[2], c[0], c[1], c[2], proj=True, norm=normalized )
         else:
-            weightdata = group[weights].astype("float64")
+            weightdata = self.__validate_value__(weights, posdata.shape[0], group).astype("float64")
             grid = calcGrid.calcGrid(posdata, hsmldata, valdata, res, res, res, box[0], box[1], box[2], c[0], c[1], c[2], proj=True, norm=normalized, weights=weightdata )
             
         data = {}
@@ -501,12 +516,12 @@ class Simulation(Snapshot):
         print "Selected %d of %d particles." % (pp.size,self.npart)
 
         posdata = pos[pp,:]
-        valdata = group[value][pp].astype('float64')
+        valdata = self.__validate_value__(value, posdata.shape[0], group)[pp].astype('float64')
         
         if  gradient is None:
             data = calcGrid.calcASlice(posdata, valdata, res, res, box[0], box[1], c[0], c[1], c[2], 0, 1, boxz=box[2], grid3D=True)
         else:
-            data = calcGrid.calcASlice(posdata, valdata, res, res, box[0], box[1], c[0], c[1], c[2], 0, 1, group[gradient][pp].astype('float64'), boxz=box[2], grid3D=True)
+            data = calcGrid.calcASlice(posdata, valdata, res, res, box[0], box[1], c[0], c[1], c[2], 0, 1, self.__validate_value__(gradient, posdata.shape[0], group)[pp].astype('float64'), boxz=box[2], grid3D=True)
         
         data[ "neighbours" ] = pp[ data["neighbours"] ]
         
@@ -536,12 +551,12 @@ class Simulation(Snapshot):
             domainc[2] = self.boxsize/2.
 
         posdata = group.pos.astype( 'float64' )
-        valdata = group[value].astype('float64')
+        valdata = self.__validate_value__(value, posdata.shape[0], group).astype('float64')
         
         if gradient==None:
             data = calcGrid.calcAMRSlice( posdata, valdata, res, res, box[0], box[1], c[0], c[1], c[2], domainc[0], domainc[1], domainc[2], domainlen, 0, 1,boxz=box[2], grid3D=True)
         else:
-            data = calcGrid.calcAMRSlice( posdata, valdata, res, res, box[0], box[1], c[0], c[1], c[2], domainc[0], domainc[1], domainc[2], domainlen, 0, 1, group[gradient][pp].astype('float64'), boxz=box[2], grid3D=True)
+            data = calcGrid.calcAMRSlice( posdata, valdata, res, res, box[0], box[1], c[0], c[1], c[2], domainc[0], domainc[1], domainc[2], domainlen, 0, 1, self.__validate_value__(gradient, posdata.shape[0], group)[pp].astype('float64'), boxz=box[2], grid3D=True)
 
         data["name"] = value
         
@@ -569,14 +584,14 @@ class Simulation(Snapshot):
             domainc[2] = self.boxsize/2.
 
         posdata = group.pos.astype( 'float64' )
-        valdata = group[value].astype('float64')
-        hsmldata = group[hsml].astype("float64")
+        valdata = self.__validate_value__(value, posdata.shape[0], group).astype('float64')
+        hsmldata = self.__validate_value__(hsml, posdata.shape[0], group).astype("float64")
 
         
         if weights==None:
             grid = calcGrid.calcGrid(posdata, hsmldata, valdata, res, res, res, box[0], box[1], box[2], c[0], c[1], c[2], proj=False, norm=normalized )
         else:
-            weightdata = group[weights].astype("float64")
+            weightdata = self.__validate_value__(weights, posdata.shape[0], group).astype("float64")
             grid = calcGrid.calcGrid(posdata, hsmldata, valdata, res, res, res, box[0], box[1], box[2], c[0], c[1], c[2], proj=False, norm=normalized, weights=weightdata )
         
         return grid

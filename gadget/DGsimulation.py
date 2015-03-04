@@ -107,9 +107,9 @@ class DGSimulation(Simulation):
 		if self.numdims >2:
 		    domainc[2] = self.boxsize/2.
 
-		posdata = group['pos'].astype('float64')
-		amrlevel = group['amrlevel'].astype('int32')
-		valdata = group[value].astype('float64')
+		posdata = group.pos.astype('float64')
+		amrlevel = group.amrlevel.astype('int32')
+		valdata = self.__validate_value__(value, posdata.shape[0], group).astype('float64')
 		
 		data = calcGrid.calcDGSlice( posdata, valdata, amrlevel, res, res, box[0], box[1], c[0], c[1], c[2], domainc[0], domainc[1], domainc[2], domainlen, axis0, axis1, boxz=box[2])
 
