@@ -92,9 +92,10 @@ class Format3:
             'Flag_Feedback', 'Flag_StellarAge', 'Flag_Metals', 'Time', 'Redshift', 'BoxSize', 'Omega0', 'OmegaLambda', 'HubbleParam', 'Flag_DoublePrecision']
            
             for i in file['/Header'].attrs:
-                if(not (i in header_list)):           
+                if not i in header_list:           
                     setattr(self.sn, i, file['/Header'].attrs[i])
-                    fields.headerfields.append(i)
+                    if not i in self.sn.__headerfields__:
+                        self.sn.__headerfields__.append(i)
       
         else:
             self.sn.ngroups =  file['/Header'].attrs['Ngroups_ThisFile']
@@ -416,14 +417,10 @@ class Format3:
         'NumFilesPerSnapshot', 'Redshift', 'BoxSize', 'Omega0', 'OmegaLambda', 'HubbleParam', 'Flag_Sfr', 'Flag_Cooling', \
         'Flag_StellarAge', 'Flag_Metals', 'Flag_Feedback']
            
-        for i in fields.headerfields:
-            if(not (i in header_list)):       
-               try:
+        for i in self.sn.__headerfields__:
+            if not i in header_list:       
+               if hasattr(self.sn, i):
                    header.attrs[i] = getattr(self.sn, i) 
-               except AttributeError:
-                   continue                      
-           
-  
         
         
     def write_particles(self,file):

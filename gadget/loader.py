@@ -21,6 +21,9 @@ class Loader(object):
 
         self.__format__ = format
         
+        self.__present__ = flds.present.copy()
+        self.__headerfields__ = list(flds.headerfields)
+        
         self.__fields__ = fields
         self.__normalizeFields__()
         
@@ -129,10 +132,7 @@ class Loader(object):
         tmp[self.__parttype__] = pres[self.__parttype__]
         return tmp
 
-    def __learnPresent__(self, name, gr=None, shape=1):
-        if not hasattr(self,"__present__"):
-            self.__present__ = flds.present
-            
+    def __learnPresent__(self, name, gr=None, shape=1):           
         if gr !=None:
             pres = np.zeros(6,dtype=np.int64)
             pres[gr] = shape
@@ -499,7 +499,7 @@ class Header(object):
     def __init__(self,parent):
         self.__parent__ = parent
         self.__attrs__ = []
-        for entry in flds.headerfields:
+        for entry in self.__parent__.__headerfields__:
             if hasattr(parent,entry):
                 self.__attrs__.append(entry)
                 
@@ -534,7 +534,7 @@ class Header(object):
             
         tmp += "header:\n"
             
-        for entry in flds.headerfields:
+        for entry in self.__parent__.__headerfields__:
             if hasattr(self,entry):
                 val = getattr(self,entry)
                 if type(val) ==  np.ndarray or type(val) == list:
