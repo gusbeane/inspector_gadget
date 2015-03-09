@@ -25,8 +25,35 @@ class DGSimulation(Simulation):
                 """
 
                 super(DGSimulation, self).__init__(*args, **kwargs)
+
+		#store the polynomials in an array
 		self.__polynomials=[self.__P0, self.__P1, self.__P2, self.__P3, self.__P4, self.__P5]
 
+		#set missing attributes
+		if(not hasattr(self, "Dims")):
+			self.Dims=self.numdims
+
+		#set the number of base functions
+		if(self.Dims==2):
+			self.Nof_base_functions=(self.Degree_K+1)*(self.Degree_K+2)/2
+		else:
+			self.Nof_base_functions=(self.Degree_K+1)*(self.Degree_K+2)*(self.Degree_K+3)/6
+
+
+		#set the base function table	
+		self.index_to_base_function_table = np.zeros([self.Nof_base_functions,self.Dims],dtype=np.int32)
+
+		if(self.Dims==2):
+			for i in np.arange(0,self.Nof_base_functions):
+				px,py = self.index_to_base_function2d(i);
+				self.index_to_base_function_table[i,0]=px
+				self.index_to_base_function_table[i,1]=py
+		else:
+			for i in np.arange(0,self.Nof_base_functions):
+				px,py,pz = self.index_to_base_function3d(i);
+				self.index_to_base_function_table[i,0]=px
+				self.index_to_base_function_table[i,1]=py
+				self.index_to_base_function_table[i,2]=pz
 
 	def __P0(self,x):
 		return 1
@@ -49,7 +76,7 @@ class DGSimulation(Simulation):
 
 
 
-	def __index_to_base_function(self,k):
+	def index_to_base_function2d(self,k):
 		degree = 0
 		counter = 0
 
@@ -71,14 +98,43 @@ class DGSimulation(Simulation):
 		return (Px,Py)
 
 
-	def base_function_value(self, index, cell_x, cell_y, cell_dl, x, y):
+	def index_to_base_function3d(self,k):
+		counter=0
+
+		for deg_k in np.arange(0,self.Degree_K):
+			for u in np.arange(0, deg_k):
+				for v in np.arange(0,deg_k-u):
+					for w in np.arange(0,deg_k-u-v):
+						if(u+v+w==deg_k):
+							if(counter==k):
+								Px=w		
+								Py=v
+								Pz=u
+								return (Px,Py,Pz)
+							else:
+								counter=counter+1
+		raise Exception("shouldn't be reached!")
+							
+
+
+	def base_function_value(self, index, cell_x, cell_y, cell_z, cell_dl, x, y, z):
 
 		xi_1=2./cell_dl*(x-cell_x)
 		xi_2=2./cell_dl*(y-cell_y)
+		xi_3=2./cell_dl*(z-cell_z)
 
-		px,py = self.__index_to_base_function(index);
+		if(self.Dims==2):
+			px=self.index_to_base_function_table[index,0]
+			py=self.index_to_base_function_table[index,1]
 
-		return self.__polynomials[px](xi_1)*self.__polynomials[py](xi_2)
+			return self.__polynomials[px](xi_1)*self.__polynomials[py](xi_2)
+
+		else:
+			px=self.index_to_base_function_table[index,0]
+			py=self.index_to_base_function_table[index,1]
+			pz=self.index_to_base_function_table[index,2]
+
+			return self.__polynomials[px](xi_1)*self.__polynomials[py](xi_2)*self.__polynomials[pz](xi_3)
 
 
     
@@ -153,9 +209,9 @@ class DGSimulation(Simulation):
 
 	def __plot_1dsolution(self, cell_index, value, axis, axes, res, colorful=False,**params):
 
-		nof_base_functions=np.shape(self.dgw0)[1]
 		cell_x=self.pos[cell_index][0]
 		cell_y=self.pos[cell_index][1]
+		cell_z=self.pos[cell_index][2]
 		cell_dl=self.boxsize/(2.**self.amrlevel[cell_index])
 
 		#line in x-direction
@@ -163,14 +219,15 @@ class DGSimulation(Simulation):
 			X=np.linspace(cell_x-0.5*cell_dl,cell_x+0.5*cell_dl,res)
 			Y=np.zeros(res)
 			yval=cell_y
+			zval=cell_z
 
 			j=0
 
 			for xval in X:
 				result = 0
 
-				for i in np.arange(0,nof_base_functions):
-					result = result + self.data[value][cell_index][i] * self.base_function_value(i, cell_x, cell_y, cell_dl, xval, yval)
+				for i in np.arange(0,self.Nof_base_functions):
+					result = result + self.data[value][cell_index][i] * self.base_function_value(i, cell_x, cell_y, cell_z, cell_dl, xval, yval, zval)
 
 				Y[j]=result
 				j=j+1
@@ -181,20 +238,21 @@ class DGSimulation(Simulation):
 			X=np.linspace(cell_y-0.5*cell_dl,cell_y+0.5*cell_dl,res)
 			Y=np.zeros(res)
 			xval=cell_x
+			zval=cell_z
 
 			j=0
 
 			for yval in X:
 				result = 0
 
-				for i in np.arange(0,nof_base_functions):
-					result = result + self.data[value][cell_index][i] * self.base_function_value(i, cell_x, cell_y, cell_dl, xval, yval)
+				for i in np.arange(0,self.Nof_base_functions):
+					result = result + self.data[value][cell_index][i] * self.base_function_value(i, cell_x, cell_y, cell_z, cell_dl, xval, yval, zval)
 
 				Y[j]=result
 				j=j+1
 
 		else:	
-			sys.exit("axis not valid!")
+			raise Exception("axis not valid!, implement me!")
 			
 	
 		if not 'color' in params and colorful==False:
