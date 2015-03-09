@@ -70,7 +70,7 @@ class Simulation(Snapshot):
     
     def r(self, center=None, periodic=True, group=None):
         if group is None:
-            group = self
+            group = self.part0
             
         center = self.__validate_vector__(center, self.center, len=3)
 
@@ -92,7 +92,7 @@ class Simulation(Snapshot):
     
     def centerat(self, center, group=None):
         if group is None:
-            group = self
+            group = self.part0
             
         center = self.__validate_vector__(center, self.center)
         
@@ -103,7 +103,7 @@ class Simulation(Snapshot):
     
     def __get_radhist__(self, value, center=None, bins=100, range=None, log=False, periodic=True, group=None):
         if group is None:
-            group = self
+            group = self.part0
 
         center = self.__validate_vector__(center, self.center)
         
@@ -163,7 +163,7 @@ class Simulation(Snapshot):
 
     def plot_pos(self, center=None, axis=[0,1], box=None, periodic=True, group=None, newfig=True, axes=None, **params):
         if group is None:
-            group = self
+            group = self.part0
                
         center = self.__validate_vector__(center,self.center)
         box = self.__validate_vector__(box,self.boxsize)
@@ -201,7 +201,7 @@ class Simulation(Snapshot):
         
     def get_Aslice( self, value, gradient=None, res=1024, center=None, axis=[0,1], box=None, group=None):
         if group is None:
-            group = self
+            group = self.part0
                
         center = self.__validate_vector__(center, self.center)
         box = self.__validate_vector__(box, self.boxsize,len=2)
@@ -351,7 +351,7 @@ class Simulation(Snapshot):
         
     def get_SPHproj( self, value, hsml="hsml", weights=None, normalized=True, res=1024, center=None, axis=[0,1], box=None, group=None):
         if group is None:
-            group = self
+            group = self.part0
                
         center = self.__validate_vector__(center, self.center)
         box = self.__validate_vector__(box, self.boxsize)
@@ -500,7 +500,7 @@ class Simulation(Snapshot):
             raise Exception( "not supported" )
         
         if group is None:
-            group = self
+            group = self.part0
             
         center = self.__validate_vector__(center, self.center)
         box = self.__validate_vector__(box, self.boxsize)
@@ -567,7 +567,7 @@ class Simulation(Snapshot):
             raise Exception( "not supported" )
         
         if group is None:
-            group = self
+            group = self.part0
             
         center = self.__validate_vector__(center, self.center)
         box = self.__validate_vector__(box, self.boxsize)
