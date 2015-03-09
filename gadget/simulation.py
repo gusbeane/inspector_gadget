@@ -70,7 +70,7 @@ class Simulation(Snapshot):
     
     def r(self, center=None, periodic=True, group=None):
         if group is None:
-            group = self.part0
+            group = self
             
         center = self.__validate_vector__(center, self.center, len=3)
 
@@ -92,7 +92,7 @@ class Simulation(Snapshot):
     
     def centerat(self, center, group=None):
         if group is None:
-            group = self.part0
+            group = self
             
         center = self.__validate_vector__(center, self.center)
         
@@ -103,7 +103,7 @@ class Simulation(Snapshot):
     
     def __get_radhist__(self, value, center=None, bins=100, range=None, log=False, periodic=True, group=None):
         if group is None:
-            group = self.part0
+            group = self
 
         center = self.__validate_vector__(center, self.center)
         
