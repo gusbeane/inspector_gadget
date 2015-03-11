@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as p
+from matplotlib import collections  as mc
 import matplotlib
 import time
 
@@ -302,6 +303,52 @@ class Simulation(Snapshot):
             
         self.__plot_Slice__(result,log=log, vmin=vmin, vmax=vmax, dresult=dresult, colorbar=colorbar, cblabel=cblabel, contour=contour, newlabels=newlabels, newfig=newfig, axes=axes, **params)
 
+
+    def __add_square(self, lines, i, cx,cy,edgelength):
+        e05=edgelength*0.5;
+        self.__add_line(lines, i, cx-e05,cy-e05, cx+e05,cy-e05)
+        self.__add_line(lines, i+1, cx+e05,cy-e05, cx+e05,cy+e05)
+        self.__add_line(lines, i+2, cx+e05,cy+e05, cx-e05,cy+e05)
+        self.__add_line(lines, i+3, cx-e05,cy+e05, cx-e05,cy-e05)
+
+    def __add_line(self, lines, i, x1,y1,x2,y2):
+        lines[i,0,0]=x1
+        lines[i,0,1]=y1
+        lines[i,1,0]=x2
+        lines[i,1,1]=y2
+
+   
+    def plot_AMRgrid(self, res=1024, center=None, axis=[0,1], box=None, group=None, newfig=False, axes=None, **params):
+
+	if(group==None):
+	    group=self.part0
+
+	if(newfig and axes==None):
+            fig = p.figure()
+            axes = p.gca()
+        elif axes==None:
+            axes = p.gca()
+
+        ids=np.unique(self.get_AMRslice("id",box=box,center=center,axis=axis,res=res,group=self.part0)["grid"])
+	ids=ids.astype(self.id.dtype)
+
+        lines=np.zeros((4*np.shape(ids)[0],2,2))
+
+	j=0
+
+        for i in ids:
+            index=np.where(self.id==i)[0][0]
+            self.__add_square(lines, j, group.pos[index,axis[0]], group.pos[index,axis[1]], group.volume[index]**(1./(self.numdims)))
+            j=j+4
+
+        if(not 'color' in params):
+            params['color']='black'    
+
+        lc = mc.LineCollection(lines, **params)
+        ax=p.subplot(1,1,1)
+        ax.add_collection(lc)
+
+	return params
 
     def get_AMRline(self, value, gradient=None, res=1024, center=None, axis=[0,1], box=None, group=None):
         if group is None:
