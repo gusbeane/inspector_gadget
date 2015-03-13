@@ -234,7 +234,10 @@ class Simulation(Snapshot):
             data = calcGrid.calcASlice(posdata, valdata, res, res, box[0], box[1], c[0], c[1], c[2], axis0, axis1, self.__validate_value__(gradient, posdata.shape[0], group)[pp].astype('float64'), boxz=box[2])
         data[ "neighbours" ] = pp[ data["neighbours"] ]
         
-        data['name'] = value
+        if type(value) == str:
+            data['name'] = value
+        else:
+            data['name'] = ""
         data['x'] = np.arange( res+1, dtype="float64" ) / res * box[0] - .5 * box[0] + c[0]
         data['y'] = np.arange( res+1, dtype="float64" ) / res * box[1] - .5 * box[1] + c[1]
         data['x2'] = (np.arange( res, dtype="float64" ) + 0.5) / res * box[0] - .5 * box[0] + center[0]
@@ -285,7 +288,10 @@ class Simulation(Snapshot):
             graddata = self.__validate_value__(gradient, posdata.shape[0], group).astype('float64')
             data = calcGrid.calcAMRSlice( posdata, valdata, res, res, box[0], box[1], c[0], c[1], c[2], domainc[0], domainc[1], domainc[2], domainlen, axis0, axis1, graddata, boxz=box[2])
         
-        data['name'] = value
+        if type(value) == str:
+            data['name'] = value
+        else:
+            data['name'] = ""
         data['x'] = np.arange( res+1, dtype="float64" ) / res * box[0] - .5 * box[0] + c[0]
         data['y'] = np.arange( res+1, dtype="float64" ) / res * box[1] - .5 * box[1] + c[1]
         data['x2'] = (np.arange( res, dtype="float64" ) + 0.5) / res * box[0] - .5 * box[0] + center[0]
@@ -386,7 +392,10 @@ class Simulation(Snapshot):
             graddata = self.__validate_value__(gradient, posdata.shape[0], group).astype('float64')
             data = calcGrid.calcAMRSlice( posdata, valdata, resx, resy, box[0], box[1], c[0], c[1], c[2], domainc[0], domainc[1], domainc[2], domainlen, axis0, axis1, graddata, boxz=box[2])
         
-        data['name'] = value
+        if type(value) == str:
+            data['name'] = value
+        else:
+            data['name'] = ""
         data['grid'] = data['grid'][:,0]
         data['x'] = np.arange( resx+1, dtype="float64" ) / resx * box[0] - .5 * box[0] + c[0]
         data['y'] = np.arange( resy+1, dtype="float64" ) / resy * box[1] - .5 * box[1] + c[1]
@@ -433,7 +442,10 @@ class Simulation(Snapshot):
         data = {}
         data['grid'] = grid
         
-        data['name'] = value
+        if type(value) == str:
+            data['name'] = value
+        else:
+            data['name'] = ""
         data['x'] = np.arange( res+1, dtype="float64" ) / res * box[0] - .5 * box[0] + c[0]
         data['y'] = np.arange( res+1, dtype="float64" ) / res * box[1] - .5 * box[1] + c[1]
         data['x2'] = (np.arange( res, dtype="float64" ) + 0.5) / res * box[0] - .5 * box[0] + center[0]
@@ -572,7 +584,10 @@ class Simulation(Snapshot):
         
         data[ "neighbours" ] = pp[ data["neighbours"] ]
         
-        data["name"] = value
+        if type(value) == str:
+            data['name'] = value
+        else:
+            data['name'] = ""
         
         return data
 
@@ -605,7 +620,10 @@ class Simulation(Snapshot):
         else:
             data = calcGrid.calcAMRSlice( posdata, valdata, res, res, box[0], box[1], c[0], c[1], c[2], domainc[0], domainc[1], domainc[2], domainlen, 0, 1, self.__validate_value__(gradient, posdata.shape[0], group)[pp].astype('float64'), boxz=box[2], grid3D=True)
 
-        data["name"] = value
+        if type(value) == str:
+            data['name'] = value
+        else:
+            data['name'] = ""
         
         return data
     
