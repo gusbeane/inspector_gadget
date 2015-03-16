@@ -101,10 +101,10 @@ class DGSimulation(Simulation):
 	def index_to_base_function3d(self,k):
 		counter=0
 
-		for deg_k in np.arange(0,self.Degree_K):
-			for u in np.arange(0, deg_k):
-				for v in np.arange(0,deg_k-u):
-					for w in np.arange(0,deg_k-u-v):
+		for deg_k in np.arange(0,self.Degree_K+1):
+			for u in np.arange(0, deg_k+1):
+				for v in np.arange(0,deg_k-u+1):
+					for w in np.arange(0,deg_k-u-v+1):
 						if(u+v+w==deg_k):
 							if(counter==k):
 								Px=w		
@@ -113,6 +113,8 @@ class DGSimulation(Simulation):
 								return (Px,Py,Pz)
 							else:
 								counter=counter+1
+
+                print "Index:", k
 		raise Exception("shouldn't be reached!")
 							
 
