@@ -2,6 +2,7 @@ import h5py
 import numpy as np
 import os.path as path
 import re
+import os
 
 import gadget.loader as loader
 import gadget.fields as fields
@@ -67,7 +68,7 @@ class Format3:
         else:
             self.sn.currFile = None
             
-
+        self.sn.__path__ = os.path.abspath(self.sn.filename)
 
     def load_header(self):
         file = self.file

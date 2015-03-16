@@ -4,6 +4,7 @@ import pylab
 import matplotlib
 import struct
 import time
+import os
 
 import gadget.loader as loader
 import gadget.fields as fields
@@ -54,6 +55,7 @@ class Format2:
         #TODO implement combineFiles=False
         self.sn.currFile = None
 
+        self.sn.__path__ = os.path.abspath(self.sn.filename)
 
 
     def get_blocks( self, fileid, verbose=False ):
