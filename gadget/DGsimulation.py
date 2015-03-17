@@ -139,7 +139,29 @@ class DGSimulation(Simulation):
 			return self.__polynomials[px](xi_1)*self.__polynomials[py](xi_2)*self.__polynomials[pz](xi_3)
 
 
+        def get_DGvalue(self, value, x, y, z=0, group=None):
+
+		if group is None:
+		    group = self.part0
+
+		id=np.unique(self.get_AMRline("id",box=[0,0,0],center=[x,y,z],res=1)["grid"])
+		id=id.astype(self.id.dtype)
+		id=id[0]
+
+		cell_index=np.where(self.id==id)[0][0]
     
+		result = 0
+
+		cell_x=self.pos[cell_index][0]
+		cell_y=self.pos[cell_index][1]
+		cell_z=self.pos[cell_index][2]
+		cell_dl=self.boxsize/(2.**self.amrlevel[cell_index])
+
+		for i in np.arange(0,self.Nof_base_functions):
+			result = result + self.data[value][cell_index][i] * self.base_function_value(i, cell_x, cell_y, cell_z, cell_dl, x, y, z)
+
+		return result
+
             
  	def get_DGslice(self, value, res=1024, center=None, axis=[0,1], box=None, group=None):
 		if group is None:
@@ -167,9 +189,11 @@ class DGSimulation(Simulation):
 
 		posdata = group.pos.astype('float64')
 		amrlevel = group.amrlevel.astype('int32')
+		dgdims = self.Dims.astype('int32')
+                degree_k = self.Degree_K.astype('int32')
 		valdata = self.__validate_value__(value, posdata.shape[0], group).astype('float64')
-		
-		data = calcGrid.calcDGSlice( posdata, valdata, amrlevel, res, res, box[0], box[1], c[0], c[1], c[2], domainc[0], domainc[1], domainc[2], domainlen, axis0, axis1, boxz=box[2])
+ 
+		data = calcGrid.calcDGSlice( posdata, valdata, amrlevel, dgdims, degree_k, res, res, box[0], box[1], c[0], c[1], c[2], domainc[0], domainc[1], domainc[2], domainlen, axis0, axis1, boxz=box[2])
 
 		
 		data['name'] = value
@@ -200,16 +224,19 @@ class DGSimulation(Simulation):
 
 		ids=np.unique(self.get_AMRline("id",box=box,center=center,axis=axis,res=res)["grid"])
 
+	        center = self.__validate_vector__(center, self.center)
+		box = self.__validate_vector__(box, self.boxsize,len=2)
+
 		for i in ids:
 			index=np.where(self.id==i)[0][0]
-			self.__plot_1dsolution(cell_index=index, value=value, axis=axis, res=res_per_cell, axes=axes,colorful=colorful,**params)
+			self.__plot_1dsolution(cell_index=index, value=value, axis=axis, axes=axes, center=center, res=res_per_cell, colorful=colorful,**params)
 
 		if(ylim!=None):
 			p.ylim(ylim[0],ylim[1])
 
 		p.show()
 
-	def __plot_1dsolution(self, cell_index, value, axis, axes, res, colorful=False,**params):
+	def __plot_1dsolution(self, cell_index, value, axis, axes, center, res, colorful=False,**params):
 
 		cell_x=self.pos[cell_index][0]
 		cell_y=self.pos[cell_index][1]
@@ -220,8 +247,8 @@ class DGSimulation(Simulation):
 		if(axis==[0,1]):
 			X=np.linspace(cell_x-0.5*cell_dl,cell_x+0.5*cell_dl,res)
 			Y=np.zeros(res)
-			yval=cell_y
-			zval=cell_z
+			yval=center[1]
+			zval=center[2]
 
 			j=0
 
@@ -239,8 +266,8 @@ class DGSimulation(Simulation):
 		elif(axis==[1,0]):
 			X=np.linspace(cell_y-0.5*cell_dl,cell_y+0.5*cell_dl,res)
 			Y=np.zeros(res)
-			xval=cell_x
-			zval=cell_z
+			xval=center[0]
+			zval=center[2]
 
 			j=0
 

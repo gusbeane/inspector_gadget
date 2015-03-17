@@ -61,7 +61,7 @@ double P_k(int k, double xi)
   }
 }
 
-void index_to_base_function(int k, int* Px, int* Py)
+void index_to_base_function2d(int k, int* Px, int* Py)
 {
   int degree = 0;
   int counter = 0;
@@ -92,11 +92,55 @@ void index_to_base_function(int k, int* Px, int* Py)
   return;
 }
 
-double dg_get_value(double* weights, int degree, double cell_x, double cell_y, double cell_dl, double x, double y)
+void index_to_base_function3d(int k, int *Px, int *Py, int *Pz, int degree_k)
+{
+  int DEGREE_K = degree_k;
+
+  int u,v,w,deg_k;
+
+  int counter = 0;
+
+  for(deg_k=0;deg_k<=DEGREE_K;deg_k++)
+    {
+      for(u=0;u<=deg_k;u++)
+        {
+          for(v=0;v<=deg_k-u;v++)
+            {
+              for(w=0;w<=deg_k-u-v;w++)
+                {
+                  if(u+v+w==deg_k)
+                    {
+                      if(counter==k)
+                        {
+                          *Px=w;
+                          *Py=v;
+                          *Pz=u;
+                         
+                          return;
+                        }
+                      else
+                        {
+                          counter++;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+  *Px=0;
+  *Py=0;
+  *Pz=0;
+
+  printf("Error in index_to_base_function3d: Couldn't calculate index from base function!\n");
+  return;
+}
+
+double dg_get_value2d(double* weights, int nof_base_fcts, double cell_x, double cell_y, double cell_dl, double x, double y)
 {
   double xi_1,xi_2;
-  //transform to cell coordinates
 
+  //transform to cell coordinates
   xi_1=2./cell_dl*(x-cell_x);
   xi_2=2./cell_dl*(y-cell_y);
 
@@ -105,9 +149,10 @@ double dg_get_value(double* weights, int degree, double cell_x, double cell_y, d
 
   int index;
   double value = 0.;
-  for(index = 0; index < degree; index++)
+
+  for(index = 0; index < nof_base_fcts; index++)
     {
-      index_to_base_function(index, &px, &py);
+      index_to_base_function2d(index, &px, &py);
 
       value += weights[index] * P_k(px, xi_1)*P_k(py, xi_2);
     }
@@ -115,3 +160,27 @@ double dg_get_value(double* weights, int degree, double cell_x, double cell_y, d
   return value;
 }
 
+double dg_get_value3d(double* weights, int nof_base_fcts, int degree_k, double cell_x, double cell_y, double cell_z, double cell_dl, double x, double y, double z)
+{
+  double xi_1,xi_2, xi_3;
+
+  //transform to cell coordinates
+  xi_1=2./cell_dl*(x-cell_x);
+  xi_2=2./cell_dl*(y-cell_y);
+  xi_3=2./cell_dl*(z-cell_z);
+
+  int px;
+  int py;
+  int pz;
+
+  int index;
+  double value = 0.;
+  for(index = 0; index < nof_base_fcts; index++)
+    {
+      index_to_base_function3d(index, &px, &py, &pz, degree_k);
+      
+      value += weights[index] * P_k(px, xi_1)*P_k(py, xi_2)*P_k(pz, xi_3);
+    }
+
+  return value;
+}

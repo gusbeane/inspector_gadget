@@ -645,7 +645,8 @@ PyObject* _calcAMRSlice(PyObject *self, PyObject *args, PyObject *kwargs) {
 PyObject* _calcDGSlice(PyObject *self, PyObject *args, PyObject *kwargs) {
         PyArrayObject *pos, *value, *amrlevel, *pyGrid, *pyNeighbours, *pyContours;
         int npart, nx, ny, nz, axis0, axis1, proj, grid3D, ngbs;
-        int x, y, z, i, j, cell;;
+        int x, y, z, i, j, cell;
+        int dgdims,degree_k;
         double bx, by, bz, cx, cy, cz;
         double domainx, domainy, domainz, domainlen;
         double *real_pos, *real_value;
@@ -656,7 +657,7 @@ PyObject* _calcDGSlice(PyObject *self, PyObject *args, PyObject *kwargs) {
         t_sph_tree tree;
         PyObject *dict;
         clock_t start;
-        char *kwlist[] = {"pos", "value", "amrlevel", "nx", "ny", "boxx", "boxy", "centerx", "centery", "centerz", "domainx", "domainy", "domainz", "domainlen", "axis0", "axis1", "proj", "nz", "boxz", "grid3D", "ngbs", NULL} ;
+        char *kwlist[] = {"pos", "value", "amrlevel", "dgdims", "degree_k", "nx", "ny", "boxx", "boxy", "centerx", "centery", "centerz", "domainx", "domainy", "domainz", "domainlen", "axis0", "axis1", "proj", "nz", "boxz", "grid3D", "ngbs", NULL} ;
 
         start = clock();
 
@@ -667,7 +668,7 @@ PyObject* _calcDGSlice(PyObject *self, PyObject *args, PyObject *kwargs) {
         bz = 0;
         grid3D = 0;
         ngbs = 1;
-        if (!PyArg_ParseTupleAndKeywords( args, kwargs, "O!O!O!iiddddddddd|iiiidii:calcDGSlice( pos, value, amrlevel, nx, ny, boxx, boxy, centerx, centery, centerz, domainx, domainy, domainz, domainlen, [axis0, axis1, proj, nz, boxz, grid3D, ngbs] )", kwlist, &PyArray_Type, &pos, &PyArray_Type, &value, &PyArray_Type, &amrlevel, &nx, &ny, &bx, &by, &cx, &cy, &cz, &domainx, &domainy, &domainz, &domainlen, &axis0, &axis1, &proj, &nz, &bz, &grid3D, &ngbs )) {
+        if (!PyArg_ParseTupleAndKeywords( args, kwargs, "O!O!O!iiiiddddddddd|iiiidii:calcDGSlice( pos, value, amrlevel, dgdims, degree_k, nx, ny, boxx, boxy, centerx, centery, centerz, domainx, domainy, domainz, domainlen, [axis0, axis1, proj, nz, boxz, grid3D, ngbs] )", kwlist, &PyArray_Type, &pos, &PyArray_Type, &value, &PyArray_Type, &amrlevel, &dgdims, &degree_k, &nx, &ny, &bx, &by, &cx, &cy, &cz, &domainx, &domainy, &domainz, &domainlen, &axis0, &axis1, &proj, &nz, &bz, &grid3D, &ngbs )) {
                 return 0;
         }
 
@@ -693,7 +694,7 @@ PyObject* _calcDGSlice(PyObject *self, PyObject *args, PyObject *kwargs) {
         }
 
         if (value->nd != 2 || value->descr->type_num != PyArray_DOUBLE) {
-                PyErr_SetString( PyExc_ValueError, "value has to be of dimension [n,no_of_degrees] and type double" );
+                PyErr_SetString( PyExc_ValueError, "value has to be of dimension [n,nof_base_functions] and type double" );
                 return 0;
         }
 
@@ -710,7 +711,7 @@ PyObject* _calcDGSlice(PyObject *self, PyObject *args, PyObject *kwargs) {
 
           }
 
-        int degree = pos->dimensions[1];
+        int nof_base_fcts = value->dimensions[1];
 
         npart = pos->dimensions[0];
         if (npart != value->dimensions[0]) {
@@ -745,16 +746,16 @@ PyObject* _calcDGSlice(PyObject *self, PyObject *args, PyObject *kwargs) {
         }
 
         real_pos = (double*)malloc( 3 * npart * sizeof( double ) );
-        real_value = (double*)malloc( npart * degree * sizeof( double ) );
+        real_value = (double*)malloc( npart * nof_base_fcts * sizeof( double ) );
         real_level = (int*)malloc( npart * sizeof(int));
 
         for (i=0; i<npart; i++) {
           for (j=0; j<3; j++) {
             real_pos[i*3+j] = *(double*)((char*)pos->data + i*pos->strides[0] + j*pos->strides[1]);
           }
-          for(j = 0; j < 3; j++)
+          for(j = 0; j < nof_base_fcts; j++)
             {
-              real_value[i*degree + j] = *(double*)((char*)value->data + i*value->strides[0] + j*value->strides[1]);
+              real_value[i*nof_base_fcts + j] = *(double*)((char*)value->data + i*value->strides[0] + j*value->strides[1]);
             }
 
           real_level[i] = *(int*)((char*)amrlevel->data + i*amrlevel->strides[0]);
@@ -788,7 +789,20 @@ PyObject* _calcDGSlice(PyObject *self, PyObject *args, PyObject *kwargs) {
 
               neighbour = getNearestNode( &tree, coord );
 
-              grid[ cell ] += dg_get_value(&real_value[ degree * neighbour ], degree, real_pos[3 * neighbour + 0],  real_pos[3 * neighbour + 1], amr_length[real_level[neighbour]], coord[ axis0 ], coord[ axis1 ]  );
+
+              if(dgdims==2)
+              {
+                grid[ cell ] += dg_get_value2d(&real_value[ nof_base_fcts * neighbour ], nof_base_fcts, real_pos[3 * neighbour + 0],  real_pos[3 * neighbour + 1], amr_length[real_level[neighbour]], coord[ axis0 ], coord[ axis1 ]  );
+              }
+              else if(dgdims==3)
+              {
+                grid[ cell ] += dg_get_value3d(&real_value[ nof_base_fcts * neighbour ], nof_base_fcts, degree_k, real_pos[3 * neighbour + 0],  real_pos[3 * neighbour + 1],  real_pos[3 * neighbour + 2], amr_length[real_level[neighbour]], coord[ axis0 ], coord[ axis1 ], coord[3-axis0-axis1] );
+              }
+              else
+              {
+		PyErr_SetString( PyExc_ValueError, "dgdims has to be 2 or 3!\n");
+		return 0;
+              }
 
               if (ngbs) neighbours[ cell ] = neighbour;
 
