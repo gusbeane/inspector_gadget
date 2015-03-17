@@ -555,6 +555,40 @@ class Header(object):
             return "ICs "+filename
         else:
             return "subfind output "+filename
+        
+class Parameter(object):
+    def __init__(self,parent,name):
+        self.__parent__ = parent
+        self.__name__ = name
+        self.__attrs__ = []
+            
+    def __str__(self):
+        filename = self.__parent__.__path__
+        if isinstance(self.__parent__, Snapshot):
+            tmp = "snapshot "+filename+"\n"
+        elif isinstance(self.__parent__, ICs):
+            tmp = "ICs "+filename+"\n"
+        else:
+            tmp = "subfind output "+filename+"\n"
+            
+        tmp += self.__name__ + ":\n"
+            
+        for entry in self.__attrs__:
+            val = getattr(self,entry)
+            if type(val) ==  np.ndarray or type(val) == list:
+                tmp += '  '+entry+': '+', '.join([str(x) for x in val])+'\n'
+            else:
+                tmp += '  '+entry+': '+str(val)+'\n'
+        return tmp
+
+    def __repr__(self):
+        filename = self.__parent__.__path__
+        if isinstance(self.__parent__, Snapshot):
+            return "snapshot "+filename
+        elif isinstance(self.__parent__, ICs):
+            return "ICs "+filename
+        else:
+            return "subfind output "+filename
 
 class PartGroup(object):
     def __init__(self,parent,num):

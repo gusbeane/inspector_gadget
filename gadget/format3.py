@@ -53,6 +53,8 @@ class Format3:
             raise Exception("could not open file %s"%filename)
         
         self.load_header()
+        self.load_parameter("Parameters", "parameters")
+        self.load_parameter("Config", "config")
         self.file.close()
         del self.file
         
@@ -123,7 +125,18 @@ class Format3:
         if "Flag_DoublePrecision" in file['/Header'].attrs.keys():
             self.sn.flag_doubleprecision = file['/Header'].attrs['Flag_DoublePrecision']
 
-
+    def load_parameter(self,group, name):
+        file = self.file
+        
+        if group in file:
+            param = loader.Parameter(self.sn,name)
+            for i in file[group].attrs:        
+                    setattr(param, i, file[group].attrs[i])
+                    param.__attrs__.append(i)
+    
+            setattr(self.sn, name, param)
+            
+            
     def load_data(self, filename, num):
         self.sn.npart_loaded = np.zeros(6,dtype=np.longlong)
         self.sn.data = {}
