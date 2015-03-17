@@ -214,7 +214,7 @@ class DGSimulation(Simulation):
 		    
 		self.__plot_Slice__(result,log=log, vmin=vmin, vmax=vmax, dresult=dresult, colorbar=colorbar, cblabel=cblabel, contour=contour, newlabels=newlabels, newfig=newfig, axes=axes, **params)
 
-	def plot_DGline(self, value="dgw0", res=1024, res_per_cell=100, ylim=None, box=None, center=None,axis=[0,1], newfig=True, axes=None,colorful=False,**params):
+	def plot_DGline(self, value="dgw0", res=1024, res_per_cell=100, ylim=None, box=None, center=None,axis=0, newfig=True, axes=None,colorful=False,**params):
 
 		if newfig and axes==None:
 		    fig = p.figure()
@@ -244,7 +244,7 @@ class DGSimulation(Simulation):
 		cell_dl=self.boxsize/(2.**self.amrlevel[cell_index])
 
 		#line in x-direction
-		if(axis==[0,1]):
+		if(axis==0):
 			X=np.linspace(cell_x-0.5*cell_dl,cell_x+0.5*cell_dl,res)
 			Y=np.zeros(res)
 			yval=center[1]
@@ -263,7 +263,7 @@ class DGSimulation(Simulation):
 
 
 		#line in y-direction
-		elif(axis==[1,0]):
+		elif(axis==1):
 			X=np.linspace(cell_y-0.5*cell_dl,cell_y+0.5*cell_dl,res)
 			Y=np.zeros(res)
 			xval=center[0]
@@ -280,8 +280,26 @@ class DGSimulation(Simulation):
 				Y[j]=result
 				j=j+1
 
+                #line in z-direction
+		elif(axis==2):
+			X=np.linspace(cell_z-0.5*cell_dl,cell_z+0.5*cell_dl,res)
+			Y=np.zeros(res)
+			yval=center[1]
+			zval=center[2]
+
+			j=0
+
+			for zval in X:
+				result = 0
+
+				for i in np.arange(0,self.Nof_base_functions):
+					result = result + self.data[value][cell_index][i] * self.base_function_value(i, cell_x, cell_y, cell_z, cell_dl, xval, yval, zval)
+
+				Y[j]=result
+				j=j+1
+
 		else:	
-			raise Exception("axis not valid!, implement me!")
+			raise Exception("axis not valid!, axis=1/2/3")
 			
 	
 		if not 'color' in params and colorful==False:
