@@ -576,8 +576,8 @@ class Simulation(Snapshot):
         dymax = dval.shape[1]
             
         def format_coord(x, y):
-            col = int((x-dxmin)/ddx+0.5)
-            row = int((y-dymin)/ddy+0.5)
+            col = int((x-dxmin)/ddx)
+            row = int((y-dymin)/ddy)
             if col>=0 and col<dxmax and row>=0 and row<dymax:
                 z = dval[row,col]
                 if dresult["name"] == "id":
