@@ -400,6 +400,8 @@ class ICs(Loader):
         if format==2:
             raise Exception( "Creating format2 snapshots is not supported yet")
         
+        self.__path__ = os.path.abspath(filename)
+        
         self.__parttype__ = np.where(num_part>0)[0]
         
         if masses is None:
@@ -524,7 +526,7 @@ class Header(object):
         return self.__dict__.keys() + self.__attrs__
     
     def __str__(self):
-        filename = os.path.abspath(self.__parent__.filename)
+        filename = self.__parent__.__path__
         if isinstance(self.__parent__, Snapshot):
             tmp = "snapshot "+filename+"\n"
         elif isinstance(self.__parent__, ICs):
@@ -546,7 +548,41 @@ class Header(object):
         return tmp
 
     def __repr__(self):
-        filename = os.path.abspath(self.__parent__.filename)
+        filename = self.__parent__.__path__
+        if isinstance(self.__parent__, Snapshot):
+            return "snapshot "+filename
+        elif isinstance(self.__parent__, ICs):
+            return "ICs "+filename
+        else:
+            return "subfind output "+filename
+        
+class Parameter(object):
+    def __init__(self,parent,name):
+        self.__parent__ = parent
+        self.__name__ = name
+        self.__attrs__ = []
+            
+    def __str__(self):
+        filename = self.__parent__.__path__
+        if isinstance(self.__parent__, Snapshot):
+            tmp = "snapshot "+filename+"\n"
+        elif isinstance(self.__parent__, ICs):
+            tmp = "ICs "+filename+"\n"
+        else:
+            tmp = "subfind output "+filename+"\n"
+            
+        tmp += self.__name__ + ":\n"
+            
+        for entry in self.__attrs__:
+            val = getattr(self,entry)
+            if type(val) ==  np.ndarray or type(val) == list:
+                tmp += '  '+entry+': '+', '.join([str(x) for x in val])+'\n'
+            else:
+                tmp += '  '+entry+': '+str(val)+'\n'
+        return tmp
+
+    def __repr__(self):
+        filename = self.__parent__.__path__
         if isinstance(self.__parent__, Snapshot):
             return "snapshot "+filename
         elif isinstance(self.__parent__, ICs):
@@ -560,7 +596,7 @@ class PartGroup(object):
         self.__num__ = num
 
     def __str__(self):
-        filename = os.path.abspath(self.__parent__.filename)
+        filename = self.__parent__.__path__
         if isinstance(self.__parent__, Snapshot):
             tmp = "snapshot "+filename+"\nparticle group %d (%d particles):\n"%(self.__num__,self.__parent__.npart_loaded[self.__num__])
         elif isinstance(self.__parent__, ICs):
@@ -581,7 +617,7 @@ class PartGroup(object):
         return tmp
         
     def __repr__(self):
-        filename = os.path.abspath(self.__parent__.filename)
+        filename = self.__parent__.__path__
         if isinstance(self.__parent__, Snapshot):
             return "snapshot "+filename+", particle group %d contains %d particles"%(self.__num__,self.__parent__.npart_loaded[self.__num__])
         elif isinstance(self.__parent__, ICs):

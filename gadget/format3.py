@@ -2,6 +2,7 @@ import h5py
 import numpy as np
 import os.path as path
 import re
+import os
 
 import gadget.loader as loader
 import gadget.fields as fields
@@ -52,6 +53,8 @@ class Format3:
             raise Exception("could not open file %s"%filename)
         
         self.load_header()
+        self.load_parameter("Parameters", "parameters")
+        self.load_parameter("Config", "config")
         self.file.close()
         del self.file
         
@@ -67,7 +70,7 @@ class Format3:
         else:
             self.sn.currFile = None
             
-
+        self.sn.__path__ = os.path.abspath(self.sn.filename)
 
     def load_header(self):
         file = self.file
@@ -122,7 +125,18 @@ class Format3:
         if "Flag_DoublePrecision" in file['/Header'].attrs.keys():
             self.sn.flag_doubleprecision = file['/Header'].attrs['Flag_DoublePrecision']
 
-
+    def load_parameter(self,group, name):
+        file = self.file
+        
+        if group in file:
+            param = loader.Parameter(self.sn,name)
+            for i in file[group].attrs:        
+                    setattr(param, i, file[group].attrs[i])
+                    param.__attrs__.append(i)
+    
+            setattr(self.sn, name, param)
+            
+            
     def load_data(self, filename, num):
         self.sn.npart_loaded = np.zeros(6,dtype=np.longlong)
         self.sn.data = {}
