@@ -1,8 +1,12 @@
 import numpy as np
-import matplotlib.pyplot as p
-import matplotlib
 import time
 import sys
+
+try:
+	import matplotlib.pyplot as p
+	import matplotlib
+except:
+	pass
 
 from gadget.loader import Snapshot
 from gadget.simulation import Simulation
@@ -155,7 +159,7 @@ class DGSimulation(Simulation):
 		cell_x=self.pos[cell_index][0]
 		cell_y=self.pos[cell_index][1]
 		cell_z=self.pos[cell_index][2]
-		cell_dl=self.boxsize/(2.**self.amrlevel[cell_index])
+		cell_dl=self.BoxSize/(2.**self.amrlevel[cell_index])
 
 		for i in np.arange(0,self.Nof_base_functions):
 			result = result + self.data[value][cell_index][i] * self.base_function_value(i, cell_x, cell_y, cell_z, cell_dl, x, y, z)
@@ -168,7 +172,7 @@ class DGSimulation(Simulation):
 		    group = self.part0
 		       
 		center = self.__validate_vector__(center, self.center)
-		box = self.__validate_vector__(box, self.boxsize,len=2)
+		box = self.__validate_vector__(box, self.BoxSize,len=2)
 		
 		axis0 = axis[0]
 		axis1 = axis[1]
@@ -179,13 +183,13 @@ class DGSimulation(Simulation):
 		c[2] = center[3 - axis0 - axis1]
 		
 
-		domainlen = self.boxsize        
+		domainlen = self.BoxSize        
 		domainc = np.zeros(3)
-		domainc[0] = self.boxsize/2
-		domainc[1] = self.boxsize/2.
+		domainc[0] = self.BoxSize/2
+		domainc[1] = self.BoxSize/2.
 		
 		if self.numdims >2:
-		    domainc[2] = self.boxsize/2.
+		    domainc[2] = self.BoxSize/2.
 
 		posdata = group.pos.astype('float64')
 		amrlevel = group.amrlevel.astype('int32')
@@ -225,7 +229,7 @@ class DGSimulation(Simulation):
 		ids=np.unique(self.get_AMRline("id",box=box,center=center,axis=axis,res=res)["grid"])
 
 	        center = self.__validate_vector__(center, self.center)
-		box = self.__validate_vector__(box, self.boxsize,len=2)
+		box = self.__validate_vector__(box, self.BoxSize,len=2)
 
 		for i in ids:
 			index=np.where(self.id==i)[0][0]
@@ -241,7 +245,7 @@ class DGSimulation(Simulation):
 		cell_x=self.pos[cell_index][0]
 		cell_y=self.pos[cell_index][1]
 		cell_z=self.pos[cell_index][2]
-		cell_dl=self.boxsize/(2.**self.amrlevel[cell_index])
+		cell_dl=self.BoxSize/(2.**self.amrlevel[cell_index])
 
 		#line in x-direction
 		if(axis==0):

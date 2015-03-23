@@ -61,15 +61,15 @@ class Halo(Filter):
     def getIndices(self, data):
         ind = None
         gr = data['group']
-        if self.offset[gr] + self.len[gr] > self.sn_offset[gr] and self.offset[gr] < self.sn_offset[gr]+data['nparticles']:
+        if self.offset[gr] + self.len[gr] > self.sn_offset[gr] and self.offset[gr] < self.sn_offset[gr]+data['NumPart_ThisFile']:
               start = np.max([0, self.offset[gr] - self.sn_offset[gr]])
-              stop = np.min([(self.offset[gr]+self.len[gr])-self.sn_offset[gr], data['nparticles']])
+              stop = np.min([(self.offset[gr]+self.len[gr])-self.sn_offset[gr], data['NumPart_ThisFile']])
               
               ind = slice(start,stop)
         else:
             ind = slice(0,0)
     
-        self.sn_offset[gr] += data['nparticles']
+        self.sn_offset[gr] += data['NumPart_ThisFile']
         
         return ind
     

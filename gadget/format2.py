@@ -105,7 +105,7 @@ class Format2:
 
         if name == "XNUC" or name == "PASS":
             bs, bsall = self.get_block_size_from_table( name )
-            if self.sn.flag_doubleprecision:
+            if self.sn.Flag_DoublePrecision:
                 ele = 8
             else:
                 ele = 4
@@ -123,7 +123,7 @@ class Format2:
         else:
             bs, bsall = self.get_block_size_from_table( name )
             dim = self.get_block_dim_from_table( name )
-            if self.sn.flag_doubleprecision:
+            if self.sn.Flag_DoublePrecision:
                 ele = 8
             else:
                 ele = 4
@@ -173,28 +173,34 @@ class Format2:
             else:
                 f.seek( 4, 1 ) # skip fortran header of data block
                 s = f.read(24)
-                self.sn.nparticles = np.longlong( struct.unpack( endian + "6i", s ) )
+                self.sn.NumPart_ThisFile = np.longlong( struct.unpack( endian + "6i", s ) )
                 s = f.read(48)
-                self.sn.masses = np.array( struct.unpack( endian + "6d", s ) )
+                self.sn.MassTable = np.array( struct.unpack( endian + "6d", s ) )
                 s = f.read(24)
-                self.sn.time, self.sn.redshift, self.sn.flag_sfr, self.sn.flag_feedback = struct.unpack( endian + "ddii", s )
+                self.sn.Time, self.sn.Redshift, self.sn.Flag_Sfr, self.sn.Flag_Feedback = struct.unpack( endian + "ddii", s )
                 s = f.read(24)
-                self.sn.nparticlesall = np.longlong( struct.unpack( endian + "6i", s ) )
+                self.sn.NumPart_Total = np.longlong( struct.unpack( endian + "6i", s ) )
                 s = f.read(16)
-                self.sn.flag_cooling, self.sn.num_files, self.sn.boxsize = struct.unpack( endian + "iid", s )
+                self.sn.Flag_Cooling, self.sn.NumFilesPerSnapshot, self.sn.BoxSize = struct.unpack( endian + "iid", s )
                 s = f.read(24)
-                self.sn.omega0, self.sn.omegalambda, self.sn.hubbleparam = struct.unpack( endian + "ddd", s )
+                self.sn.Omega0, self.sn.OmegaLambda, self.sn.HubbleParam = struct.unpack( endian + "ddd", s )
                 s = f.read(8)
-                self.sn.flag_stellarage, self.sn.flag_metals = struct.unpack( endian + "ii", s )
+                self.sn.Flag_StellarAge, self.sn.Flag_Metals = struct.unpack( endian + "ii", s )
                 s = f.read(24)
-                self.sn.nparticlesall += np.longlong( struct.unpack( endian + "6i", s ) )<<32
+                self.sn.NumPart_Total_HighWord += np.longlong( struct.unpack( endian + "6i", s ) )<<32
                 s = f.read(12)
-                self.sn.flag_entropy_instead_u, self.sn.flag_doubleprecision, self.sn.flag_lpt_ics = struct.unpack( "iii", s )
+                self.sn.flag_entropy_instead_u, self.sn.Flag_DoublePrecision, self.sn.flag_lpt_ics = struct.unpack( "iii", s )
                 s = f.read(52)
+                
+                self.sn.__headerfields__ = ['Time', 'Redshift', 'BoxSize', 'Omega0', 'OmegaLambda', 'HubbleParam', 'Flag_Sfr',
+                                  'Flag_Feedback', 'Flag_Cooling', 'Flag_StellarAge', 'Flag_Metals', 'Flag_DoublePrecision', 
+                                  'NumPart_ThisFile', 'NumPart_Total', 'NumPart_Total_HighWord', 'NumFilesPerSnapshot', 'MassTable', 'flag_lpt_ics', 'flag_entropy_instead_u' ]
 
+                self.sn.nparticlesall = np.longlong(self.sn.NumPart_Total)
+                self.sn.nparticlesall += np.longlong(self.sn.NumPart_Total_HighWord)<<32
 
                 if self.sn.nparticlesall.sum() == 0:
-                    self.sn.nparticlesall = self.sn.nparticles
+                    self.sn.nparticlesall = self.sn.NumPart_ThisFile
                         
                 sort = self.sn.nparticlesall.argsort()
                 if self.sn.nparticlesall[ sort[::-1] ][1] == 0:
@@ -206,15 +212,15 @@ class Format2:
                 f.close()
                 s = "" # stop reading
 
-                self.sn.npart = self.sn.nparticles.sum()
+                self.sn.npart = self.sn.NumPart_ThisFile.sum()
                 self.sn.npartall = self.sn.nparticlesall.sum()
 
                 if verbose:
                     print "nparticlesall:", self.sn.nparticlesall, "sum:", self.sn.npartall
 
                 if fileid == 0:
-                    if (self.sn.num_files != self.filecount) and not (self.sn.num_files == 0 and self.filecount == 1):
-                        raise Exception( "Number of files detected (%d) and num_files in the header (%d) are inconsistent." % (self.filecount, self.sn.num_files) )
+                    if (self.sn.NumFilesPerSnapshot != self.filecount) and not (self.sn.NumFilesPerSnapshot == 0 and self.filecount == 1):
+                        raise Exception( "Number of files detected (%d) and NumFilesPerSnapshot in the header (%d) are inconsistent." % (self.filecount, self.sn.NumFilesPerSnapshot) )
         if verbose:
             print "Snapshot contains %d particles." % self.sn.npartall
         return
@@ -243,7 +249,7 @@ class Format2:
                 blocktype = "i4"
                 elementsize = 4
             else:
-                if self.sn.flag_doubleprecision:
+                if self.sn.Flag_DoublePrecision:
                     blocktype = 'f8'
                     elementsize = 8
                 else:
@@ -252,7 +258,7 @@ class Format2:
 
             nsum = 0
             for ptype in range( 6 ):
-                if self.sn.nparticles[ptype] == 0:
+                if self.sn.NumPart_ThisFile[ptype] == 0:
                     continue
                     
                 if not self.parttype_has_block( ptype, name ):
@@ -306,7 +312,7 @@ class Format2:
                     blocktype = "i4"
                     elementsize = 4
                 else:
-                    if self.sn.flag_doubleprecision:
+                    if self.sn.Flag_DoublePrecision:
                         blocktype = 'f8'
                         elementsize = 8
                     else:
@@ -315,7 +321,7 @@ class Format2:
                 
                 nsum = 0
                 for ptype in range( 6 ):
-                    if self.sn.nparticles[ptype] == 0:
+                    if self.sn.NumPart_ThisFile[ptype] == 0:
                         continue
                     
                     if not self.parttype_has_block( ptype, name ):
@@ -323,7 +329,7 @@ class Format2:
                     
                     npart, npartall = self.get_block_size_from_table( name )
                     dim = self.get_block_dim_from_table( name )
-                    npartptype = self.sn.nparticles[ptype]
+                    npartptype = self.sn.NumPart_ThisFile[ptype]
                     elements = npartptype * dim
                     
                     if self.sn.__verbose__:
@@ -352,7 +358,7 @@ class Format2:
 
                     nsum += self.sn.nparticlesall[ptype]
                     
-            nparttot += self.sn.nparticles
+            nparttot += self.sn.NumPart_ThisFile
         
         if self.filecount > 1:
             self.sn.npart = self.npartall
@@ -365,24 +371,24 @@ class Format2:
         npartall = 0
         if block in ["POS ", "VEL ", "ID  ", "MASS", "POT ", "TSTP"]:
             # present for all particles
-            npart = self.sn.nparticles.sum()
+            npart = self.sn.NumPart_ThisFile.sum()
             npartall = self.sn.nparticlesall.sum()
         if block in ["U   ","RHO ", "NE  ", "NH  ", "HSML", "SFR ", "Z   ", "XNUC", "PRES", "VORT", "VOL ", "HRGM", "REF ", "DIVV", "ROTV", "DUDT", "BFLD", "DIVB", "PSI ", "MASS", "REF ", "PASS", "TEMP", "GRAR", "GRAP", "NONN", "CSND"]:
             # present for hydro particles
-            npart += self.sn.nparticles[0]
+            npart += self.sn.NumPart_ThisFile[0]
             npartall += self.sn.nparticlesall[0]
         if block in ["AGE ", "Z   "]:
             # present for star particles
-            npart += self.sn.nparticles[4]
+            npart += self.sn.NumPart_ThisFile[4]
             npartall += self.sn.nparticlesall[4]
         if block in ["BHMA", "BHMD"]:
             #present for black hole particles
-            npart += self.sn.nparticles[5]
+            npart += self.sn.NumPart_ThisFile[5]
             npartall += self.sn.nparticlesall[5]
 
         if self.tracer:
             if block in ["MASS"]:
-                npart -= self.sn.nparticles[ self.tracer ]
+                npart -= self.sn.NumPart_ThisFile[ self.tracer ]
                 npartall -= self.sn.nparticlesall[ self.tracer ]
         return npart, npartall
     

@@ -22,7 +22,7 @@ class Loader(object):
         self.__format__ = format
         
         self.__present__ = flds.present.copy()
-        self.__headerfields__ = list(flds.headerfields)
+        self.__headerfields__ = []
         
         self.__fields__ = fields
         self.__normalizeFields__()
@@ -60,10 +60,16 @@ class Loader(object):
         for i in np.arange(len(self.__fields__)):
             self.__fields__[i] = self.__normalizeName__(self.__fields__[i])
                     
-    def __getattr__(self,attr):       
+    def __getattr__(self,attr):
+        if attr in flds.legacy_header_names:
+            return getattr(self, flds.legacy_header_names[attr]) 
+              
         return self.__getitem__(attr)
 
     def __setattr__(self,attr,val):
+        if attr in flds.legacy_header_names:
+            setattr(self, flds.legacy_header_names[attr], val)
+            
         attr = self.__normalizeName__(attr)
         
         if attr =='data':
@@ -80,8 +86,6 @@ class Loader(object):
         if hasattr(self, "data"):
             for i in self.data.keys():
                 dir.append(i)
-                if flds.shortnames.has_key(i):
-                    dir.append(flds.shortnames[i])
                 if flds.rev_hdf5toformat2.has_key(i):
                     dir.append(flds.rev_hdf5toformat2[i])
         
@@ -137,7 +141,7 @@ class Loader(object):
             pres = np.zeros(6,dtype=np.int64)
             pres[gr] = shape
             if name == 'mass':
-                pres[gr] = (0 if self.masses[gr]>0  else 1)
+                pres[gr] = (0 if self.MassTable[gr]>0  else 1)
             old = self.__present__.get(name,np.zeros(6,dtype=np.longlong))
             pres = np.maximum(old,pres)
             self.__present__[name] = pres
@@ -177,7 +181,7 @@ class Loader(object):
         else:
             pres = self.__isPresent__(name)
             
-        num = np.where(pres>0,self.nparticles,0)
+        num = np.where(pres>0,self.NumPart_ThisFile,0)
         
         if dtype==None:
             if name=='id':
@@ -224,7 +228,7 @@ class Loader(object):
         if self.currFile is None:
             return False
         if num is None:
-            if self.currFile < self.num_files-1:
+            if self.currFile < self.NumFilesPerSnapshot-1:
                 num = self.currFile+1
             else:
                 if self.__verbose__:
@@ -232,7 +236,7 @@ class Loader(object):
                 return False
             
         else:
-            if num >= self.num_files or num < 0:
+            if num >= self.NumFilesPerSnapshot or num < 0:
                 if self.__verbose__:
                     print "invalide file number %d"%num
                 return False
@@ -269,7 +273,7 @@ class Loader(object):
             yield self
             return
 
-        for i in np.arange(self.num_files):
+        for i in np.arange(self.NumFilesPerSnapshot):
             self.nextFile(i)
             yield self
 
@@ -286,6 +290,15 @@ class Loader(object):
         
             del self.data
             self.data = {}
+            
+            
+        for i in self.__headerfields__:
+            delattr(self,i)
+        self.__headerfields__ = []
+        if hasattr(self,"parameters"):
+            del self.parameters
+        if hasattr(self,"config"):
+            del self.parameters
 
 class Snapshot(Loader):
     """
@@ -336,8 +349,8 @@ class Snapshot(Loader):
         #set these two, in case we want to add fields to an existing snapshot
         if toDouble:
            self.__precision__ = np.float64
-        elif hasattr(self,"flag_doubleprecision"):
-            if self.flag_doubleprecision:
+        elif hasattr(self,"Flag_DoublePrecision"):
+            if self.Flag_DoublePrecision:
                 self.__precision__ = np.float64
             else:
                 self.__precision__ = np.float32
@@ -413,31 +426,38 @@ class ICs(Loader):
         self.__precision__ = precision
         self.__longids__ = longids
             
-        self.nparticles = np.longlong(num_part)
-        self.nparticlesall = np.longlong(num_part)
-        self.npart_loaded = self.nparticles
-        self.npart = self.nparticles.sum()
+        self.NumPart_ThisFile = np.longlong(num_part)
+        self.NumPart_Total = np.longlong(num_part)
+        self.NumPart_Total_HighWord = np.zeros(6)
+        
+        self.sn.nparticlesall = np.longlong(self.sn.NumPart_Total)
+        self.npart_loaded = self.NumPart_ThisFile
+        self.npart = self.NumPart_ThisFile.sum()
         self.npartall = self.nparticlesall.sum()
         
         
-        self.num_files = 1
-        self.masses = masses
+        self.NumFilesPerSnapshot = 1
+        self.MassTable = masses
         
-        self.time = 0.
-        self.redshift = 0.
-        self.boxsize = 0.
-        self.omega0 = 0.
-        self.omegalambda = 0
-        self.hubbleparam = 0
-        self.flag_sfr = 0
-        self.flag_feedback = 0
-        self.flag_cooling = 0
-        self.flag_stellarage = 0
-        self.flag_metals = 0
+        self.Time = 0.
+        self.Redshift = 0.
+        self.BoxSize = 0.
+        self.Omega0 = 0.
+        self.OmegaLambda = 0
+        self.HubbleParam = 0
+        self.Flag_Sfr = 0
+        self.Flag_Feedback = 0
+        self.Flag_Cooling = 0
+        self.Flag_StellarAge = 0
+        self.Flag_Metals = 0
         if precision == np.float64:
-            self.flag_doubleprecision=1
+            self.Flag_DoublePrecision=1
         else:
-            self.flag_doubleprecision=0
+            self.Flag_DoublePrecision=0
+            
+        self.__headerfields__ = ['Time', 'Redshift', 'BoxSize', 'Omega0', 'OmegaLambda', 'HubbleParam', 'Flag_Sfr',
+                                  'Flag_Feedback', 'Flag_Cooling', 'Flag_StellarAge', 'Flag_Metals', 'Flag_DoublePrecision', 
+                                  'NumPart_ThisFile', 'NumPart_Total', 'NumPart_Total_HighWord', 'NumFilesPerSnapshot', 'MassTable']
         
         self.header = Header(self)
         
@@ -489,6 +509,7 @@ class Subfind(Loader):
         self.__backend__.load()
 
         self.header = Header(self)
+        
         if not onlyHeader:
             self.group = PartGroup(self,0)
             self.subhalo = PartGroup(self,1)
@@ -500,13 +521,12 @@ class Subfind(Loader):
 class Header(object):
     def __init__(self,parent):
         self.__parent__ = parent
-        self.__attrs__ = []
-        for entry in self.__parent__.__headerfields__:
-            if hasattr(parent,entry):
-                self.__attrs__.append(entry)
                 
     def __getattr__(self,name):
-        if name in self.__attrs__:
+        if name in flds.legacy_header_names:
+            name = flds.legacy_header_names[name] 
+        
+        if name in self.__parent__.__headerfields__:
             return getattr(self.__parent__,name)
         else:
             raise AttributeError
@@ -515,7 +535,10 @@ class Header(object):
         #we can't handle these
         if name in ["__parent__","__attrs__"]:
             super(Header,self).__setattr__(name,value)
-        elif name in self.__attrs__:
+            return        
+        if name in flds.legacy_header_names:
+            name = flds.legacy_header_names[name]     
+        if name in self.__parent__.__headerfields__:
             if type(value)==list:
                 value = np.array(value)
             setattr(self.__parent__,name,value)
@@ -523,7 +546,7 @@ class Header(object):
             raise AttributeError
         
     def __dir__(self):
-        return self.__dict__.keys() + self.__attrs__
+        return self.__dict__.keys() + self.__parent__.__headerfields__
     
     def __str__(self):
         filename = self.__parent__.__path__
@@ -537,14 +560,11 @@ class Header(object):
         tmp += "header:\n"
             
         for entry in self.__parent__.__headerfields__:
-            if hasattr(self,entry):
-                val = getattr(self,entry)
-                if type(val) ==  np.ndarray or type(val) == list:
-                    tmp += '  '+entry+': '+', '.join([str(x) for x in val])+'\n'
-                else:
-                    tmp += '  '+entry+': '+str(val)+'\n'
-
-
+            val = getattr(self,entry)
+            if type(val) ==  np.ndarray or type(val) == list:
+                tmp += '  '+entry+': '+', '.join([str(x) for x in val])+'\n'
+            else:
+                tmp += '  '+entry+': '+str(val)+'\n'
         return tmp
 
     def __repr__(self):
@@ -603,14 +623,12 @@ class PartGroup(object):
             tmp = "ICs "+filename+"\nparticle group %d (%d particles):\n"%(self.__num__,self.__parent__.npart_loaded[self.__num__])
         else:
             if self.__num__ == 0:
-                tmp = "subfind output "+filename+"\groups (%d groups):\n"%(self.__parent__.npart_loaded[self.__num__])
+                tmp = "subfind output "+filename+"\ngroups (%d groups):\n"%(self.__parent__.npart_loaded[self.__num__])
             else:
-                tmp = "subfind output "+filename+"\subhalos (%d subhalos):\n"%(self.__parent__.npart_loaded[self.__num__])
+                tmp = "subfind output "+filename+"\nsubhalos (%d subhalos):\n"%(self.__parent__.npart_loaded[self.__num__])
             
         for i in self.data.keys():
             tmp += "  " + i
-            if flds.shortnames.has_key(i):
-                tmp += '/'+flds.shortnames[i]
             if flds.rev_hdf5toformat2.has_key(i):
                 tmp += '/'+flds.rev_hdf5toformat2[i]
             tmp += "\n"
@@ -716,8 +734,6 @@ class PartGroup(object):
                     pres = parent.__isPresent__(key)
                     if pres[num]>0:
                         dir.append(key)
-                        if flds.shortnames.has_key(key):
-                            dir.append(flds.shortnames[key])
                         if flds.rev_hdf5toformat2.has_key(key):
                             dir.append(flds.rev_hdf5toformat2[key])
         return dir   

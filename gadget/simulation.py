@@ -1,8 +1,14 @@
 import numpy as np
-import matplotlib.pyplot as p
-from matplotlib import collections  as mc
-import matplotlib
 import time
+
+try:
+    import matplotlib.pyplot as p
+    from matplotlib import collections  as mc
+    import matplotlib
+except:
+    print("Could not load matplotlib, plotting function will not work")
+
+
 
 from gadget.loader import Snapshot
 import gadget.calcGrid as calcGrid
@@ -81,7 +87,7 @@ class Simulation(Snapshot):
         
         
     def set_center(self, center):
-        c =  self.__validate_vector__(center, self.boxsize/2, len=3, req=self.numdims)
+        c =  self.__validate_vector__(center, self.BoxSize/2, len=3, req=self.numdims)
         
         if hasattr(self,"config"):
             if hasattr(self.config,"LONG_X"):
@@ -95,7 +101,7 @@ class Simulation(Snapshot):
         return
     
     def set_box(self, box):
-        c = self.__validate_vector__(box, self.boxsize, len=3, req=self.numdims)
+        c = self.__validate_vector__(box, self.BoxSize, len=3, req=self.numdims)
         
         if hasattr(self,"config"):
             if hasattr(self.config,"LONG_X"):
@@ -119,12 +125,12 @@ class Simulation(Snapshot):
         dz = group.pos[:,2]-center[2]
         
         if periodic:
-            dx = np.where(dx > self.boxsize/2, dx-self.boxsize/2,dx)
-            dx = np.where(dx < -self.boxsize/2, dx+self.boxsize/2,dx)
-            dy = np.where(dy > self.boxsize/2, dy-self.boxsize/2,dy)
-            dy = np.where(dy < -self.boxsize/2, dy+self.boxsize/2,dy)
-            dz = np.where(dz > self.boxsize/2, dz-self.boxsize/2,dz)
-            dz = np.where(dz < -self.boxsize/2, dz+self.boxsize/2,dz)
+            dx = np.where(dx > self.BoxSize/2, dx-self.BoxSize/2,dx)
+            dx = np.where(dx < -self.BoxSize/2, dx+self.BoxSize/2,dx)
+            dy = np.where(dy > self.BoxSize/2, dy-self.BoxSize/2,dy)
+            dy = np.where(dy < -self.BoxSize/2, dy+self.BoxSize/2,dy)
+            dz = np.where(dz > self.BoxSize/2, dz-self.BoxSize/2,dz)
+            dz = np.where(dz < -self.BoxSize/2, dz+self.BoxSize/2,dz)
             
         radius = np.sqrt(dx**2+dy**2+dz**2)
 
@@ -137,7 +143,7 @@ class Simulation(Snapshot):
         center = self.__validate_vector__(center, self.center)
         
         group.pos -= center[None,:]
-        self.center = np.zeros( 3 )
+        self.set_center(np.zeros(3))
         
         return
     
@@ -227,12 +233,12 @@ class Simulation(Snapshot):
         z = group.pos[:,3 - axis0 - axis1]
         
         if periodic:
-            x = np.where(x - c[0] > self.boxsize/2, x-self.boxsize/2,x)
-            x = np.where(x - c[0] < -self.boxsize/2, x+self.boxsize/2,x)
-            y = np.where(y - c[1] > self.boxsize/2, y-self.boxsize/2,y)
-            y = np.where(y - c[1] < -self.boxsize/2, y+self.boxsize/2,y)
-            z = np.where(z - c[2] > self.boxsize/2, z-self.boxsize/2,z)
-            z = np.where(z - c[2] < -self.boxsize/2, z+self.boxsize/2,z)
+            x = np.where(x - c[0] > self.BoxSize/2, x-self.BoxSize/2,x)
+            x = np.where(x - c[0] < -self.BoxSize/2, x+self.BoxSize/2,x)
+            y = np.where(y - c[1] > self.BoxSize/2, y-self.BoxSize/2,y)
+            y = np.where(y - c[1] < -self.BoxSize/2, y+self.BoxSize/2,y)
+            z = np.where(z - c[2] > self.BoxSize/2, z-self.BoxSize/2,z)
+            z = np.where(z - c[2] < -self.BoxSize/2, z+self.BoxSize/2,z)
 
         pp, = np.where( (np.abs(x-c[0]) <= 0.5*box[0]) & (np.abs(y-c[1]) <= 0.5*box[1]) & (np.abs(z-c[2]) <= 0.5*box[2]) )
         
@@ -424,13 +430,13 @@ class Simulation(Snapshot):
         c[1] = center[axis1]
         c[2] = center[3 - axis0 - axis1]
         
-        domainlen = self.boxsize        
+        domainlen = self.BoxSize        
         domainc = np.zeros(3)
-        domainc[0] = self.boxsize/2
-        domainc[1] = self.boxsize/2.
+        domainc[0] = self.BoxSize/2
+        domainc[1] = self.BoxSize/2.
         
         if self.numdims >2:
-            domainc[2] = self.boxsize/2.
+            domainc[2] = self.BoxSize/2.
 
         posdata = group.pos.astype('float64')
         valdata = self.__validate_value__(value, posdata.shape[0], group).astype('float64')
@@ -687,14 +693,14 @@ class Simulation(Snapshot):
 
         c = center
         
-        domainlen = self.boxsize
+        domainlen = self.BoxSize
         
         domainc = np.zeros(3)
-        domainc[0] = self.boxsize/2
-        domainc[1] = self.boxsize/2.
+        domainc[0] = self.BoxSize/2
+        domainc[1] = self.BoxSize/2.
         
         if self.numdims >2:
-            domainc[2] = self.boxsize/2.
+            domainc[2] = self.BoxSize/2.
 
         posdata = group.pos.astype( 'float64' )
         valdata = self.__validate_value__(value, posdata.shape[0], group).astype('float64')
@@ -723,14 +729,14 @@ class Simulation(Snapshot):
 
         c = center
         
-        domainlen = self.boxsize
+        domainlen = self.BoxSize
         
         domainc = np.zeros(3)
-        domainc[0] = self.boxsize/2
-        domainc[1] = self.boxsize/2.
+        domainc[0] = self.BoxSize/2
+        domainc[1] = self.BoxSize/2.
         
         if self.numdims >2:
-            domainc[2] = self.boxsize/2.
+            domainc[2] = self.BoxSize/2.
 
         posdata = group.pos.astype( 'float64' )
         valdata = self.__validate_value__(value, posdata.shape[0], group).astype('float64')

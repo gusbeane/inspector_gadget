@@ -69,34 +69,28 @@ present = {
     'u'  : np.array([1,0,0,0,0,0]),           
     }
 
-headerfields = [
-    'nparticles', 
-    'nparticlesall', 
-    'nparticlesallhighword',
-    'num_files',
-    'masses',
-    'time',
-    'redshift',
-    'boxsize',
-    'omega0',
-    'omegalambda',
-    'hubbleparam',
-    'flag_sfr',
-    'flag_feedback',
-    'flag_cooling',
-    'flag_stellarage',
-    'flag_metals',
-    'flag_entropy_instead_u',
-    'flag_doubleprecision',
-    'flag_lpt_ics',
-    
-    'ngroups',
-    'ngroupsall',
-    'nids',
-    'nidsall',
-    'nsubhalos',
-    'nsubhalosall'
-    ]
-
-
+legacy_header_names = {
+    'nparticles': 'NumPart_ThisFile',
+    'masses': 'MassTable',
+    'num_files': 'NumFilesPerSnapshot',
+    'flag_sfr': 'Flag_Sfr',
+    'flag_cooling': 'Flag_Cooling',
+    'flag_feedback': 'Flag_Feedback',
+    'flag_stellarage': 'Flag_StellarAge',
+    'flag_metals': 'Flag_Metals',
+    'ngroups': 'Ngroups_ThisFile',
+    'ngroupsall': 'Ngroups_Total',
+    'nids': 'Nids_ThisFile',
+    'nidsall': 'Nids_Total',
+    'nsubgroups': 'Nsubgroups_ThisFile',
+    'nsubgroupsall': 'Nsubgroups_Total',
+    'NumFiles': 'NumFilesPerSnapshot',
+    'time': 'Time',
+    'redshift': 'Redshift',
+    'boxsize': 'BoxSize',
+    'omega0': 'Omega0',
+    'omegalambda': 'OmegaLambda',
+    'hubbleparam': 'HubbleParam',
+    'flag_doubleprecision': 'Flag_DoublePrecision'
+    }
 

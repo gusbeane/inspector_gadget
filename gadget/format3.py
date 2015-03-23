@@ -64,7 +64,7 @@ class Format3:
             else:
                 self.load_data_subfind(filename,num)
 
-        if self.sn.__combineFiles__==False and self.sn.num_files>1:
+        if self.sn.__combineFiles__==False and self.sn.NumFilesPerSnapshot>1:
             self.sn.currFile = num
             self.sn.filename = filename
         else:
@@ -75,55 +75,28 @@ class Format3:
     def load_header(self):
         file = self.file
         
+        self.sn.__headerfields__ = []
+        
+        for i in file['/Header'].attrs:
+            name = i.replace(" " ,"")
+            
+            if name == "NumFiles": #fix for subfind cataloges
+                name = "NumFilesPerSnapshot"
+                
+            setattr(self.sn, name, file['/Header'].attrs[i])
+            self.sn.__headerfields__.append(name)
+        
         if isinstance(self.sn, loader.Snapshot):
-            self.sn.nparticles =  np.longlong(file['/Header'].attrs['NumPart_ThisFile'])
-            self.sn.nparticlesall = np.longlong(file['/Header'].attrs['NumPart_Total'])
-            self.sn.nparticlesall += np.longlong(file['/Header'].attrs['NumPart_Total_HighWord'])<<32
-            self.sn.masses = file['/Header'].attrs['MassTable']
-            self.sn.num_files = file['/Header'].attrs['NumFilesPerSnapshot']
-            
-            self.sn.flag_sfr = file['/Header'].attrs['Flag_Sfr']
-            self.sn.flag_cooling = file['/Header'].attrs['Flag_Cooling']
-            self.sn.flag_feedback = file['/Header'].attrs['Flag_Feedback']
-            self.sn.flag_stellarage = file['/Header'].attrs['Flag_StellarAge']
-            self.sn.flag_metals = file['/Header'].attrs['Flag_Metals']
+            self.sn.nparticlesall = np.longlong(self.sn.NumPart_Total)
+            self.sn.nparticlesall += np.longlong(self.sn.NumPart_Total_HighWord)<<32
 
-            self.sn.npart = np.array( self.sn.nparticles ).sum()
+            self.sn.npart = np.array( self.sn.NumPart_Total ).sum()
             self.sn.npartall = np.array( self.sn.nparticlesall ).sum()
-            
-            header_list = ['NumPart_ThisFile', 'NumPart_Total', 'NumPart_Total_HighWord', 'MassTable', 'NumFilesPerSnapshot', 'Flag_Sfr', 'Flag_Cooling', \
-            'Flag_Feedback', 'Flag_StellarAge', 'Flag_Metals', 'Time', 'Redshift', 'BoxSize', 'Omega0', 'OmegaLambda', 'HubbleParam', 'Flag_DoublePrecision']
-           
-            for i in file['/Header'].attrs:
-                if not i in header_list:           
-                    setattr(self.sn, i, file['/Header'].attrs[i])
-                    if not i in self.sn.__headerfields__:
-                        self.sn.__headerfields__.append(i)
       
         else:
-            self.sn.ngroups =  file['/Header'].attrs['Ngroups_ThisFile']
-            self.sn.ngroupsall =  file['/Header'].attrs['Ngroups_Total']
-            self.sn.nids =  file['/Header'].attrs['Nids_ThisFile']
-            self.sn.nidsall =  file['/Header'].attrs['Nids_Total']
-            self.sn.nsubgroups =  file['/Header'].attrs['Nsubgroups_ThisFile']
-            self.sn.nsubgroupsall =  file['/Header'].attrs['Nsubgroups_Total']
-            self.sn.num_files = file['/Header'].attrs['NumFiles']
+            self.sn.NumPart_ThisFile = np.array([self.sn.Ngroups_ThisFile, self.sn.Nsubgroups_ThisFile,0,0,0,0])
+            self.sn.nparticlesall = np.array([self.sn.Ngroups_Total, self.sn.Nsubgroups_Total,0,0,0,0])
             
-            self.sn.nparticles = np.array([self.sn.ngroups, self.sn.nsubgroups,0,0,0,0])
-            self.sn.nparticlesall = np.array([self.sn.ngroupsall, self.sn.nsubgroupsall,0,0,0,0])
-        
-
-
-        self.sn.time = file['/Header'].attrs['Time']
-        self.sn.redshift = file['/Header'].attrs['Redshift']
-        self.sn.boxsize = file['/Header'].attrs['BoxSize']
-        self.sn.omega0 = file['/Header'].attrs['Omega0']
-        self.sn.omegalambda = file['/Header'].attrs['OmegaLambda']
-        self.sn.hubbleparam = file['/Header'].attrs['HubbleParam']
-        
-        
-        if "Flag_DoublePrecision" in file['/Header'].attrs.keys():
-            self.sn.flag_doubleprecision = file['/Header'].attrs['Flag_DoublePrecision']
 
     def load_parameter(self,group, name):
         file = self.file
@@ -159,7 +132,7 @@ class Format3:
 
         if self.sn.__combineFiles__:
             filesA = 0
-            filesB = self.sn.num_files
+            filesB = self.sn.NumFilesPerSnapshot
         else:
             filesA = num
             filesB = num+1
@@ -198,11 +171,11 @@ class Format3:
                             pres = self.sn.__learnPresent__(name,gr=gr,shape=elem)
                 if filter != None:
                     if "PartType%d"%gr in self.file.keys():
-                        ind = np.arange(self.sn.nparticles[gr])
+                        ind = np.arange(self.sn.NumPart_ThisFile[gr])
                         for f in filter:
                             if gr in f.parttype:
                                 data = {}
-                                data['nparticles'] = np.longlong(self.file['/Header'].attrs['NumPart_ThisFile'])[gr]
+                                data['NumPart_ThisFile'] = np.longlong(self.file['/Header'].attrs['NumPart_ThisFile'])[gr]
                                 data['group'] = gr
                                 
                                 for fld in f.requieredFields:
@@ -217,7 +190,7 @@ class Format3:
                     else:
                         indices[gr].append(np.array([]))
                 else:
-                    self.sn.npart_loaded[gr] += self.sn.nparticles[gr]
+                    self.sn.npart_loaded[gr] += self.sn.NumPart_ThisFile[gr]
             self.file.close()
                                 
         #now load the requested data                        
@@ -269,7 +242,7 @@ class Format3:
                                 elements = len(indices[gr][i])
                     loaded[gr] += elements
             
-            #self.sn.npart_loaded[self.sn.__parttype__] += self.sn.nparticles[self.sn.__parttype__]
+            #self.sn.npart_loaded[self.sn.__parttype__] += self.sn.NumPart_ThisFile[self.sn.__parttype__]
        
             self.file.close()
             del self.file
@@ -282,7 +255,7 @@ class Format3:
 
         if self.sn.__combineFiles__:
             filesA = 0
-            filesB = self.sn.num_files
+            filesB = self.sn.NumFilesPerSnapshot
         else:
             filesA = num
             filesB = num+1
@@ -301,8 +274,6 @@ class Format3:
                 raise Exception("could not open file %s"%filename)
            
             self.load_header()
-            self.sn.header = loader.Header(self.sn)
-                
 
             for gr in self.sn.__parttype__:
                 if groupnames[gr] in self.file.keys():
@@ -336,9 +307,7 @@ class Format3:
             except Exception:
                 raise Exception("could not open file %s"%filename)
                 
-            self.load_header()
-            self.sn.header = loader.Header(self.sn)
-                
+            self.load_header()  
 
             for gr in self.sn.__parttype__:
                 if groupnames[gr] in self.file.keys():
@@ -352,7 +321,7 @@ class Format3:
                             if self.sn.__combineFiles__:
                                 n2 = np.where(pres > 0, self.sn.nparticlesall, np.zeros(6,dtype=np.longlong))
                             else:
-                                n2 = np.where(pres > 0, self.sn.nparticles, np.zeros(6,dtype=np.longlong))
+                                n2 = np.where(pres > 0, self.sn.NumPart_ThisFile, np.zeros(6,dtype=np.longlong))
                             
                             d = self.file["%s/%s"%(groupnames[gr],item)]
                             shape = np.array(d.shape)
@@ -361,7 +330,7 @@ class Format3:
                                 if self.sn.__combineFiles__:
                                     num = np.where(pres > 0, self.sn.nparticlesall, np.zeros(6,dtype=np.longlong)).sum()
                                 else:
-                                    num = np.where(pres > 0, self.sn.nparticles, np.zeros(6,dtype=np.longlong)).sum()
+                                    num = np.where(pres > 0, self.sn.NumPart_ThisFile, np.zeros(6,dtype=np.longlong)).sum()
                 
                                 #get propertiers of dataset
                                 datatype = d.dtype
@@ -374,7 +343,7 @@ class Format3:
                                     
                             self.sn.data[name][n2[0:gr].sum()+n1[gr]:n2[0:gr].sum()+n1[gr]+shape[0]] = d
             
-            self.sn.npart_loaded[self.sn.__parttype__] += self.sn.nparticles[self.sn.__parttype__]
+            self.sn.npart_loaded[self.sn.__parttype__] += self.sn.NumPart_ThisFile[self.sn.__parttype__]
        
             self.file.close()
             del self.file
@@ -406,35 +375,10 @@ class Format3:
         
     def write_header(self,file):
         header = file.create_group("/Header")
-        header.attrs['NumPart_ThisFile'] = self.sn.nparticles
-        header.attrs['NumPart_Total'] = self.sn.nparticlesall
-        header.attrs['NumPart_Total_HighWord'] = [0,0,0,0,0,0]
-        header.attrs['MassTable'] = self.sn.masses
-        
-        header.attrs['Time'] = self.sn.time
-        header.attrs['NumFilesPerSnapshot'] = self.sn.num_files
-        header.attrs['Redshift'] = self.sn.redshift
-        header.attrs['BoxSize'] = self.sn.boxsize
-
-        header.attrs['Omega0'] =  self.sn.omega0
-        header.attrs['OmegaLambda'] = self.sn.omegalambda
-        header.attrs['HubbleParam'] =  self.sn.hubbleparam
-        header.attrs['Flag_Sfr'] =  self.sn.flag_sfr
-        header.attrs['Flag_Cooling'] = self.sn.flag_cooling
-        header.attrs['Flag_StellarAge'] = self.sn.flag_stellarage
-        header.attrs['Flag_Metals'] =  self.sn.flag_metals
-        header.attrs['Flag_Feedback'] =  self.sn.flag_feedback
-        if hasattr(self.sn, "flag_doubleprecision"):
-            header.attrs['Flag_DoublePrecision'] = self.sn.flag_doubleprecision
-            
-        header_list = ['NumPart_ThisFile', 'NumPart_Total', 'NumPart_Total_HighWord', 'MassTable', 'Time', \
-        'NumFilesPerSnapshot', 'Redshift', 'BoxSize', 'Omega0', 'OmegaLambda', 'HubbleParam', 'Flag_Sfr', 'Flag_Cooling', \
-        'Flag_StellarAge', 'Flag_Metals', 'Flag_Feedback']
            
-        for i in self.sn.__headerfields__:
-            if not i in header_list:       
-               if hasattr(self.sn, i):
-                   header.attrs[i] = getattr(self.sn, i) 
+        for i in self.sn.__headerfields__:    
+            if hasattr(self.sn, i):
+                header.attrs[i] = getattr(self.sn, i) 
         
         
     def write_particles(self,file):
