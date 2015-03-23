@@ -284,8 +284,8 @@ class DGSimulation(Simulation):
 		elif(axis==2):
 			X=np.linspace(cell_z-0.5*cell_dl,cell_z+0.5*cell_dl,res)
 			Y=np.zeros(res)
+			xval=center[0]
 			yval=center[1]
-			zval=center[2]
 
 			j=0
 
