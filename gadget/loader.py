@@ -298,7 +298,7 @@ class Loader(object):
         if hasattr(self,"parameters"):
             del self.parameters
         if hasattr(self,"config"):
-            del self.parameters
+            del self.config
 
 class Snapshot(Loader):
     """
@@ -430,7 +430,7 @@ class ICs(Loader):
         self.NumPart_Total = np.longlong(num_part)
         self.NumPart_Total_HighWord = np.zeros(6)
         
-        self.sn.nparticlesall = np.longlong(self.sn.NumPart_Total)
+        self.nparticlesall = np.longlong(self.NumPart_Total)
         self.npart_loaded = self.NumPart_ThisFile
         self.npart = self.NumPart_ThisFile.sum()
         self.npartall = self.nparticlesall.sum()
