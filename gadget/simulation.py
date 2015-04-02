@@ -36,16 +36,8 @@ class Simulation(Snapshot):
         self.set_center(None)
         self.set_box(None)
         
-        c = np.zeros(3)
-        c[:] = self.box
-        if hasattr(self,"config"):
-            if hasattr(self.config,"LONG_X"):
-                c[0] *= self.config.LONG_X
-            if hasattr(self.config,"LONG_Y"):
-                c[1] *= self.config.LONG_Y
-            if hasattr(self.config,"LONG_Z"):
-                c[2] *= self.config.LONG_Z
-        self.__domain__ = c
+        self.__domain__ = np.zeros(3)
+        self.__domain__[:] = self.box
         
     def __validate_vector__(self, vector, default, len=None, req=None):
         if len is None:
