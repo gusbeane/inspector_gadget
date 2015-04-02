@@ -81,13 +81,14 @@ class Simulation(Snapshot):
     def set_center(self, center):
         c =  self.__validate_vector__(center, self.BoxSize/2, len=3, req=self.numdims)
         
-        if hasattr(self,"config"):
-            if hasattr(self.config,"LONG_X"):
-                c[0] *= self.config.LONG_X
-            if hasattr(self.config,"LONG_Y"):
-                c[1] *= self.config.LONG_Y
-            if hasattr(self.config,"LONG_Z"):
-                c[2] *= self.config.LONG_Z
+        if center is None:
+            if hasattr(self,"config"):
+                if hasattr(self.config,"LONG_X"):
+                    c[0] *= self.config.LONG_X
+                if hasattr(self.config,"LONG_Y"):
+                    c[1] *= self.config.LONG_Y
+                if hasattr(self.config,"LONG_Z"):
+                    c[2] *= self.config.LONG_Z
                 
         self.center = c
         return
@@ -95,13 +96,14 @@ class Simulation(Snapshot):
     def set_box(self, box):
         c = self.__validate_vector__(box, self.BoxSize, len=3, req=self.numdims)
         
-        if hasattr(self,"config"):
-            if hasattr(self.config,"LONG_X"):
-                c[0] *= self.config.LONG_X
-            if hasattr(self.config,"LONG_Y"):
-                c[1] *= self.config.LONG_Y
-            if hasattr(self.config,"LONG_Z"):
-                c[2] *= self.config.LONG_Z
+        if box is None:
+            if hasattr(self,"config"):
+                if hasattr(self.config,"LONG_X"):
+                    c[0] *= self.config.LONG_X
+                if hasattr(self.config,"LONG_Y"):
+                    c[1] *= self.config.LONG_Y
+                if hasattr(self.config,"LONG_Z"):
+                    c[2] *= self.config.LONG_Z
                 
         self.box = c
         return
