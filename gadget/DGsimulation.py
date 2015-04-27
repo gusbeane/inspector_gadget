@@ -218,7 +218,7 @@ class DGSimulation(Simulation):
 
         self.__plot_Slice__(result,log=log, vmin=vmin, vmax=vmax, dresult=dresult, colorbar=colorbar, cblabel=cblabel, contour=contour, newlabels=newlabels, newfig=newfig, axes=axes, **params)
 
-    def plot_DGline(self, value="dgw0", res=1024, res_per_cell=100, ylim=None, box=None, center=None,shift=0, axis=0, newfig=True, axes=None,colorful=False,**params):
+    def plot_DGline(self, value="dgw0", res=1024, res_per_cell=100, ylim=None, box=None, center=None,shift=0, axis=0, newfig=True, axes=None,colorful=False,colors=[None],**params):
 
         if newfig and axes==None:
             fig = p.figure()
@@ -230,17 +230,26 @@ class DGSimulation(Simulation):
 
         center = self.__validate_vector__(center, self.center)
         box = self.__validate_vector__(box, self.BoxSize,len=2)
+  
+        myplot=None
+
+        if(colors[0]!=None):
+            self.__color_counter=0
+
 
         for i in ids:
             index=np.where(self.id==i)[0][0]
-            self.__plot_1dsolution(cell_index=index, value=value, axis=axis, axes=axes, center=center, res=res_per_cell, shift=shift,colorful=colorful,**params)
+            myplot,=self.__plot_1dsolution(cell_index=index, value=value, axis=axis, axes=axes, center=center, res=res_per_cell, shift=shift,colorful=colorful,colors=colors,**params)
 
         if(ylim!=None):
             p.ylim(ylim[0],ylim[1])
 
         p.show()
 
-    def plot_DGline_dir(self, value="dgw0", res=4096, ylim=None, newfig=True, start=[0.5,0.5,0.5], end=[1,0.5,0.5], shift=0, axes=None, colorful=False,**params):
+        return myplot
+
+
+    def plot_DGline_dir(self, value="dgw0", res=4096, ylim=None, newfig=True, start=[0.5,0.5,0.5], end=[1,0.5,0.5], shift=0, axes=None, colorful=False,colors=[None],**params):
 
         if newfig and axes==None:
 
@@ -249,8 +258,11 @@ class DGSimulation(Simulation):
         elif axes==None:
             axes = p.gca()
 
-        if not 'color' in params and colorful==False:
+        if not 'color' in params and colors[0]==None and colorful==False:
             params['color']="black"
+
+        if colors[0] != None:
+            self.__color_counter=0
 
         #plot
         xvals=np.linspace(start[0],end[0], res)
@@ -283,7 +295,11 @@ class DGSimulation(Simulation):
 
               if(not(xvals[j]<=cell_x+0.5*cell_dl and xvals[j]>=cell_x-0.5*cell_dl and yvals[j]<=cell_y+0.5*cell_dl and yvals[j]>=cell_y-0.5*cell_dl and zvals[j]<=cell_z+0.5*cell_dl and zvals[j]>=cell_z-0.5*cell_dl)):
                   #cell crossed
-                  axes.plot(X[cmin:cmin+cnof]+shift,Y[cmin:cmin+cnof],**params)
+                  if colors[0] != None:
+                      params['color']=colors[self.__color_counter%np.shape(colors)[0]] 
+                      self.__color_counter = self.__color_counter+1
+  
+                  myplot,=axes.plot(X[cmin:cmin+cnof]+shift,Y[cmin:cmin+cnof],**params)
                   cmin=cmin+cnof
                   cnof=0
           
@@ -316,12 +332,16 @@ class DGSimulation(Simulation):
 
         print "cells crossed:", cells_crossed
 
-        axes.plot(X[cmin:cmin+cnof]+shift,Y[cmin:cmin+cnof],**params)
+        if colors[0] != None:
+            params['color']=colors[self.__color_counter%np.shape(colors)[0]] 
+            self.__color_counter = self.__color_counter+1
+
+        myplot,=axes.plot(X[cmin:cmin+cnof]+shift,Y[cmin:cmin+cnof],**params)
         p.show()
 
+        return myplot
 
-
-    def __plot_1dsolution(self, cell_index, value, axis, axes, center, res,shift=0, colorful=False,**params):
+    def __plot_1dsolution(self, cell_index, value, axis, axes, center, res,shift=0, colorful=False, colors=[None], **params):
 
         cell_x=self.pos[cell_index][0]
         cell_y=self.pos[cell_index][1]
@@ -387,7 +407,15 @@ class DGSimulation(Simulation):
             raise Exception("axis not valid!, axis=1/2/3")
 
 
-        if not 'color' in params and colorful==False:
+        if not 'color' in params and colors[0]==None and colorful==False:
             params['color']="black"
 
-        axes.plot(X+shift,Y,**params)
+
+        if colors[0] != None:
+            params['color']=colors[self.__color_counter%np.shape(colors)[0]] 
+            self.__color_counter = self.__color_counter+1
+
+
+        myplot=axes.plot(X+shift,Y,**params)
+
+        return myplot
