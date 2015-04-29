@@ -187,16 +187,20 @@ class Simulation(Snapshot):
     def plot_raddens(self, value='mass', center=None, bins=100, range=None, log=False, periodic=True, group=None, **params):
         (profile, xpos) = self.get_raddens(value=value, center=center, bins=bins, range=range, log=log, periodic=periodic, group=group)
         if log:
-            p.loglog(xpos, profile, **params)
+            myplot = p.loglog(xpos, profile, **params)
         else:
-            p.plot(xpos, profile, **params)
+            myplot = p.plot(xpos, profile, **params)
+
+        return myplot
 
     def plot_radprof(self, value, weights=None, center=None, bins=100, range=None, log=False, periodic=True, group=None, **params):
         (profile, xpos) = self.get_radprof(value=value, weights=weights, center=center, bins=bins, range=range, log=log, periodic=periodic, group=group)
         if log:
-            p.loglog(xpos,profile, **params)
+            myplot = p.loglog(xpos,profile, **params)
         else:
-            p.plot(xpos, profile, **params)
+            myplot = p.plot(xpos, profile, **params)
+
+        return myplot
 
 
     def plot_pos(self, center=None, axis=[0,1], box=None, periodic=True, group=None, newfig=True, axes=None, **params):
@@ -234,8 +238,10 @@ class Simulation(Snapshot):
 
         pp, = np.where( (np.abs(x-c[0]) <= 0.5*box[0]) & (np.abs(y-c[1]) <= 0.5*box[1]) & (np.abs(z-c[2]) <= 0.5*box[2]) )
         
-        axes.scatter(x[pp], y[pp], **params)
+        myplot = axes.scatter(x[pp], y[pp], **params)
         axes.axis( "scaled" )
+
+        return myplot
         
     def get_Aslice( self, value, gradient=None, res=1024, center=None, axis=[0,1], box=None, group=None):
         if group is None:
@@ -294,7 +300,9 @@ class Simulation(Snapshot):
         if dvalue != None:
             dresult = self.get_Aslice(value=dvalue, gradient=dgradient, res=res, center=center, axis=axis, box=box, group=group)
             
-        self.__plot_Slice__(result,log=log, vmin=vmin, vmax=vmax, dresult=dresult, colorbar=colorbar, cblabel=cblabel, contour=contour, newlabels=newlabels, newfig=newfig, axes=axes, **params)
+        myplot = self.__plot_Slice__(result,log=log, vmin=vmin, vmax=vmax, dresult=dresult, colorbar=colorbar, cblabel=cblabel, contour=contour, newlabels=newlabels, newfig=newfig, axes=axes, **params)
+
+        return myplot
 
         
     def get_AMRslice(self, value, gradient=None, res=1024, center=None, axis=[0,1], box=None, group=None):
@@ -352,7 +360,9 @@ class Simulation(Snapshot):
         if dvalue != None:
             dresult = self.get_AMRslice(dvalue, gradient=dgradient, res=res, center=center, axis=axis, box=box, group=group)
             
-        self.__plot_Slice__(result,log=log, vmin=vmin, vmax=vmax, dresult=dresult, colorbar=colorbar, cblabel=cblabel, contour=contour, newlabels=newlabels, newfig=newfig, axes=axes, **params)
+        myplot = self.__plot_Slice__(result,log=log, vmin=vmin, vmax=vmax, dresult=dresult, colorbar=colorbar, cblabel=cblabel, contour=contour, newlabels=newlabels, newfig=newfig, axes=axes, **params)
+
+        return myplot
 
 
     def __add_square(self, lines, i, cx,cy,edgelength):
@@ -451,8 +461,10 @@ class Simulation(Snapshot):
     def plot_AMRline(self, value, gradient=None, log=False, res=1024, center=None, axis=0, box=None, group=None, newlabels=False, newfig=True, axes=None, **params):
         result = self.get_AMRline(value, gradient=gradient, res=res, center=center, axis=axis, box=box, group=group)
             
-        self.__plot_Line__(result,log=log, newlabels=newlabels, newfig=newfig, axes=axes, **params)        
+        myplot = self.__plot_Line__(result,log=log, newlabels=newlabels, newfig=newfig, axes=axes, **params)        
         
+        return myplot
+
     def get_SPHproj( self, value, hsml="hsml", weights=None, normalized=True, res=1024, center=None, axis=[0,1], box=None, group=None):
         if group is None:
             group = self.part0
@@ -513,7 +525,9 @@ class Simulation(Snapshot):
         if dvalue != None:
             dresult = self.get_SPHproj(dvalue, hsml=hsml, weights=dweights, normalized=normalized, res=res, center=center, axis=axis, box=box, group=group)
             
-        self.__plot_Slice__(result,log=log, vmin=vmin, vmax=vmax, dresult=dresult, colorbar=colorbar, cblabel=cblabel, contour=contour, newlabels=newlabels, newfig=newfig, axes=axes, **params)
+        myplot = self.__plot_Slice__(result,log=log, vmin=vmin, vmax=vmax, dresult=dresult, colorbar=colorbar, cblabel=cblabel, contour=contour, newlabels=newlabels, newfig=newfig, axes=axes, **params)
+
+        return myplot
         
         
     def __plot_Slice__(self, result, log=False, vmin=None, vmax=None, dresult=None, colorbar=True, cblabel=None, contour=False, newlabels=False, newfig=True, axes=None, **params):          
@@ -603,7 +617,7 @@ class Simulation(Snapshot):
                     yticklabels += [ r'$%.2f \cdot 10^{%d}$' % (tick/10**(np.ceil(np.log10(np.abs(tick)))), np.ceil(np.log10(np.abs(tick)))) ]
             pc.axes.set_yticklabels( yticklabels, size=24, ha='right' )
         
-        return
+        return pc
 
 
     def __plot_Line__(self, result, log=False, newlabels=False, newfig=True, axes=None, **params):          
@@ -633,7 +647,7 @@ class Simulation(Snapshot):
                     xticklabels += [ r'$%.2f \cdot 10^{%d}$' % (tick/10**(np.ceil(np.log10(np.abs(tick)))), np.ceil(np.log10(np.abs(tick)))) ]
             pc.axes.set_xticklabels( xticklabels, size=24, y=-0.1, va='baseline' )
         
-        return        
+        return pc      
 
     def get_Agrid( self, value, gradient=None, res=1024, center=None, box=None, group=None):
         if self.numdims != 3:

@@ -216,7 +216,9 @@ class DGSimulation(Simulation):
         if dvalue != None:
             dresult = self.get_DGslice(dvalue, res=res, center=center, axis=axis, box=box, group=group)
 
-        self.__plot_Slice__(result,log=log, vmin=vmin, vmax=vmax, dresult=dresult, colorbar=colorbar, cblabel=cblabel, contour=contour, newlabels=newlabels, newfig=newfig, axes=axes, **params)
+        myplot = self.__plot_Slice__(result,log=log, vmin=vmin, vmax=vmax, dresult=dresult, colorbar=colorbar, cblabel=cblabel, contour=contour, newlabels=newlabels, newfig=newfig, axes=axes, **params)
+
+        return myplot
 
     def plot_DGline(self, value="dgw0", res=1024, res_per_cell=100, ylim=None, box=None, center=None,shift=0, axis=0, newfig=True, axes=None,colorful=False,colors=[None],**params):
 
