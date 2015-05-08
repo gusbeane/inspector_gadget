@@ -12,6 +12,9 @@ import gadget.fields as fields
 class Format2:
 
     def __init__( self, sn, nommap=False, tracer=False, **param):
+        if len(param.keys()) > 0:
+            raise Exception("Unknown parameters: %s"%str(param.keys()))
+        
         self.sn = sn
         if sn.__fields__ != None:
             self.loadlist = sn.__fields__

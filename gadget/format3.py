@@ -15,6 +15,9 @@ class Format3:
 
 
     def __init__(self, sn, **param):
+        if len(param.keys()) > 0:
+            raise Exception("Unknown parameters: %s"%str(param.keys()))
+                            
         self.sn=sn
         
         

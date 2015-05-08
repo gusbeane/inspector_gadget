@@ -17,7 +17,7 @@ import gadget.calcGrid as calcGrid
 class Simulation(Snapshot):
     
     def __init__(self,filename, format=None, fields=None, parttype=None, **param):
-        param['combineParticles'] = True
+        param['combineFiles'] = True
         super(Simulation,self).__init__(filename, format=format, fields=fields, parttype=parttype,**param)
         
 
@@ -63,20 +63,26 @@ class Simulation(Snapshot):
         
         return v
     
-    def __validate_value__(self, value, length, group=None):
+    def __validate_value__(self, value, length, group=None, components=None):
         if value is None:
             return None
         elif type(value) == str:
             if group is None:
                 group = self
-            return group[value]
+            ret = group[value]
         elif type(value) == np.ndarray:
             if value.shape[0] != length:
                 raise Exception("wrong array length: %s\n"%str(value.shape))
-            return value
+            ret = value
         else:
-            return np.ones(length) * value
-        
+            ret = np.ones(length) * value
+         
+        if components is not None:
+            if components > 1:
+                if ret.shape[1] < components:
+                    raise Exception("wrong array format: %s\n"%str(value.shape))
+                
+        return ret
         
     def set_center(self, center):
         c =  self.__validate_vector__(center, self.BoxSize/2, len=3, req=self.numdims)
@@ -405,8 +411,9 @@ class Simulation(Snapshot):
         if group is None:
             group = self.part0
                
-        center = self.__validate_vector__(center, self.center)
-                
+        resx=res
+        resy=1
+        
         axis0 = axis
         if axis0 == 0:
             axis1 = 1
@@ -416,9 +423,7 @@ class Simulation(Snapshot):
         b = self.box[axis0]
         box0 = self.__validate_vector__(box, b, len=1)[0]
 
-        resx=res
-        resy=1
-
+        center = self.__validate_vector__(center, self.center)
         c = np.zeros( 3 )
         c[0] = center[axis0]
         c[1] = center[axis1]
