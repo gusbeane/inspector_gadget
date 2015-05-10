@@ -405,7 +405,12 @@ class Simulation(Snapshot):
             params['color']='black'    
 
         lc = mc.LineCollection(lines, **params)
-        ax=p.subplot(1,1,1)
+
+        if(axes==None):
+            ax=p.subplot(1,1,1)
+        else:
+            ax=axes
+
         ax.add_collection(lc)
 
 
