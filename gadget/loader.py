@@ -181,7 +181,7 @@ class Loader(object):
         else:
             pres = self.__isPresent__(name)
             
-        num = np.where(pres>0,self.NumPart_ThisFile,0)
+        num = np.where(pres>0,self.npart_loaded,0)
         
         if dtype==None:
             if name=='id':
