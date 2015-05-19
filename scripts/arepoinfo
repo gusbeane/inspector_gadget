@@ -1,0 +1,53 @@
+#!python
+import sys
+import arepo
+
+def usage():
+    print("Usage: arepoinfo [OPTIONS] <filename>")
+    print("")
+    print("[OPTIONS] are:")
+    print("  -p  --param   print parameters used (if available)")
+    print("  -c  --config  print config options used (if available)")
+    print("  -d  --dir     show which data fields are stored in this file")
+    exit()
+
+if __name__ == "__main__":
+    fname = ''
+    param = False
+    config = False
+    onlyHeader=True
+    
+    if len(sys.argv) < 2:
+        usage()
+    
+    for opt in sys.argv[1:]:
+        if opt == "--param" or opt == "-p":
+            param=True
+            
+        elif opt == "--config" or opt == "-c":
+            config=True
+            
+        elif opt == "--dir" or opt == "-d":
+            onlyHeader = False
+            
+        elif opt == "--help" or opt == "-h":
+            usage()
+            
+        elif not opt.startswith("-"):
+            if fname == "":
+                fname = opt
+            else:
+                usage()
+                
+        else:
+            usage()
+    
+    sn = arepo.Snapshot(fname, combineFiles=False, onlyHeader=onlyHeader)
+    
+    print(sn)
+    
+    if param and hasattr(sn, "parameters"):
+        print(sn.parameters)
+        
+    if config and hasattr(sn, "config"):
+        print(sn.config)
