@@ -502,8 +502,6 @@ class Subfind(Loader):
 	            print "ignoring part type %d for subfind output"%i
             else:
                 parttype_filter.append(i)
-
-        param['combineParticles'] = False
            
         super(Subfind,self).__init__(filename, format=format, fields=fields, parttype=parttype_filter, combineFiles=combineFiles, toDouble=toDouble, onlyHeader=onlyHeader, verbose=verbose, **param)
         self.__backend__.load()
