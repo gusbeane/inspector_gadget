@@ -190,7 +190,7 @@ class Format2:
                 s = f.read(8)
                 self.sn.Flag_StellarAge, self.sn.Flag_Metals = struct.unpack( endian + "ii", s )
                 s = f.read(24)
-                self.sn.NumPart_Total_HighWord += np.longlong( struct.unpack( endian + "6i", s ) )<<32
+                self.sn.NumPart_Total_HighWord = np.longlong( struct.unpack( endian + "6i", s ) )<<32
                 s = f.read(12)
                 self.sn.flag_entropy_instead_u, self.sn.Flag_DoublePrecision, self.sn.flag_lpt_ics = struct.unpack( "iii", s )
                 s = f.read(52)
