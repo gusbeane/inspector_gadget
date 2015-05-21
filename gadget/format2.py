@@ -44,8 +44,11 @@ class Format2:
             raise Exception( "Neither %s nor %s.0 exists." % (self.sn.filename, self.sn.filename) )
 
 
+            
         self.load_header( 0, verbose=self.sn.__verbose__ )
         self.get_blocks( 0, verbose=self.sn.__verbose__ )
+        
+        self.sn.__path__ = os.path.abspath(self.sn.filename)
 
         if self.sn.__onlyHeader__:
             return
@@ -58,7 +61,6 @@ class Format2:
         #TODO implement combineFiles=False
         self.sn.currFile = None
 
-        self.sn.__path__ = os.path.abspath(self.sn.filename)
 
 
     def get_blocks( self, fileid, verbose=False ):
