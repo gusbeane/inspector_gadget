@@ -92,7 +92,7 @@ class Halo(Filter):
 
             first =  np.uint64(self.cat.group.GroupFirstSub[halo])
             if self.subhalo - first > 0:
-                self.offset += np.cumsum(self.cat.subhalo.SubhaloLenType[first:self.subhalo,:], axis=0, dtype=np.uint64)
+                self.offset += np.sum(self.cat.subhalo.SubhaloLenType[first:self.subhalo,:], axis=0, dtype=np.uint64)
 
             self.len = self.cat.subhalo.SubhaloLenType[self.subhalo,:]  
                 
