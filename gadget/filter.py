@@ -77,7 +77,7 @@ class Halo(Filter):
         self.sn_offset = np.zeros(6)
         
         self.halo_offset = np.zeros((self.cat.npart_loaded[0],6))
-        self.sub_offset = np.zeros((self.cat.npart_loaded[1],6))
+        #self.sub_offset = np.zeros((self.cat.npart_loaded[1],6))
         
         self.halo_offset[1:,:] = np.cumsum(self.cat.group.GroupLenType[:-1,:], axis=0, dtype=np.uint64)
         
@@ -86,17 +86,15 @@ class Halo(Filter):
             self.len = self.cat.GroupLenType[self.halo,:]
             return
         
-        halo = 0
-        for i in np.arange(self.cat.npart_loaded[0]):
-            if self.cat.group.GroupNsubs[i] > 0:
-                tmp = self.halo_offset[i,:]
-                self.sub_offset[halo,:] = tmp
-                self.sub_offset[halo+1:halo+self.cat.group.GroupNsubs[i],:] = tmp + np.cumsum(self.cat.subhalo.SubhaloLenType[halo:halo+self.cat.group.GroupNsubs[i]-1,:], axis=0, dtype=np.uint64)
-                halo += self.cat.group.GroupNsubs[i]
-                
         if self.subhalo != None:
-            self.offset = self.sub_offset[self.subhalo,:]
-            self.len = self.cat.subhalo.SubhaloLenType[self.subhalo,:]
+            halo = self.cat.subhalo.SubhaloGrNr[self.subhalo]
+            self.offset = self.halo_offset[halo,:]   
+
+            first =  np.uint64(self.cat.group.GroupFirstSub[halo])
+            if self.subhalo - first > 0:
+                self.offset += np.cumsum(self.cat.subhalo.SubhaloLenType[first:self.subhalo,:], axis=0, dtype=np.uint64)
+
+            self.len = self.cat.subhalo.SubhaloLenType[self.subhalo,:]  
                 
         
         
