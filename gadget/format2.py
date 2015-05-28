@@ -11,7 +11,7 @@ import re
 import gadget.fields as fields
 
 def handlesfile(filename, snapshot=None, filenum=None, snapprefix = "snap", snap = None, **param):
-    if getFilename(filename, snapshot, filenum, snapprefix, snap) is not None:
+    if getFilename(filename, snapshot, filenum, snapprefix, snap)[0] is not None:
         return True
     else:
         return False
@@ -97,7 +97,7 @@ class Format2:
                 self.files += [filename + ".%d" % self.filecount]
                 self.filecount += 1
 
-            if not nommap:
+            if not self.nommap and self.filecount > 1:
                 print "Multiple files detected, thus mmap is deactivated."
                 self.nommap = True
         

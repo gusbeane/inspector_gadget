@@ -8,7 +8,7 @@ import gadget
 import gadget.fields as fields
 
 def handlesfile(filename, snapshot=None, filenum=None, snapprefix=None, dirprefix=None, snap=None, **param):
-    if getFilename(filename, snapshot, filenum, snapprefix, dirprefix, snap) is not None:
+    if getFilename(filename, snapshot, filenum, snapprefix, dirprefix, snap)[0] is not None:
         return True
     else:
         return False
