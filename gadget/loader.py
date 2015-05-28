@@ -5,19 +5,33 @@ import os
 
 import gadget.fields as flds
 
+import gadget.format2
+import gadget.format3
+
+backends_modules = {3:gadget.format3, 2:gadget.format2}
+backends = {3:gadget.format3.Format3, 2:gadget.format2.Format2}
+
 class Loader(object):
        
-    def __init__(self,filename, format=None, fields=None, parttype=None, combineFiles=False, toDouble=False, onlyHeader=False, verbose=False, **param): 
+    def __init__(self,filename, snapshot=None, filenum=None, format=None, fields=None, parttype=None, combineFiles=False, toDouble=False, onlyHeader=False, verbose=False, **param): 
         self.data = {}
                     
+        format = None
         #detect backend
-        if format==None:
-            if filename.endswith('.hdf5') or filename.endswith('.h5'):
-                format = 3
-            else:
-                format = 2
-
+        if not isinstance(self, gadget.loader.ICs):
+            for f in backends_modules.keys():
+                if backends_modules[f].handlesfile(filename, snapshot=snapshot, filenum=filenum, snap=self, **param):
+                    format = f
+        else:
+            for f in backends_modules.keys():
+                if backends_modules[f].writefile(filename):
+                    format = f
+                
+                
         self.filename = filename
+        
+        self.filenum = filenum
+        self.snapshot = snapshot
 
         self.__format__ = format
         
@@ -41,16 +55,7 @@ class Loader(object):
             parttype = np.array([parttype])
         self.__parttype__ = parttype
 
-
-        if format==3:
-            import format3
-            self.__backend__=format3.Format3(self, **param)
-
-        if format==2:              
-            import format2
-            self.__backend__=format2.Format2(self, **param)
-                
-
+        self.__backend__ = backends[format](self, **param) 
             
         
     def __normalizeFields__(self):
@@ -205,31 +210,24 @@ class Loader(object):
         if not self.__writeable__:
             raise Exception("This snapshot can not be written")
         
-        if filename==None:
+        if filename is None:
             filename = self.filename
             
-        if format==None:
+        if format is None:
             format = self.__format__
-            
-        if format == self.__format__:
-            if format==2:
-                raise Exception( "Creating format2 snapshots is not supported yet")
-            
+
+        if format == self.__format__:           
             self.__backend__.write(filename=filename)
         else:
-            if format==3:
-                import format3
-                tmp_backend = format3.Format3(self)
-                tmp_backend.write(filename=filename)
-            elif format==2:
-                raise Exception( "Creating format2 snapshots is not supported yet")
+            tmp_backend = backends[format](self)
+            tmp_backend.write(filename=filename)
     
     def nextFile(self, num=None):
-        if self.currFile is None:
+        if self.filenum is None:
             return False
         if num is None:
-            if self.currFile < self.NumFilesPerSnapshot-1:
-                num = self.currFile+1
+            if self.filenum < self.NumFilesPerSnapshot-1:
+                num = self.filenum+1
             else:
                 if self.__verbose__:
                     print "last chunk reached"
@@ -241,14 +239,51 @@ class Loader(object):
                     print "invalide file number %d"%num
                 return False
             
-        if self.currFile == num:
+        if self.filenum == num:
             return True
         
         self.close()
 
 
         #open next file
-        self.__backend__.load(num)
+        self.__backend__.load(num, self.snapshot)
+        
+        if self.__onlyHeader__: 
+            if  isinstance(self, Snapshot):       
+                self.part0 = PartGroup(self,0)
+                self.part1 = PartGroup(self,1)
+                self.part2 = PartGroup(self,2)
+                self.part3 = PartGroup(self,3)
+                self.part4 = PartGroup(self,4)
+                self.part5 = PartGroup(self,5)
+                self.groups = [self.part0, self.part1, self.part2, self.part3, self.part4, self.part5]
+            else:
+                self.group = PartGroup(self,0)
+                self.subhalo = PartGroup(self,1)
+                self.groups = [self.group, self.subhalo]
+
+        return True
+
+    def iterFiles(self):
+        if self.filenum is None:
+            yield self
+            return
+
+        for i in np.arange(self.NumFilesPerSnapshot):
+            self.nextFile(i)
+            yield self
+            
+    def nextSnapshot(self, snapshot=None):
+        if snapshot is None:
+            snapshot = self.snapshot + 1
+            
+        if backends_modules[self.__format__].getFilename(self.filename, snapshot, self.filenum)[0] is None:
+            return False
+             
+        self.close()
+
+        #open next file
+        self.__backend__.load(self.filenum, snapshot)
         
         if self.__onlyHeader__: 
             if  isinstance(self, Snapshot):       
@@ -263,19 +298,6 @@ class Loader(object):
                 self.group = PartGroup(self,0)
                 self.subhalo = PartGroup(self,1)
                 self.groups = [self.group, self.subhalo]   
-        
-        self.__onlyHeader__ = False
-
-        return True
-
-    def iterFiles(self):
-        if self.currFile is None:
-            yield self
-            return
-
-        for i in np.arange(self.NumFilesPerSnapshot):
-            self.nextFile(i)
-            yield self
 
     def close(self):
         self.__backend__.close()
@@ -304,7 +326,7 @@ class Snapshot(Loader):
     """
     This class loads Gadget snapshots. Currently file format 2 and 3 (hdf5) are supported.
     """
-    def __init__(self,filename, format=None, fields=None, parttype=None, combineFiles=False, toDouble=False, onlyHeader=False, verbose=False, filter=None, sortID=False, **param):     
+    def __init__(self,filename, snapshot=None, filenum=None, format=None, fields=None, parttype=None, combineFiles=False, toDouble=False, onlyHeader=False, verbose=False, filter=None, sortID=False, **param):     
         """
         *filename* : The name of the snapshot file
         *format* : (optional) file format of the snapshot, otherwise this is guessed from the file name
@@ -320,11 +342,11 @@ class Snapshot(Loader):
         *num_part* : (ic generation) generate an empty snapshot instead; num_part must be an array with 6 integers, giving the number of particles for each particle species
         *masses* : (ic generation, optinal) array with masses of each particle species, (0 if specified in the mass array)
         """
-        super(Snapshot,self).__init__(filename, format=format, fields=fields, parttype=parttype, combineFiles=combineFiles, toDouble=toDouble, onlyHeader=onlyHeader, verbose=verbose, **param)
+        super(Snapshot,self).__init__(filename, snapshot=snapshot, filenum=filenum, format=format, fields=fields, parttype=parttype, combineFiles=combineFiles, toDouble=toDouble, onlyHeader=onlyHeader, verbose=verbose, **param)
     
         self.__filter__ = filter
     
-        self.__backend__.load()
+        self.__backend__.load(filenum, snapshot)
         
         self.header = Header(self)
         
@@ -336,7 +358,9 @@ class Snapshot(Loader):
             self.part4 = PartGroup(self,4)
             self.part5 = PartGroup(self,5)
             self.groups = [self.part0, self.part1, self.part2, self.part3, self.part4, self.part5]
-
+        else:
+            self.groups = []
+            
         self.__sortID__ = sortID
         if sortID:
             for gr in self.groups:
@@ -371,9 +395,9 @@ class Snapshot(Loader):
         self.__filter__ = filter
 
         #open next file
-        self.__backend__.load()
+        self.__backend__.load(self.filenum, self.snapshot)
         
-        if self.__onlyHeader__:        
+        if not self.__onlyHeader__:        
             self.part0 = PartGroup(self,0)
             self.part1 = PartGroup(self,1)
             self.part2 = PartGroup(self,2)
@@ -383,9 +407,6 @@ class Snapshot(Loader):
             self.groups = [self.part0, self.part1, self.part2, self.part3, self.part4, self.part5]
         else:
             self.groups = []
-
-        
-        self.__onlyHeader__ = False
 
         return True
 
@@ -487,7 +508,7 @@ class ICs(Loader):
                 self.addField(field)
 
 class Subfind(Loader):
-    def __init__(self,filename, format=None, fields=None, parttype=None, combineFiles=False, toDouble=False, onlyHeader=False, verbose=False, **param):
+    def __init__(self,filename, snapshot=None, filenum=None,  format=None, fields=None, parttype=None, combineFiles=False, toDouble=False, onlyHeader=False, verbose=False, **param):
         if parttype is None:
             parttype = np.array([0,1])
         elif type(parttype) == list:
@@ -503,8 +524,8 @@ class Subfind(Loader):
             else:
                 parttype_filter.append(i)
            
-        super(Subfind,self).__init__(filename, format=format, fields=fields, parttype=parttype_filter, combineFiles=combineFiles, toDouble=toDouble, onlyHeader=onlyHeader, verbose=verbose, **param)
-        self.__backend__.load()
+        super(Subfind,self).__init__(filename, snapshot=snapshot, filenum=filenum, format=format, fields=fields, parttype=parttype_filter, combineFiles=combineFiles, toDouble=toDouble, onlyHeader=onlyHeader, verbose=verbose, **param)
+        self.__backend__.load(filenum, snapshot)
 
         self.header = Header(self)
         

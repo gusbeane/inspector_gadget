@@ -16,9 +16,9 @@ import gadget.calcGrid as calcGrid
 
 class Simulation(Snapshot):
     
-    def __init__(self,filename, format=None, fields=None, parttype=None, **param):
+    def __init__(self,filename, snapshot=None, filenum=None, format=None, fields=None, parttype=None, **param):
         param['combineFiles'] = True
-        super(Simulation,self).__init__(filename, format=format, fields=fields, parttype=parttype,**param)
+        super(Simulation,self).__init__(filename, snapshot=snapshot, filenum=filenum, format=format, fields=fields, parttype=parttype,**param)
         
 
         self.numdims = 3

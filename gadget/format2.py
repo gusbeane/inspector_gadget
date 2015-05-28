@@ -6,12 +6,59 @@ import struct
 import time
 import os
 
-import gadget.loader as loader
+import re
+
 import gadget.fields as fields
+
+def handlesfile(filename, snapshot=None, filenum=None, snapprefix = "snap", snap = None, **param):
+    if getFilename(filename, snapshot, filenum, snapprefix, snap) is not None:
+        return True
+    else:
+        return False
+    
+def writefile(filename):
+    return False
+    
+def getFilename(filename, snapshot=None, filenum=None, snapprefix = "snap", snap=None):
+    if snapshot is not None:
+        filename = re.sub(r"snapdir_[0-9]+",r"snapdir_%3d"%snapshot, filename)
+        filename = re.sub(r"%s_[0-9]+\."%snapprefix,r"%s_%3d."%(snapprefix,snapshot), filename)
+    
+    if filenum is not None:
+        filename = re.sub(r"\.[0-9]+$",r".%d"%filenum, filename)
+        
+    if filenum is None:
+        filenum = 0
+        
+    if path.isfile( filename ):
+        filename = filename  
+    elif  path.isfile( filename + ".0" ):
+        filename += ".0"
+    elif snapshot is not None and path.isfile( filename + snapprefix +"_%3d"%snapshot):
+        filename = filename + snapprefix +"_%3d"%snapshot
+    elif snapshot is not None and path.isfile( filename + "snapdir_%3d/" + snapprefix +"_%3d"%snapshot + ".%d"%filenum):
+        filename = filename + "snapdir_%3d/" + snapprefix +"_%3d"%snapshot + ".%d"%filenum
+    else:
+        return (None, None, None)
+        
+    res = re.findall(r"_([0-9]+)(\.([0-9]*))?$", filename)
+    
+    if len(res) > 0:
+        if res[0][2] != "":
+            filenum = int(res[0][2])
+        else:
+            filenum = None
+    
+        if res[0][0] != "":
+            snapshot = int(res[0][0])
+        else:
+            snapshot = None
+           
+    return (filename, filenum, snapshot)
 
 class Format2:
 
-    def __init__( self, sn, nommap=False, tracer=False, **param):
+    def __init__( self, sn, nommap=False, tracer=False, snapprefix=None, **param):
         if len(param.keys()) > 0:
             raise Exception("Unknown parameters: %s"%str(param.keys()))
         
@@ -26,42 +73,49 @@ class Format2:
 
         self.datablocks_skip = ["HEAD"]
         self.datablocks_int32 = ["ID  ","NONN"]
-
-    def load(self):
+        
+        self.snapprefix = snapprefix
+        
+    def load(self, num, snapshot):
+        self.sn.npart_loaded = np.zeros(6,dtype=np.longlong)
+        
+        if num is None:
+            num = self.sn.filenum
+            
+        if snapshot is None:
+            snapshot = self.sn.snapshot
+        
+        filename, num, snapshot = getFilename(self.sn.filename, snapshot, num, self.snapprefix, self.sn)
+        
+        self.files = [filename]
         self.filecount = 1
-        if path.exists( self.sn.filename ):
-            self.files = [self.sn.filename]
-        elif path.exists( self.sn.filename + '.0' ):
-            self.files = [self.sn.filename + '.0']
-            while path.exists( self.sn.filename + ".%d" % self.filecount ):
-                self.files += [self.sn.filename + ".%d" % self.filecount]
+        if self.sn.__combineFiles__:
+            while path.exists( filename + ".%d" % self.filecount ):
+                self.files += [filename + ".%d" % self.filecount]
                 self.filecount += 1
 
             if not nommap:
                 print "Multiple files detected, thus mmap is deactivated."
                 self.nommap = True
-        else:
-            raise Exception( "Neither %s nor %s.0 exists." % (self.sn.filename, self.sn.filename) )
-
-
-            
+        
         self.load_header( 0, verbose=self.sn.__verbose__ )
         self.get_blocks( 0, verbose=self.sn.__verbose__ )
-        
-        self.sn.__path__ = os.path.abspath(self.sn.filename)
 
-        if self.sn.__onlyHeader__:
-            return
-
-        if self.filecount == 1 and not self.nommap and not self.sn.__toDouble__:
-            self.load_data_mmap()
+        if not self.sn.__onlyHeader__:
+            if self.filecount == 1 and not self.nommap and not self.sn.__toDouble__:
+                self.load_data_mmap()
+            else:
+                self.load_data()
+            
+        if self.sn.__combineFiles__:
+            self.filenum = None
         else:
-            self.load_data()
-        
-        #TODO implement combineFiles=False
-        self.sn.currFile = None
-
-
+            self.filenum = num
+            
+        self.sn.snapshot = snapshot
+        self.sn.filename = filename
+            
+        self.sn.__path__ = path.abspath(self.sn.filename)
 
     def get_blocks( self, fileid, verbose=False ):
         swap, endian = self.endianness_check( self.files[fileid] )

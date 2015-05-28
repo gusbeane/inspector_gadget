@@ -4,56 +4,112 @@ import os.path as path
 import re
 import os
 
-import gadget.loader as loader
+import gadget
 import gadget.fields as fields
 
+def handlesfile(filename, snapshot=None, filenum=None, snapprefix=None, dirprefix=None, snap=None, **param):
+    if getFilename(filename, snapshot, filenum, snapprefix, dirprefix, snap) is not None:
+        return True
+    else:
+        return False
+    
+def writefile(filename):
+    if filename.endswith(".hdf5") or filename.endswith(".h5"):
+        return True
+    else:
+        return False
+    
+    
+def getFilename(filename, snapshot=None, filenum=None, snapprefix = None, dirprefix=None, snap = None):
+    
+    if snapprefix is None:
+        if isinstance(snap, gadget.loader.Subfind):
+            snapprefix = "fof_subhalo_tab"
+        else:
+            snapprefix = "snap"
+            
+    if dirprefix is None:
+        if isinstance(snap, gadget.loader.Subfind):
+            dirprefix = "groups"
+        else:
+            dirprefix = "snapdir"
+    
+    if snapshot is not None:
+        filename = re.sub(r"%s_[0-9]+"%dirprefix,r"%s_%3d"%(dirprefix,snapshot), filename)
+        filename = re.sub(r"%s_[0-9]+\."%snapprefix,r"%s_%3d."%(snapprefix,snapshot), filename)
+    
+    if filenum is not None:
+        filename = re.sub(r"\.[0-9]+\.(hdf5|h5)$",r".%d.\1"%filenum, filename)
+        
+    if filenum is None:
+        filenum = 0
+        
+    if filename == "":
+        filename = "."
+        
+    if path.isfile( filename ) and (filename.endswith(".hdf5") or filename.endswith(".h5")):
+        filename = filename  
+    elif path.isfile( filename + ".hdf5" ):
+        filename += ".hdf5"
+    elif  path.isfile( filename + ".0.hdf5" ):
+        filename += ".0.hdf5"
+    elif path.isfile( filename + ".h5" ):
+        filename += ".h5"
+    elif path.isfile( filename + ".0.h5" ):
+        filename += ".0.h5"
+    elif snapshot is not None and path.isfile( filename + "/" + snapprefix +"_%3d"%snapshot + ".hdf5"):
+        filename = filename + "/"  + snapprefix +"_%3d"%snapshot + ".hdf5"
+    elif snapshot is not None and  path.isfile( filename + "/"  + snapprefix +"_%3d"%snapshot + ".h5"):
+        filename = filename + "/"  + snapprefix +"_%3d"%snapshot + ".h5"
+    elif snapshot is not None and path.isfile( filename + "/"  + dirprefix + "_%3d/" + snapprefix +"_%3d"%snapshot + ".%d"%filenum + ".hdf5"):
+        filename = filename + "/"  + dirprefix + "_%3d/" + snapprefix +"_%3d"%snapshot + ".%d"%filenum + ".hdf5"
+    elif snapshot is not None and path.isfile( filename + "/"  + dirprefix+ "_%3d/" + snapprefix +"_%3d"%snapshot + ".%d"%filenum + ".h5"):
+        filename = filename + "/"  + dirprefix + "_%3d/" + snapprefix +"_%3d"%snapshot + ".%d"%filenum + ".h5"
+    else:
+        return (None, None, None)
+        
+        
+    res = re.findall(r"_([0-9]+)\.(([0-9]*)\.)?(hdf5|h5)$", filename)
+    
+    if len(res) > 0:
+        if res[0][2] != "":
+            filenum = int(res[0][2])
+        else:
+            filenum = None
+    
+        if res[0][0] != "":
+            snapshot = int(res[0][0])
+        else:
+            snapshot = None
+           
+    return (filename, filenum, snapshot)
+
 class Format3:
-
-
     dict = fields.hdf5toformat2
     rev_dict = fields.rev_hdf5toformat2
 
 
-    def __init__(self, sn, **param):
-        if len(param.keys()) > 0:
-            raise Exception("Unknown parameters: %s"%str(param.keys()))
-                            
+    def __init__(self, sn, snapprefix=None, dirprefix=None):          
         self.sn=sn
+        self.snapprefix = snapprefix
+        self.dirprefix = dirprefix
         
         
-        
-    def load(self, num=None):
+    def load(self, num, snapshot):
         self.sn.npart_loaded = np.zeros(6,dtype=np.longlong)
         
-        if not path.exists( self.sn.filename ):
-            if path.exists( self.sn.filename + ".hdf5" ):
-                self.sn.filename += ".hdf5"
-            elif  path.exists( self.sn.filename + "0.hdf5" ):
-                self.sn.filename += "0.hdf5"
-            elif path.exists( self.sn.filename + ".h5" ):
-                self.sn.filename += ".h5"
-            elif  path.exists( self.sn.filename + "0.h5" ):
-                self.sn.filename += "0.h5"
-                
-        if num==None:
-            res = re.findall("\.[0-9]*\.hdf5",self.sn.filename)
-            res2 = re.findall("\.[0-9]*\.h5",self.sn.filename)
-            if len(res) > 0:
-                num = int(res[-1][1:-5])
-            elif len(res2) > 0:
-                num = int(res[-1][1:-3])
-            else:
-                num = 0    
-                
-        filename = self.sn.filename
-        if num!=None:
-            filename = re.sub("\.[0-9]*\.hdf5",".%d.hdf5"%num, filename)
-            filename = re.sub("\.[0-9]*\.h5",".%d.h5"%num, filename) 
+        if num is None:
+            num = self.sn.filenum
+            
+        if snapshot is None:
+            snapshot = self.sn.snapshot
+        
+        filename, num, snapshot = getFilename(self.sn.filename, snapshot, num, self.snapprefix, self.dirprefix, self.sn)
         
         try:
             self.file = h5py.File(filename,"r")
         except Exception:
-            raise Exception("could not open file %s"%filename)
+            raise Exception("could not open file '%s'"%filename)
         
         self.load_header()
         self.load_parameter("Parameters", "parameters")
@@ -62,18 +118,20 @@ class Format3:
         del self.file
         
         if not self.sn.__onlyHeader__:
-            if isinstance(self.sn, loader.Snapshot):
+            if isinstance(self.sn, gadget.loader.Snapshot):
                 self.load_data(filename,num)
             else:
                 self.load_data_subfind(filename,num)
-
-        if self.sn.__combineFiles__==False and self.sn.NumFilesPerSnapshot>1:
-            self.sn.currFile = num
-            self.sn.filename = filename
+                
+        if self.sn.__combineFiles__:
+            self.filenum = None
         else:
-            self.sn.currFile = None
+            self.filenum = num
             
-        self.sn.__path__ = os.path.abspath(self.sn.filename)
+        self.sn.snapshot = snapshot
+        self.sn.filename = filename
+            
+        self.sn.__path__ = path.abspath(self.sn.filename)
 
     def load_header(self):
         file = self.file
@@ -89,7 +147,7 @@ class Format3:
             setattr(self.sn, name, file['/Header'].attrs[i])
             self.sn.__headerfields__.append(name)
         
-        if isinstance(self.sn, loader.Snapshot):
+        if isinstance(self.sn, gadget.loader.Snapshot):
             self.sn.nparticlesall = np.longlong(self.sn.NumPart_Total)
             self.sn.nparticlesall += np.longlong(self.sn.NumPart_Total_HighWord)<<32
 
@@ -105,7 +163,7 @@ class Format3:
         file = self.file
         
         if group in file:
-            param = loader.Parameter(self.sn,name)
+            param = gadget.loader.Parameter(self.sn,name)
             for i in file[group].attrs:        
                     setattr(param, i, file[group].attrs[i])
                     param.__attrs__.append(i)
@@ -136,16 +194,19 @@ class Format3:
         if self.sn.__combineFiles__:
             filesA = 0
             filesB = self.sn.NumFilesPerSnapshot
-        else:
+        elif num is not None:
             filesA = num
             filesB = num+1
+        else:
+            filesA = 0
+            filesB = 1
             
         #learn about present fields
         for i in np.arange(filesA,filesB):
             if self.sn.__verbose__:
                 print("Learning about file %d"%i)
 
-            filename = re.sub("\.[0-9]*\.hdf5",".%d.hdf5"%i, self.sn.filename)
+            filename = re.sub("\.[0-9]*\.hdf5",".%d.hdf5"%i, filename)
             filename = re.sub("\.[0-9]*\.h5",".%d.h5"%i, filename)
             self.sn.filename = filename
             try:
@@ -259,9 +320,12 @@ class Format3:
         if self.sn.__combineFiles__:
             filesA = 0
             filesB = self.sn.NumFilesPerSnapshot
-        else:
+        elif num is not None:
             filesA = num
             filesB = num+1
+        else:
+            filesA = 0
+            filesB = 1
             
         #learn about present fields
         for i in np.arange(filesA,filesB):
