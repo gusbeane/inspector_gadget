@@ -36,8 +36,8 @@ def getFilename(filename, snapshot=None, filenum=None, snapprefix = "snap", snap
         filename += ".0"
     elif snapshot is not None and path.isfile( filename + snapprefix +"_%3d"%snapshot):
         filename = filename + snapprefix +"_%3d"%snapshot
-    elif snapshot is not None and path.isfile( filename + "snapdir_%3d/" + snapprefix +"_%3d"%snapshot + ".%d"%filenum):
-        filename = filename + "snapdir_%3d/" + snapprefix +"_%3d"%snapshot + ".%d"%filenum
+    elif snapshot is not None and path.isfile( filename + "snapdir_%3d/"%snapshot + snapprefix +"_%3d"%snapshot + ".%d"%filenum):
+        filename = filename + "snapdir_%3d/"%snapshot + snapprefix +"_%3d"%snapshot + ".%d"%filenum
     else:
         return (None, None, None)
         
@@ -53,6 +53,9 @@ def getFilename(filename, snapshot=None, filenum=None, snapprefix = "snap", snap
             snapshot = int(res[0][0])
         else:
             snapshot = None
+    else:
+        filenum = None
+        snapshot = None
            
     return (filename, filenum, snapshot)
 
@@ -108,9 +111,9 @@ class Format2:
                 self.load_data()
             
         if self.sn.__combineFiles__:
-            self.filenum = None
+            self.sn.filenum = None
         else:
-            self.filenum = num
+            self.sn.filenum = num
             
         self.sn.snapshot = snapshot
         self.sn.filename = filename

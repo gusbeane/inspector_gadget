@@ -61,10 +61,10 @@ def getFilename(filename, snapshot=None, filenum=None, snapprefix = None, dirpre
         filename = filename + "/"  + snapprefix +"_%3d"%snapshot + ".hdf5"
     elif snapshot is not None and  path.isfile( filename + "/"  + snapprefix +"_%3d"%snapshot + ".h5"):
         filename = filename + "/"  + snapprefix +"_%3d"%snapshot + ".h5"
-    elif snapshot is not None and path.isfile( filename + "/"  + dirprefix + "_%3d/" + snapprefix +"_%3d"%snapshot + ".%d"%filenum + ".hdf5"):
-        filename = filename + "/"  + dirprefix + "_%3d/" + snapprefix +"_%3d"%snapshot + ".%d"%filenum + ".hdf5"
-    elif snapshot is not None and path.isfile( filename + "/"  + dirprefix+ "_%3d/" + snapprefix +"_%3d"%snapshot + ".%d"%filenum + ".h5"):
-        filename = filename + "/"  + dirprefix + "_%3d/" + snapprefix +"_%3d"%snapshot + ".%d"%filenum + ".h5"
+    elif snapshot is not None and path.isfile( filename + "/"  + dirprefix + "_%3d/"%snapshot + snapprefix +"_%3d"%snapshot + ".%d"%filenum + ".hdf5"):
+        filename = filename + "/"  + dirprefix + "_%3d/"%snapshot + snapprefix +"_%3d"%snapshot + ".%d"%filenum + ".hdf5"
+    elif snapshot is not None and path.isfile( filename + "/"  + dirprefix+ "_%3d/"%snapshot + snapprefix +"_%3d"%snapshot + ".%d"%filenum + ".h5"):
+        filename = filename + "/"  + dirprefix + "_%3d/"%snapshot + snapprefix +"_%3d"%snapshot + ".%d"%filenum + ".h5"
     else:
         return (None, None, None)
         
@@ -81,6 +81,9 @@ def getFilename(filename, snapshot=None, filenum=None, snapprefix = None, dirpre
             snapshot = int(res[0][0])
         else:
             snapshot = None
+    else:
+        filenum = None
+        snapshot = None
            
     return (filename, filenum, snapshot)
 
@@ -124,9 +127,9 @@ class Format3:
                 self.load_data_subfind(filename,num)
                 
         if self.sn.__combineFiles__:
-            self.filenum = None
+            self.sn.filenum = None
         else:
-            self.filenum = num
+            self.sn.filenum = num
             
         self.sn.snapshot = snapshot
         self.sn.filename = filename
