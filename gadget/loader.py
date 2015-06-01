@@ -543,14 +543,8 @@ class Header(object):
     def __init__(self,parent):
         self.__parent__ = parent
                 
-    def __getattr__(self,name):
-        if name in flds.legacy_header_names:
-            name = flds.legacy_header_names[name] 
-        
-        if name in self.__parent__.__headerfields__:
-            return getattr(self.__parent__,name)
-        else:
-            raise AttributeError
+    def __getattr__(self,name):       
+        return getattr(self.__parent__,name)
             
     def __setattr__(self,name, value):
         #we can't handle these
@@ -559,7 +553,7 @@ class Header(object):
             return        
         if name in flds.legacy_header_names:
             name = flds.legacy_header_names[name]     
-        if name in self.__parent__.__headerfields__:
+        if name in self.__parent__.__headerfields__ or name=='NumFilesPerSnapshot': #(NumFilesPerSnapshot fix for Subfind Header) 
             if type(value)==list:
                 value = np.array(value)
             setattr(self.__parent__,name,value)
