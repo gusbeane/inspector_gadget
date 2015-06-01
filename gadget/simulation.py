@@ -1,5 +1,4 @@
 import numpy as np
-import time
 
 try:
     import matplotlib.pyplot as p
@@ -8,9 +7,8 @@ try:
 except:
     print("Could not load matplotlib, plotting function will not work")
 
-
-
 from gadget.loader import Snapshot
+
 import gadget.calcGrid as calcGrid
 
 
@@ -21,17 +19,17 @@ class Simulation(Snapshot):
         super(Simulation,self).__init__(filename, snapshot=snapshot, filenum=filenum, format=format, fields=fields, parttype=parttype,**param)
         
 
-        self.numdims = 3
+        self.numdims = np.int32(3)
         self.twodim = False
         self.onedim = False
                 
         if hasattr(self,'pos'):
             if np.abs( self['pos'][:,2] ).max() == 0.:
                 self.twodim = True
-                self.numdims = 2
+                self.numdims = np.int32(2)
             if self.twodim and np.abs( self['pos'][:,1] ).max() == 0.:
                 self.onedim = True
-                self.numdims = 1
+                self.numdims = np.int32(1)
             
         self.set_center(None)
         self.set_box(None)
@@ -714,8 +712,7 @@ class Simulation(Snapshot):
         domainc = np.zeros(3)
         domainc[0] = np.max(self.__domain__)/2
         domainc[1] = np.max(self.__domain__)/2.
-        if self.numdims > 2:
-            domainc[2] = np.max(self.__domain__)/2.
+        domainc[2] = np.max(self.__domain__)/2.
 
         posdata = group.pos.astype( 'float64' )
         valdata = self.__validate_value__(value, posdata.shape[0], group).astype('float64')
