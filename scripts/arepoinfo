@@ -9,18 +9,23 @@ def usage():
     print("  -p  --param   print parameters used (if available)")
     print("  -c  --config  print config options used (if available)")
     print("  -d  --dir     show which data fields are stored in this file")
+    print("  -f  --format  specify file format if not auto detected")
+    print("  -s  --subfind teat file as subfind output")
     exit()
 
 if __name__ == "__main__":
     fname = ''
     param = False
     config = False
-    onlyHeader=True
+    onlyHeader = True
+    format = None
+    subfind = False
     
     if len(sys.argv) < 2:
         usage()
     
-    for opt in sys.argv[1:]:
+    it = iter(sys.argv[1:])
+    for opt in it:
         if opt == "--param" or opt == "-p":
             param=True
             
@@ -29,6 +34,12 @@ if __name__ == "__main__":
             
         elif opt == "--dir" or opt == "-d":
             onlyHeader = False
+            
+        elif opt == "--format" or opt == "-f":
+            format = int(it.next())
+        
+        elif opt == "--subfind" or opt == "-s":
+            subfind = True
             
         elif opt == "--help" or opt == "-h":
             usage()
@@ -42,7 +53,10 @@ if __name__ == "__main__":
         else:
             usage()
     
-    sn = arepo.Snapshot(fname, combineFiles=False, onlyHeader=onlyHeader)
+    if fname.find("fof_subhalo_tab") == -1 and subfind == False:
+        sn = arepo.Snapshot(fname, format=format, combineFiles=False, onlyHeader=onlyHeader)
+    else:
+        sn = arepo.Subfind(fname, format=format, combineFiles=False, onlyHeader=onlyHeader)
     
     print(sn)
     

@@ -1,0 +1,74 @@
+#!python
+import sys
+import arepo
+
+def usage():
+    print("Usage: arepoconvert [OPTIONS] <input filename> <outout filename>")
+    print("")
+    print("[OPTIONS] are:")
+    print("  -fin  --informat       specify the input file format if not auto detected")
+    print("  -fout --outformat      specify the output file format (default is format 3/hdf5)")
+    print("  -bs   --blocksequence  list of blocks in file seperated by ','; only allowed for format 1 files")
+    print("  -d    --todouble       convert floating point values to double")
+    print("  -s    --subfind        treat file as subfind output")
+    exit()
+
+if __name__ == "__main__":
+    fin = ''
+    fout = ''
+    formatin = None
+    formatout = 3
+    subfind = False
+    bs = None
+    toDouble = False
+        
+    if len(sys.argv) < 3:
+        usage()
+    
+    it = iter(sys.argv[1:])
+    for opt in it:           
+        if opt == "--informat" or opt == "-fin":
+            formatin = int(it.next())
+            
+        elif opt == "--outformat" or opt == "-fout":
+            formatout = int(it.next())
+        
+        elif opt == "--blocksequence" or opt == "-bs":
+            bs = int(it.next()).split(",")
+        
+        elif opt == "--subfind" or opt == "-s":
+            subfind = True
+            
+        elif opt == "--todouble" or opt == "-d":
+            toDouble = True
+            
+        elif opt == "--help" or opt == "-h":
+            usage()
+            
+        elif not opt.startswith("-"):
+            if fin == "":
+                fin = opt
+            elif fout == "":
+                fout = opt
+            else:
+                usage()
+                
+        else:
+            usage()
+    
+    if fin.find("fof_subhalo_tab") == -1 and subfind == False:
+        if bs is not None:
+            sn = arepo.Snapshot(fin, format=formatin, combineFiles=False, block_sequence=bs, toDouble=toDouble)
+        else:
+            sn = arepo.Snapshot(fin, format=formatin, combineFiles=False, toDouble=toDouble)
+    else:
+        if bs is not None:
+            sn = arepo.Subfind(fin, format=formatin, combineFiles=False, block_sequence=bs, toDouble=toDouble)
+        else:
+            sn = arepo.Subfind(fin, format=formatin, combineFiles=False, toDouble=toDouble)
+    
+
+    if sn.__format__ == 1 or sn.__format__ == 2:
+        pass
+        
+    sn.write(fout, format=formatout)

@@ -428,13 +428,11 @@ class Format3:
     def write(self,filename):
         if not filename.endswith(".hdf5") and not filename.endswith(".h5"):
             filename += ".hdf5"
-            
-        #TODO check filename for multipart files    
+    
         try:
             file = h5py.File(filename,"w")
         except Exception:
-            raise Exception("could not open file %s for writing"%filename)
-        
+            raise Exception("could not open file %s for writing"%filename)        
         
         self.write_header(file)
         
@@ -454,7 +452,14 @@ class Format3:
            
         for i in self.sn.__headerfields__:    
             if hasattr(self.sn, i):
-                header.attrs[i] = getattr(self.sn, i) 
+                value = getattr(self.sn, i)
+                if i == "Flag_DoublePrecision":
+                    if self.sn.__precison__ == np.float64:
+                        value = 1
+                    else:
+                        value = 0
+                
+                header.attrs[i] = value  
     
     def write_parameter(self,param, name, file):
         group = file.create_group(name)
