@@ -5,28 +5,29 @@ import os
 
 import gadget.fields as flds
 
+import gadget.format1
 import gadget.format2
 import gadget.format3
 
-backends_modules = {3:gadget.format3, 2:gadget.format2}
-backends = {3:gadget.format3.Format3, 2:gadget.format2.Format2}
+backends_modules = {3:gadget.format3, 2:gadget.format2, 1:gadget.format1}
+backends = {3:gadget.format3.Format3, 2:gadget.format2.Format2, 1:gadget.format1.Format1}
 
 class Loader(object):
        
     def __init__(self,filename, snapshot=None, filenum=None, format=None, fields=None, parttype=None, combineFiles=False, toDouble=False, onlyHeader=False, verbose=False, **param): 
         self.data = {}
                     
-        format = None
         #detect backend
-        if not isinstance(self, gadget.loader.ICs):
-            for f in backends_modules.keys():
-                if backends_modules[f].handlesfile(filename, snapshot=snapshot, filenum=filenum, snap=self, **param):
-                    format = f
-        else:
-            for f in backends_modules.keys():
-                if backends_modules[f].writefile(filename):
-                    format = f
-                
+        if format is None:
+            if not isinstance(self, gadget.loader.ICs):
+                for f in backends_modules.keys():
+                    if backends_modules[f].handlesfile(filename, snapshot=snapshot, filenum=filenum, snap=self, **param):
+                        format = f
+            else:
+                for f in backends_modules.keys():
+                    if backends_modules[f].writefile(filename):
+                        format = f
+                    
                 
         self.filename = filename
         
@@ -74,6 +75,7 @@ class Loader(object):
     def __setattr__(self,attr,val):
         if attr in flds.legacy_header_names:
             setattr(self, flds.legacy_header_names[attr], val)
+            return
             
         attr = self.__normalizeName__(attr)
         

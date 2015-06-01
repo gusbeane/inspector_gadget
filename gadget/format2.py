@@ -1,18 +1,38 @@
 import numpy as np
 import os.path as path
-import pylab
-import matplotlib
 import struct
 import time
 import os
 
 import re
 
+import gadget
 import gadget.fields as fields
 
 def handlesfile(filename, snapshot=None, filenum=None, snapprefix = "snap", snap = None, **param):
-    if getFilename(filename, snapshot, filenum, snapprefix, snap)[0] is not None:
-        return True
+    fname, filenum, snapshot = getFilename(filename, snapshot, filenum, snapprefix, snap)
+    if fname is not None:
+        f = None
+        try:
+            swap, endian = endianness_check(fname)
+            
+            f = open(fname, 'r' )
+            s = f.read(16)
+            while len(s) > 0:
+                fheader, name, length, ffooter = struct.unpack( endian + "i4sii", s )
+            
+                if name != "HEAD":
+                    f.seek( length, 1 )
+                    s = f.read( 16 )
+                else:
+                    f.close()
+                    return True
+            f.close()
+            return False
+        except:
+            if f is not None:
+                f.close()
+            return False
     else:
         return False
     
@@ -61,11 +81,12 @@ def getFilename(filename, snapshot=None, filenum=None, snapprefix = "snap", snap
 
 class Format2:
 
-    def __init__( self, sn, nommap=False, tracer=False, snapprefix=None, **param):
-        if len(param.keys()) > 0:
-            raise Exception("Unknown parameters: %s"%str(param.keys()))
-        
+    def __init__( self, sn, nommap=False, tracer=False, snapprefix=None):       
         self.sn = sn
+        
+        if not isinstance(self.sn, gadget.loader.Snapshot):
+            raise Exception("Format 2 can only load snapshots")
+        
         if sn.__fields__ != None:
             self.loadlist = sn.__fields__
     	else:
@@ -121,7 +142,7 @@ class Format2:
         self.sn.__path__ = path.abspath(self.sn.filename)
 
     def get_blocks( self, fileid, verbose=False ):
-        swap, endian = self.endianness_check( self.files[fileid] )
+        swap, endian = endianness_check( self.files[fileid] )
 		
         self.blocks = {}
         self.origdata = []
@@ -222,7 +243,7 @@ class Format2:
         return True
 
     def load_header( self, fileid, verbose=False ):
-        swap, endian = self.endianness_check( self.files[fileid] )
+        swap, endian = endianness_check( self.files[fileid] )
 		
         f = open( self.files[fileid], 'r' )
         s = f.read(16)
@@ -251,12 +272,12 @@ class Format2:
                 s = f.read(24)
                 self.sn.NumPart_Total_HighWord = np.longlong( struct.unpack( endian + "6i", s ) )<<32
                 s = f.read(12)
-                self.sn.flag_entropy_instead_u, self.sn.Flag_DoublePrecision, self.sn.flag_lpt_ics = struct.unpack( "iii", s )
+                self.sn.Flag_EntropyInsteadU, self.sn.Flag_DoublePrecision, self.sn.Flag_lpt_ics = struct.unpack( "iii", s )
                 s = f.read(52)
                 
                 self.sn.__headerfields__ = ['Time', 'Redshift', 'BoxSize', 'Omega0', 'OmegaLambda', 'HubbleParam', 'Flag_Sfr',
                                   'Flag_Feedback', 'Flag_Cooling', 'Flag_StellarAge', 'Flag_Metals', 'Flag_DoublePrecision', 
-                                  'NumPart_ThisFile', 'NumPart_Total', 'NumPart_Total_HighWord', 'NumFilesPerSnapshot', 'MassTable', 'flag_lpt_ics', 'flag_entropy_instead_u' ]
+                                  'NumPart_ThisFile', 'NumPart_Total', 'NumPart_Total_HighWord', 'NumFilesPerSnapshot', 'MassTable', 'Flag_lpt_ics', 'Flag_EntropyInsteadU' ]
 
                 self.sn.nparticlesall = np.longlong(self.sn.NumPart_Total)
                 self.sn.nparticlesall += np.longlong(self.sn.NumPart_Total_HighWord)<<32
@@ -289,7 +310,7 @@ class Format2:
 
     def load_data_mmap( self ):
         # memory mapping works only if there is only one file
-        swap, endian = self.endianness_check( self.files[0] )
+        swap, endian = endianness_check( self.files[0] )
         self.sn.data = {}
 
         self.get_blocks( 0, verbose=self.sn.__verbose__ )
@@ -345,10 +366,10 @@ class Format2:
         return
 
     def load_data( self ):
-        swap, endian = self.endianness_check( self.files[0] )
+        swap, endian = endianness_check( self.files[0] )
         self.sn.data = {}
 
-        nparttot = pylab.zeros( 6, dtype='int32' )    
+        nparttot = np.zeros( 6, dtype='int32' )    
         for fileid in range( self.filecount ):
             self.load_header( fileid, verbose=self.sn.__verbose__ )
             self.get_blocks( fileid, verbose=self.sn.__verbose__ )
@@ -400,9 +421,9 @@ class Format2:
                     blockname = block.strip().lower()
                     if not self.sn.data.has_key( blockname ):
                         if dim == 1:
-                            self.sn.data[ blockname ] = pylab.zeros( npartall, dtype=blocktype )
+                            self.sn.data[ blockname ] = np.zeros( npartall, dtype=blocktype )
                         else:
-                            self.sn.data[ blockname ] = pylab.zeros( (npartall, dim), dtype=blocktype )
+                            self.sn.data[ blockname ] = np.zeros( (npartall, dim), dtype=blocktype )
 
                     if blocktype == 'f4' and self.sn.__toDouble__:
                         self.sn.data[ blockname ] = self.sn.data[ blockname ].astype( 'float64' ) # change array type to float64
@@ -423,30 +444,43 @@ class Format2:
             nparttot += self.sn.NumPart_ThisFile
         
         if self.filecount > 1:
-            self.sn.npart = self.npartall
-        print '%d particles loaded.' % self.sn.npartall
-        self.sn.npart_loaded = self.sn.nparticlesall
-        return
+            self.sn.npart = self.sn.npartall
 
+        self.sn.npart_loaded = self.sn.nparticlesall
+        
+        if self.sn.__verbose__:
+            print '%d particles loaded.' % self.sn.npartall
+
+    def close(self):
+        pass
+    
+    def write(self):
+        raise Exception("Writing of format 2 files is not supported")
+    
     def get_block_size_from_table( self, block ):
         npart = 0
         npartall = 0
-        if block in ["POS ", "VEL ", "ID  ", "MASS", "POT ", "TSTP"]:
+        if block in ["POS ", "VEL ", "ID  ", "POT ", "TSTP"]:
             # present for all particles
             npart = self.sn.NumPart_ThisFile.sum()
             npartall = self.sn.nparticlesall.sum()
-        if block in ["U   ","RHO ", "NE  ", "NH  ", "HSML", "SFR ", "Z   ", "XNUC", "PRES", "VORT", "VOL ", "HRGM", "REF ", "DIVV", "ROTV", "DUDT", "BFLD", "DIVB", "PSI ", "MASS", "REF ", "PASS", "TEMP", "GRAR", "GRAP", "NONN", "CSND"]:
+        elif block in ["U   ","RHO ", "NE  ", "NH  ", "HSML", "SFR ", "Z   ", "XNUC", "PRES", "VORT", "VOL ", "HRGM", "REF ", "DIVV", "ROTV", "DUDT", "BFLD", "DIVB", "PSI ", "REF ", "PASS", "TEMP", "GRAR", "GRAP", "NONN", "CSND"]:
             # present for hydro particles
             npart += self.sn.NumPart_ThisFile[0]
             npartall += self.sn.nparticlesall[0]
-        if block in ["AGE ", "Z   "]:
+        elif block in ["AGE ", "Z   "]:
             # present for star particles
             npart += self.sn.NumPart_ThisFile[4]
             npartall += self.sn.nparticlesall[4]
-        if block in ["BHMA", "BHMD"]:
+        elif block in ["BHMA", "BHMD"]:
             #present for black hole particles
             npart += self.sn.NumPart_ThisFile[5]
-            npartall += self.sn.nparticlesall[5]
+            npartall += self.sn.nparticlesall[5]  
+        elif block in ["MASS"]:
+            npart = self.sn.NumPart_ThisFile[np.where(self.sn.MassTable==0)[0]].sum()
+            npartall = self.sn.nparticlesall[np.where(self.sn.MassTable==0)[0]].sum()  
+        else:
+            raise Exception("Unknown block: %s. Add to format 2 loader")
 
         if self.tracer:
             if block in ["MASS"]:
@@ -476,7 +510,7 @@ class Format2:
             else:
                 return False
         else:
-                return False
+            raise Exception("Unknown block: %s. Add to format 2 loader")
         
     def get_block_dim_from_table( self, block ):
         if block in ["POS ", "VEL ", "DIVV", "VORT", "BFLD", "GRAR", "GRAP"]:
@@ -484,60 +518,61 @@ class Format2:
         else:
             return 1
 
-    def endianness_local(self):
-        s = struct.pack( "bb", 1, 0 )
-        r, = struct.unpack( "h", s )
+def endianness_local():
+    s = struct.pack( "bb", 1, 0 )
+    r, = struct.unpack( "h", s )
 
-        if r == 1:
-            return '<'
-        else:
-            return '>'
+    if r == 1:
+        return '<'
+    else:
+        return '>'
 
-    def endianness_check(self, filename ):
-        if not path.exists( filename ):
-            print "File %s does not exist." % filename
-            return False
+def endianness_check(filename ):
+    if not path.exists( filename ):
+        print "File %s does not exist." % filename
+        return False
 
-        filesize = path.getsize( filename )
+    filesize = path.getsize( filename )
 
-        endian_local = self.endianness_local()
-        endian_data = endian_local
+    endian_local = endianness_local()
+    endian_data = endian_local
 
-        f = open( filename )
-        s = f.read(4)
-        if len(s) > 0:
-        	size, = struct.unpack( "<i", s )
-        	size = abs( size )
+    f = open( filename )
+    s = f.read(4)
+    if len(s) > 0:
+    	size, = struct.unpack( "<i", s )
+    	size = abs( size )
 
-        	if size < filesize:
-        		f.seek( size, 1 )
-        		s = f.read(4)
-        	else:
-        		s = ""
-        	
-        	if (len(s) > 0) and (struct.unpack( "<i", s )[0] == size):
-        		f.close()
-        		endian_data = "<"
-        	else:
-        		f.seek( 0, 0 )
-        		size, = struct.unpack( ">i", f.read(4) )
-        		size = abs( size )
-        		
-        		if size < filesize:
-        			f.seek( size, 1 )
-        			s = f.read(4)
-        		else:
-        			s = ""
-        		
-        		if (len(s) > 0) and (struct.unpack( ">i", s )[0] == size):
-        			f.close()
-        			endian_data = ">"
-        		else:
-        			f.close()
-        			print "File %s is corrupt." % filename
-        			return False
-        else:
-        	f.close()
-        	print "File %s is empty." % filename
+    	if size < filesize:
+    		f.seek( size, 1 )
+    		s = f.read(4)
+    	else:
+    		s = ""
+    	
+    	if (len(s) > 0) and (struct.unpack( "<i", s )[0] == size):
+    		f.close()
+    		endian_data = "<"
+    	else:
+    		f.seek( 0, 0 )
+    		size, = struct.unpack( ">i", f.read(4) )
+    		size = abs( size )
+    		
+    		if size < filesize:
+    			f.seek( size, 1 )
+    			s = f.read(4)
+    		else:
+    			s = ""
+    		
+    		if (len(s) > 0) and (struct.unpack( ">i", s )[0] == size):
+    			f.close()
+    			endian_data = ">"
+    		else:
+    			f.close()
+                raise Exception("Format 1: File %s is corrupt." % filename)
+                return False
+    else:
+        f.close()
+        if self.sn.__verbose__:
+            print("File %s is empty." % filename)
 
-        return (endian_local != endian_data, endian_data)
+    return (endian_local != endian_data, endian_data)

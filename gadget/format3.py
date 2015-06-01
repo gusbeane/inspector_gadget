@@ -144,8 +144,8 @@ class Format3:
         for i in file['/Header'].attrs:
             name = i.replace(" " ,"")
             
-            if name == "NumFiles": #fix for subfind cataloges
-                name = "NumFilesPerSnapshot"
+            #if name == "NumFiles": #fix for subfind cataloges
+            #    name = "NumFilesPerSnapshot"
                 
             setattr(self.sn, name, file['/Header'].attrs[i])
             self.sn.__headerfields__.append(name)
@@ -438,6 +438,12 @@ class Format3:
         
         self.write_header(file)
         
+        if hasattr(self.sn, "parameters"):
+            self.write_parameter(self.sn.parameters, "Parameters", file)
+            
+        if hasattr(self.sn, "config"):
+            self.write_parameter(self.sn.config, "Config", file)
+        
         self.write_particles(file)
         
         file.close()
@@ -449,10 +455,19 @@ class Format3:
         for i in self.sn.__headerfields__:    
             if hasattr(self.sn, i):
                 header.attrs[i] = getattr(self.sn, i) 
+    
+    def write_parameter(self,param, name, file):
+        group = file.create_group(name)
         
+        for i in param.__attrs__:
+            if hasattr(param, i):
+                group.attrs[i] = getattr(param, i) 
         
     def write_particles(self,file):
-        for i in np.arange(0,6):
+        for i in np.arange(6):
+            if self.sn.npart_loaded[i] == 0:
+                continue
+            
             group = file.create_group("PartType%d"%i)
             
             for item in self.sn.data:
