@@ -28,7 +28,9 @@ class Loader(object):
                     if backends_modules[f].writefile(filename):
                         format = f
                     
-                
+        if format is None:
+            raise Exception("could not detect backend for file '%s', snapshot %s, filenum %s. Specify file format or check file name."%(filename, snapshot, filenum))
+        
         self.filename = filename
         
         self.filenum = filenum
@@ -88,7 +90,7 @@ class Loader(object):
         object.__setattr__(self,attr,val)
         
     def __dir__(self):
-        dir = self.__dict__.keys()
+        dir = list(self.__dict__.keys())
         
         if hasattr(self, "data"):
             for i in self.data.keys():
@@ -433,8 +435,8 @@ class ICs(Loader):
         
         super(ICs,self).__init__(filename, format=format, verbose=verbose, **param)
         
-        if format==2:
-            raise Exception( "Creating format2 snapshots is not supported yet")
+        if format!=2:
+            raise Exception( "Only Format 3 ICs are supported at the moment")
         
         self._path = os.path.abspath(filename)
         
@@ -561,7 +563,7 @@ class Header(object):
             raise AttributeError
         
     def __dir__(self):
-        return self.__dict__.keys() + self._parent._headerfields
+        return list(self.__dict__.keys()) + self._parent._headerfields
     
     def __str__(self):
         filename = self._parent._path
@@ -726,7 +728,7 @@ class PartGroup(object):
             data = {}
             if parent.npart_loaded[num]>0:
                 if hasattr(parent,"data"):
-                    for key in parent.data.iterkeys():
+                    for key in parent.data.keys():
                         pres = parent._isPresent(key)
                         if pres[num]>0:
                             f = parent.data[key]
@@ -741,11 +743,11 @@ class PartGroup(object):
         parent = self._parent
         num = self._num
         
-        dir = self.__dict__.keys()
+        dir = list(self.__dict__.keys())
         dir.append('data')
         if parent.npart_loaded[num]>0:
             if hasattr(parent,"data"):
-                for key in parent.data.iterkeys():
+                for key in parent.data.keys():
                     pres = parent._isPresent(key)
                     if pres[num]>0:
                         dir.append(key)
