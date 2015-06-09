@@ -68,7 +68,14 @@ if __name__ == "__main__":
             sn = arepo.Subfind(fin, format=formatin, combineFiles=False, toDouble=toDouble)
     
 
-    if sn.__format__ == 1 or sn.__format__ == 2:
-        pass
-        
+    if (sn.__format__ == 1 or sn.__format__ == 2) and formatout==3:
+        end = False
+        for k in sn.data.keys():
+            if k not in rev_hdf5toformat2:
+                print("Can not translate key %s to hdf5 dataset name. Please add it to inspector gadget first."%k)
+                end=True
+        if end:
+            print("Stopping")
+            exit()
+            
     sn.write(fout, format=formatout)
