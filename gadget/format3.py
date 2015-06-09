@@ -120,13 +120,13 @@ class Format3:
         self.file.close()
         del self.file
         
-        if not self.sn.__onlyHeader__:
+        if not self.sn._onlyHeader:
             if isinstance(self.sn, gadget.loader.Snapshot):
                 self.load_data(filename,num)
             else:
                 self.load_data_subfind(filename,num)
                 
-        if self.sn.__combineFiles__:
+        if self.sn._combineFiles:
             self.sn.filenum = None
         else:
             self.sn.filenum = num
@@ -134,12 +134,12 @@ class Format3:
         self.sn.snapshot = snapshot
         self.sn.filename = filename
             
-        self.sn.__path__ = path.abspath(self.sn.filename)
+        self.sn._path = path.abspath(self.sn.filename)
 
     def load_header(self):
         file = self.file
         
-        self.sn.__headerfields__ = []
+        self.sn._headerfields = []
         
         for i in file['/Header'].attrs:
             name = i.replace(" " ,"")
@@ -148,7 +148,7 @@ class Format3:
             #    name = "NumFilesPerSnapshot"
                 
             setattr(self.sn, name, file['/Header'].attrs[i])
-            self.sn.__headerfields__.append(name)
+            self.sn._headerfields.append(name)
         
         if isinstance(self.sn, gadget.loader.Snapshot):
             self.sn.nparticlesall = np.longlong(self.sn.NumPart_Total)
@@ -169,7 +169,7 @@ class Format3:
             param = gadget.loader.Parameter(self.sn,name)
             for i in file[group].attrs:        
                     setattr(param, i, file[group].attrs[i])
-                    param.__attrs__.append(i)
+                    param._attrs.append(i)
     
             setattr(self.sn, name, param)
             
@@ -180,8 +180,8 @@ class Format3:
         
         loaded = np.zeros(6,dtype=np.longlong)
         
-        if hasattr(self.sn,"__filter__") and self.sn.__filter__ != None:
-            filter = self.sn.__filter__
+        if hasattr(self.sn,"_filter") and self.sn._filter != None:
+            filter = self.sn._filter
             if type(filter) == list:
                 filter = np.array(filter)
             elif type(filter) != np.ndarray:
@@ -194,7 +194,7 @@ class Format3:
         else:
             filter = None
 
-        if self.sn.__combineFiles__:
+        if self.sn._combineFiles:
             filesA = 0
             filesB = self.sn.NumFilesPerSnapshot
         elif num is not None:
@@ -206,7 +206,7 @@ class Format3:
             
         #learn about present fields
         for i in np.arange(filesA,filesB):
-            if self.sn.__verbose__:
+            if self.sn._verbose:
                 print("Learning about file %d"%i)
 
             filename = re.sub("\.[0-9]*\.hdf5",".%d.hdf5"%i, filename)
@@ -219,23 +219,23 @@ class Format3:
            
             self.load_header()
 
-            for gr in self.sn.__parttype__:
+            for gr in self.sn._parttype:
                 if "PartType%d"%gr in self.file.keys():
                     for item in self.file["PartType%d"%gr].keys():
                         if not item in self.dict:
-                            if self.sn.__verbose__:
+                            if self.sn._verbose:
                                 print("warning: hdf5 key '%s' could not translated"%item)
                                 self.dict[item] = item
 
                         name  = self.dict.get(item,item)
-                        if self.sn.__fields__==None or name in self.sn.__fields__:
+                        if self.sn._fields==None or name in self.sn._fields:
                             d = self.file["PartType%d/%s"%(gr,item)]
                             shape = np.array(d.shape)
                             elem = 1
                             if shape.size == 2:
                                 elem=shape[1]
                                 
-                            pres = self.sn.__learnPresent__(name,gr=gr,shape=elem)
+                            pres = self.sn._learnPresent(name,gr=gr,shape=elem)
                 if filter != None:
                     if "PartType%d"%gr in self.file.keys():
                         ind = np.arange(self.sn.NumPart_ThisFile[gr])
@@ -262,7 +262,7 @@ class Format3:
                                 
         #now load the requested data                        
         for i in np.arange(filesA,filesB):
-            if self.sn.__verbose__:
+            if self.sn._verbose:
                 print("Reading file %d"%i)
 
             filename = re.sub("\.[0-9]*\.hdf5",".%d.hdf5"%i, self.sn.filename)
@@ -275,13 +275,13 @@ class Format3:
                 
             self.load_header()
 
-            for gr in self.sn.__parttype__:
+            for gr in self.sn._parttype:
                 if "PartType%d"%gr in self.file.keys():
                     elements = 0
                     for item in self.file["PartType%d"%gr].keys():
                         name  = self.dict.get(item,item)
-                        if self.sn.__fields__==None or name in self.sn.__fields__:
-                            pres = self.sn.__isPresent__(name)
+                        if self.sn._fields==None or name in self.sn._fields:
+                            pres = self.sn._isPresent(name)
                                 
                             n1 = np.where(pres > 0, loaded, np.zeros(6,dtype=np.longlong))
                             n2 = np.where(pres > 0, self.sn.npart_loaded, np.zeros(6,dtype=np.longlong))
@@ -296,7 +296,7 @@ class Format3:
                                 datatype = d.dtype
                                 s = np.array(d.shape)
                                 s[0] = num
-                                if self.sn.__toDouble__ and datatype == np.dtype('float32'):
+                                if self.sn._toDouble and datatype == np.dtype('float32'):
                                     datatype = np.dtype('float64')
                                         
                                 self.sn.data[name] = np.empty(s, dtype=datatype)
@@ -309,7 +309,7 @@ class Format3:
                                 elements = len(indices[gr][i])
                     loaded[gr] += elements
             
-            #self.sn.npart_loaded[self.sn.__parttype__] += self.sn.NumPart_ThisFile[self.sn.__parttype__]
+            #self.sn.npart_loaded[self.sn._parttype] += self.sn.NumPart_ThisFile[self.sn._parttype]
        
             self.file.close()
             del self.file
@@ -320,7 +320,7 @@ class Format3:
         
         groupnames = ['Group','Subhalo']
 
-        if self.sn.__combineFiles__:
+        if self.sn._combineFiles:
             filesA = 0
             filesB = self.sn.NumFilesPerSnapshot
         elif num is not None:
@@ -332,7 +332,7 @@ class Format3:
             
         #learn about present fields
         for i in np.arange(filesA,filesB):
-            if self.sn.__verbose__:
+            if self.sn._verbose:
                 print("Learning about file %d"%i)
                 
             filename = re.sub("\.[0-9]*\.hdf5",".%d.hdf5"%i, filename)
@@ -345,28 +345,28 @@ class Format3:
            
             self.load_header()
 
-            for gr in self.sn.__parttype__:
+            for gr in self.sn._parttype:
                 if groupnames[gr] in self.file.keys():
                     for item in self.file[groupnames[gr]].keys():
                         if not item in self.dict:
-                            if self.sn.__verbose__:
+                            if self.sn._verbose:
                                 print("warning: hdf5 key '%s' could not translated"%item)
                                 self.dict[item] = item
                                 
                         name  = self.dict.get(item,item)
-                        if self.sn.__fields__==None or name in self.sn.__fields__:
+                        if self.sn._fields==None or name in self.sn._fields:
                             d = self.file["%s/%s"%(groupnames[gr],item)]
                             shape = np.array(d.shape)
                             elem = 1
                             if shape.size == 2:
                                 elem=shape[1]
                                 
-                            pres = self.sn.__learnPresent__(name,gr=gr,shape=elem)
+                            pres = self.sn._learnPresent(name,gr=gr,shape=elem)
             self.file.close()
                                 
         #now load the requested data                    
         for i in np.arange(filesA,filesB):
-            if self.sn.__verbose__:
+            if self.sn._verbose:
                 print("Reading file %d"%i)
                 
             filename = re.sub("\.[0-9]*\.hdf5",".%d.hdf5"%i, self.sn.filename)
@@ -379,16 +379,16 @@ class Format3:
                 
             self.load_header()  
 
-            for gr in self.sn.__parttype__:
+            for gr in self.sn._parttype:
                 if groupnames[gr] in self.file.keys():
                     for item in self.file[groupnames[gr]].keys():
                         name  = self.dict.get(item,item)
-                        if self.sn.__fields__==None or name in self.sn.__fields__:
-                            pres = self.sn.__isPresent__(name)
+                        if self.sn._fields==None or name in self.sn._fields:
+                            pres = self.sn._isPresent(name)
                                 
                             n1 = np.where(pres > 0, self.sn.npart_loaded, np.zeros(6,dtype=np.longlong))
                                 
-                            if self.sn.__combineFiles__:
+                            if self.sn._combineFiles:
                                 n2 = np.where(pres > 0, self.sn.nparticlesall, np.zeros(6,dtype=np.longlong))
                             else:
                                 n2 = np.where(pres > 0, self.sn.NumPart_ThisFile, np.zeros(6,dtype=np.longlong))
@@ -397,7 +397,7 @@ class Format3:
                             shape = np.array(d.shape)
                                 
                             if not name in self.sn.data:
-                                if self.sn.__combineFiles__:
+                                if self.sn._combineFiles:
                                     num = np.where(pres > 0, self.sn.nparticlesall, np.zeros(6,dtype=np.longlong)).sum()
                                 else:
                                     num = np.where(pres > 0, self.sn.NumPart_ThisFile, np.zeros(6,dtype=np.longlong)).sum()
@@ -406,14 +406,14 @@ class Format3:
                                 datatype = d.dtype
                                 s = np.array(d.shape)
                                 s[0] = num
-                                if self.sn.__toDouble__ and datatype == np.dtype('float32'):
+                                if self.sn._toDouble and datatype == np.dtype('float32'):
                                     datatype = np.dtype('float64')
                                         
                                 self.sn.data[name] = np.empty(s, dtype=datatype)
                                     
                             self.sn.data[name][n2[0:gr].sum()+n1[gr]:n2[0:gr].sum()+n1[gr]+shape[0]] = d
             
-            self.sn.npart_loaded[self.sn.__parttype__] += self.sn.NumPart_ThisFile[self.sn.__parttype__]
+            self.sn.npart_loaded[self.sn._parttype] += self.sn.NumPart_ThisFile[self.sn._parttype]
        
             self.file.close()
             del self.file
@@ -450,11 +450,11 @@ class Format3:
     def write_header(self,file):
         header = file.create_group("/Header")
            
-        for i in self.sn.__headerfields__:    
+        for i in self.sn._headerfields:    
             if hasattr(self.sn, i):
                 value = getattr(self.sn, i)
                 if i == "Flag_DoublePrecision":
-                    if self.sn.__precison__ == np.float64:
+                    if self.sn._precison == np.float64:
                         value = 1
                     else:
                         value = 0
@@ -464,7 +464,7 @@ class Format3:
     def write_parameter(self,param, name, file):
         group = file.create_group(name)
         
-        for i in param.__attrs__:
+        for i in param._attrs:
             if hasattr(param, i):
                 group.attrs[i] = getattr(param, i) 
         
@@ -476,7 +476,7 @@ class Format3:
             group = file.create_group("PartType%d"%i)
             
             for item in self.sn.data:
-                pres = self.sn.__isPresent__(item)
+                pres = self.sn._isPresent(item)
                 if pres[i] > 0 and self.sn.npart_loaded[i]>0:
                     #reverse translate name
                     if item in self.dict.values():

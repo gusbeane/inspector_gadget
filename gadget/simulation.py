@@ -34,10 +34,10 @@ class Simulation(Snapshot):
         self.set_center(None)
         self.set_box(None)
         
-        self.__domain__ = np.zeros(3)
-        self.__domain__[:] = self.box
+        self._domain = np.zeros(3)
+        self._domain[:] = self.box
         
-    def __validate_vector__(self, vector, default, len=None, req=None):
+    def _validate_vector(self, vector, default, len=None, req=None):
         if len is None:
             len = self.numdims
             
@@ -61,7 +61,7 @@ class Simulation(Snapshot):
         
         return v
     
-    def __validate_value__(self, value, length, group=None, components=None):
+    def _validate_value(self, value, length, group=None, components=None):
         if value is None:
             return None
         elif type(value) == str:
@@ -83,7 +83,7 @@ class Simulation(Snapshot):
         return ret
         
     def set_center(self, center):
-        c =  self.__validate_vector__(center, self.BoxSize/2, len=3, req=self.numdims)
+        c =  self._validate_vector(center, self.BoxSize/2, len=3, req=self.numdims)
         
         if center is None:
             if hasattr(self,"config"):
@@ -98,7 +98,7 @@ class Simulation(Snapshot):
         return
     
     def set_box(self, box):
-        c = self.__validate_vector__(box, self.BoxSize, len=3, req=self.numdims)
+        c = self._validate_vector(box, self.BoxSize, len=3, req=self.numdims)
         
         if box is None:
             if hasattr(self,"config"):
@@ -116,19 +116,19 @@ class Simulation(Snapshot):
         if group is None:
             group = self
             
-        center = self.__validate_vector__(center, self.center, len=3)
+        center = self._validate_vector(center, self.center, len=3)
 
         dx = group.pos[:,0]-center[0]
         dy = group.pos[:,1]-center[1]
         dz = group.pos[:,2]-center[2]
         
         if periodic:
-            dx = np.where(dx > self.__domain__[0]/2, dx-self.__domain__[0]/2,dx)
-            dx = np.where(dx < -self.__domain__[0]/2, dx+self.__domain__[0]/2,dx)
-            dy = np.where(dy > self.__domain__[1]/2, dy-self.__domain__[1]/2,dy)
-            dy = np.where(dy < -self.__domain__[1]/2, dy+self.__domain__[1]/2,dy)
-            dz = np.where(dz > self.__domain__[2]/2, dz-self.__domain__[2]/2,dz)
-            dz = np.where(dz < -self.__domain__[2]/2, dz+self.__domain__[2]/2,dz)
+            dx = np.where(dx > self._domain[0]/2, dx-self._domain[0]/2,dx)
+            dx = np.where(dx < -self._domain[0]/2, dx+self._domain[0]/2,dx)
+            dy = np.where(dy > self._domain[1]/2, dy-self._domain[1]/2,dy)
+            dy = np.where(dy < -self._domain[1]/2, dy+self._domain[1]/2,dy)
+            dz = np.where(dz > self._domain[2]/2, dz-self._domain[2]/2,dz)
+            dz = np.where(dz < -self._domain[2]/2, dz+self._domain[2]/2,dz)
             
         radius = np.sqrt(dx**2+dy**2+dz**2)
 
@@ -138,18 +138,18 @@ class Simulation(Snapshot):
         if group is None:
             group = self
             
-        center = self.__validate_vector__(center, self.center)
+        center = self._validate_vector(center, self.center)
         
         group.pos -= center[None,:]
         self.set_center(np.zeros(3))
         
         return
     
-    def __get_radhist__(self, value, center=None, bins=100, range=None, log=False, periodic=True, group=None):
+    def _get_radhist(self, value, center=None, bins=100, range=None, log=False, periodic=True, group=None):
         if group is None:
             group = self
 
-        center = self.__validate_vector__(center, self.center)
+        center = self._validate_vector(center, self.center)
         
         radius = self.r(center=center, periodic=periodic, group=group)
         
@@ -170,21 +170,21 @@ class Simulation(Snapshot):
         if value is None:
             val = None
         else:
-            val = self.__validate_value__(value, radius.shape[0], group).astype('float64')
+            val = self._validate_value(value, radius.shape[0], group).astype('float64')
             
         profile, xbins = np.histogram(radius,bins=xbins,weights=val)
         
         return (profile, xpos, xbins, range)
 
     def get_raddens(self, value='mass', center=None, bins=100, range=None, log=False, periodic=True, group=None):
-        (profile, xpos, xbins, range) = self.__get_radhist__(value=value, center=center, bins=bins ,range=range, log=log, periodic=periodic, group=group)
+        (profile, xpos, xbins, range) = self._get_radhist(value=value, center=center, bins=bins ,range=range, log=log, periodic=periodic, group=group)
         profile /= 4./3*np.pi * (xbins[1:]**3-xbins[:1]**3)
         
         return (profile,xpos)
     
     def get_radprof(self, value, weights=None, center=None, bins=100, range=None, log=False, periodic=True, group=None):
-        (profile, xpos, xbins, range) = self.__get_radhist__(value=value, center=center, bins=bins ,range=range, log=log, periodic=periodic, group=group)
-        (norm, xpos, xbins, range) = self.__get_radhist__(value=weights, center=center, bins=bins ,range=range, log=log, periodic=periodic, group=group)
+        (profile, xpos, xbins, range) = self._get_radhist(value=value, center=center, bins=bins ,range=range, log=log, periodic=periodic, group=group)
+        (norm, xpos, xbins, range) = self._get_radhist(value=weights, center=center, bins=bins ,range=range, log=log, periodic=periodic, group=group)
         
         profile /= norm
         
@@ -213,8 +213,8 @@ class Simulation(Snapshot):
         if group is None:
             group = self.part0
                
-        center = self.__validate_vector__(center,self.center)
-        box = self.__validate_vector__(box,self.box)
+        center = self._validate_vector(center,self.center)
+        box = self._validate_vector(box,self.box)
                 
         if newfig and axes==None:
             fig = p.figure()
@@ -235,12 +235,12 @@ class Simulation(Snapshot):
         z = group.pos[:,3 - axis0 - axis1]
         
         if periodic:
-            x = np.where(x - c[0] > self.__domain__[0]/2, x-self.__domain__[0]/2,x)
-            x = np.where(x - c[0] < -self.__domain__[0]/2, x+self.__domain__[0]/2,x)
-            y = np.where(y - c[1] > self.__domain__[1]/2, y-self.__domain__[1]/2,y)
-            y = np.where(y - c[1] < -self.__domain__[1]/2, y+self.__domain__[1]/2,y)
-            z = np.where(z - c[2] > self.__domain__[2]/2, z-self.__domain__[2]/2,z)
-            z = np.where(z - c[2] < -self.__domain__[2]/2, z+self.__domain__[2]/2,z)
+            x = np.where(x - c[0] > self._domain[0]/2, x-self._domain[0]/2,x)
+            x = np.where(x - c[0] < -self._domain[0]/2, x+self._domain[0]/2,x)
+            y = np.where(y - c[1] > self._domain[1]/2, y-self._domain[1]/2,y)
+            y = np.where(y - c[1] < -self._domain[1]/2, y+self._domain[1]/2,y)
+            z = np.where(z - c[2] > self._domain[2]/2, z-self._domain[2]/2,z)
+            z = np.where(z - c[2] < -self._domain[2]/2, z+self._domain[2]/2,z)
 
         pp, = np.where( (np.abs(x-c[0]) <= 0.5*box[0]) & (np.abs(y-c[1]) <= 0.5*box[1]) & (np.abs(z-c[2]) <= 0.5*box[2]) )
         
@@ -260,8 +260,8 @@ class Simulation(Snapshot):
         b[0] = self.box[axis0]
         b[1] = self.box[axis1]
                
-        center = self.__validate_vector__(center, self.center)
-        box = self.__validate_vector__(box, b, len=2)
+        center = self._validate_vector(center, self.center)
+        box = self._validate_vector(box, b, len=2)
 
         c = np.zeros( 3 )
         c[0] = center[axis0]
@@ -279,12 +279,12 @@ class Simulation(Snapshot):
         print("Selected %d of %d particles." % (pp.size,self.npart))
 
         posdata = pos[pp,:]
-        valdata = self.__validate_value__(value, posdata.shape[0], group)[pp].astype('float64')
+        valdata = self._validate_value(value, posdata.shape[0], group)[pp].astype('float64')
         
         if gradient is None:
             data = calcGrid.calcASlice(posdata, valdata, res, res, box[0], box[1], c[0], c[1], c[2], axis0, axis1)
         else:
-            graddata = self.__validate_value__(gradient, posdata.shape[0], group)[pp].astype('float64')
+            graddata = self._validate_value(gradient, posdata.shape[0], group)[pp].astype('float64')
             data = calcGrid.calcASlice(posdata, valdata, res, res, box[0], box[1], c[0], c[1], c[2], axis0, axis1, grad=graddata)
         data[ "neighbours" ] = pp[ data["neighbours"] ]
         
@@ -306,7 +306,7 @@ class Simulation(Snapshot):
         if dvalue != None:
             dresult = self.get_Aslice(value=dvalue, gradient=dgradient, res=res, center=center, axis=axis, box=box, group=group)
             
-        myplot = self.__plot_Slice__(result,log=log, vmin=vmin, vmax=vmax, dresult=dresult, colorbar=colorbar, cblabel=cblabel, contour=contour, newlabels=newlabels, newfig=newfig, axes=axes, **params)
+        myplot = self._plot_Slice(result,log=log, vmin=vmin, vmax=vmax, dresult=dresult, colorbar=colorbar, cblabel=cblabel, contour=contour, newlabels=newlabels, newfig=newfig, axes=axes, **params)
 
         return myplot
 
@@ -322,29 +322,29 @@ class Simulation(Snapshot):
         b[0] = self.box[axis0]
         b[1] = self.box[axis1]
                
-        center = self.__validate_vector__(center, self.center)
-        box = self.__validate_vector__(box, b, len=2)
+        center = self._validate_vector(center, self.center)
+        box = self._validate_vector(box, b, len=2)
 
         c = np.zeros( 3 )
         c[0] = center[axis0]
         c[1] = center[axis1]
         c[2] = center[3 - axis0 - axis1]
 
-        domainlen = np.max(self.__domain__)        
+        domainlen = np.max(self._domain)        
         domainc = np.zeros(3)
-        domainc[0] = np.max(self.__domain__)/2
-        domainc[1] = np.max(self.__domain__)/2.
+        domainc[0] = np.max(self._domain)/2
+        domainc[1] = np.max(self._domain)/2.
         
         if self.numdims >2:
-            domainc[2] = np.max(self.__domain__)/2.
+            domainc[2] = np.max(self._domain)/2.
 
         posdata = group.pos.astype('float64')
-        valdata = self.__validate_value__(value, posdata.shape[0], group).astype('float64')
+        valdata = self._validate_value(value, posdata.shape[0], group).astype('float64')
         
         if gradient is None:
             data = calcGrid.calcAMRSlice( posdata, valdata, res, res, box[0], box[1], c[0], c[1], c[2], domainc[0], domainc[1], domainc[2], domainlen, axis0, axis1)
         else:
-            graddata = self.__validate_value__(gradient, posdata.shape[0], group).astype('float64')
+            graddata = self._validate_value(gradient, posdata.shape[0], group).astype('float64')
             data = calcGrid.calcAMRSlice( posdata, valdata, res, res, box[0], box[1], c[0], c[1], c[2], domainc[0], domainc[1], domainc[2], domainlen, axis0, axis1, grad=graddata)
         
         if type(value) == str:
@@ -366,19 +366,19 @@ class Simulation(Snapshot):
         if dvalue != None:
             dresult = self.get_AMRslice(dvalue, gradient=dgradient, res=res, center=center, axis=axis, box=box, group=group)
             
-        myplot = self.__plot_Slice__(result,log=log, vmin=vmin, vmax=vmax, dresult=dresult, colorbar=colorbar, cblabel=cblabel, contour=contour, newlabels=newlabels, newfig=newfig, axes=axes, **params)
+        myplot = self._plot_Slice(result,log=log, vmin=vmin, vmax=vmax, dresult=dresult, colorbar=colorbar, cblabel=cblabel, contour=contour, newlabels=newlabels, newfig=newfig, axes=axes, **params)
 
         return myplot
 
 
-    def __add_square(self, lines, i, cx,cy,edgelength):
+    def _add_square(self, lines, i, cx,cy,edgelength):
         e05=edgelength*0.5;
-        self.__add_line(lines, i, cx-e05,cy-e05, cx+e05,cy-e05)
-        self.__add_line(lines, i+1, cx+e05,cy-e05, cx+e05,cy+e05)
-        self.__add_line(lines, i+2, cx+e05,cy+e05, cx-e05,cy+e05)
-        self.__add_line(lines, i+3, cx-e05,cy+e05, cx-e05,cy-e05)
+        self._add_line(lines, i, cx-e05,cy-e05, cx+e05,cy-e05)
+        self._add_line(lines, i+1, cx+e05,cy-e05, cx+e05,cy+e05)
+        self._add_line(lines, i+2, cx+e05,cy+e05, cx-e05,cy+e05)
+        self._add_line(lines, i+3, cx-e05,cy+e05, cx-e05,cy-e05)
 
-    def __add_line(self, lines, i, x1,y1,x2,y2):
+    def _add_line(self, lines, i, x1,y1,x2,y2):
         lines[i,0,0]=x1
         lines[i,0,1]=y1
         lines[i,1,0]=x2
@@ -404,7 +404,7 @@ class Simulation(Snapshot):
 
         for i in ids:
             index=np.where(self.id==i)[0][0]
-            self.__add_square(lines, j, group.pos[index,axis[0]], group.pos[index,axis[1]], group.volume[index]**(1./(self.numdims)))
+            self._add_square(lines, j, group.pos[index,axis[0]], group.pos[index,axis[1]], group.volume[index]**(1./(self.numdims)))
             j=j+4
 
         if(not 'color' in params):
@@ -434,28 +434,28 @@ class Simulation(Snapshot):
             axis1 = 0
             
         b = self.box[axis0]
-        box0 = self.__validate_vector__(box, b, len=1)[0]
+        box0 = self._validate_vector(box, b, len=1)[0]
 
-        center = self.__validate_vector__(center, self.center)
+        center = self._validate_vector(center, self.center)
         c = np.zeros( 3 )
         c[0] = center[axis0]
         c[1] = center[axis1]
         c[2] = center[3 - axis0 - axis1]
         
-        domainlen = np.max(self.__domain__)        
+        domainlen = np.max(self._domain)        
         domainc = np.zeros(3)
-        domainc[0] = np.max(self.__domain__)/2
-        domainc[1] = np.max(self.__domain__)/2.
+        domainc[0] = np.max(self._domain)/2
+        domainc[1] = np.max(self._domain)/2.
         if self.numdims > 2:
-            domainc[2] = np.max(self.__domain__)/2.
+            domainc[2] = np.max(self._domain)/2.
 
         posdata = group.pos.astype('float64')
-        valdata = self.__validate_value__(value, posdata.shape[0], group).astype('float64')
+        valdata = self._validate_value(value, posdata.shape[0], group).astype('float64')
         
         if gradient is None:
             data = calcGrid.calcAMRSlice( posdata, valdata, resx, resy, box0, 0., c[0], c[1], c[2], domainc[0], domainc[1], domainc[2], domainlen, axis0, axis1)
         else:
-            graddata = self.__validate_value__(gradient, posdata.shape[0], group).astype('float64')
+            graddata = self._validate_value(gradient, posdata.shape[0], group).astype('float64')
             data = calcGrid.calcAMRSlice( posdata, valdata, resx, resy, box0, 0., c[0], c[1], c[2], domainc[0], domainc[1], domainc[2], domainlen, axis0, axis1, grad=graddata)
         
         if type(value) == str:
@@ -471,7 +471,7 @@ class Simulation(Snapshot):
     def plot_AMRline(self, value, gradient=None, log=False, res=1024, center=None, axis=0, box=None, group=None, newlabels=False, newfig=True, axes=None, **params):
         result = self.get_AMRline(value, gradient=gradient, res=res, center=center, axis=axis, box=box, group=group)
             
-        myplot = self.__plot_Line__(result,log=log, newlabels=newlabels, newfig=newfig, axes=axes, **params)        
+        myplot = self._plot_Line(result,log=log, newlabels=newlabels, newfig=newfig, axes=axes, **params)        
         
         return myplot
 
@@ -487,8 +487,8 @@ class Simulation(Snapshot):
         b[1] = self.box[axis1]
         b[2] = self.box[3 - axis0 - axis1]
                
-        center = self.__validate_vector__(center, self.center)
-        box = self.__validate_vector__(box, b)
+        center = self._validate_vector(center, self.center)
+        box = self._validate_vector(box, b)
 
         c = np.zeros( 3 )
         c[0] = center[axis0]
@@ -504,14 +504,14 @@ class Simulation(Snapshot):
         print("Selected %d of %d particles." % (pp.size,self.npart))
 
         posdata = pos[pp,:]
-        valdata = self.__validate_value__(value, posdata.shape[0], group)[pp].astype('float64')
-        hsmldata = self.__validate_value__(hsml, posdata.shape[0], group)[pp].astype("float64")
+        valdata = self._validate_value(value, posdata.shape[0], group)[pp].astype('float64')
+        hsmldata = self._validate_value(hsml, posdata.shape[0], group)[pp].astype("float64")
 
         
         if weights is None:
             grid = calcGrid.calcGrid(posdata, hsmldata, valdata, res, res, res, box[0], box[1], box[2], c[0], c[1], c[2], proj=True, norm=normalized )
         else:
-            weightdata = self.__validate_value__(weights, posdata.shape[0], group).astype("float64")
+            weightdata = self._validate_value(weights, posdata.shape[0], group).astype("float64")
             grid = calcGrid.calcGrid(posdata, hsmldata, valdata, res, res, res, box[0], box[1], box[2], c[0], c[1], c[2], proj=True, norm=normalized, weights=weightdata )
             
         data = {}
@@ -535,12 +535,12 @@ class Simulation(Snapshot):
         if dvalue != None:
             dresult = self.get_SPHproj(dvalue, hsml=hsml, weights=dweights, normalized=normalized, res=res, center=center, axis=axis, box=box, group=group)
             
-        myplot = self.__plot_Slice__(result,log=log, vmin=vmin, vmax=vmax, dresult=dresult, colorbar=colorbar, cblabel=cblabel, contour=contour, newlabels=newlabels, newfig=newfig, axes=axes, **params)
+        myplot = self._plot_Slice(result,log=log, vmin=vmin, vmax=vmax, dresult=dresult, colorbar=colorbar, cblabel=cblabel, contour=contour, newlabels=newlabels, newfig=newfig, axes=axes, **params)
 
         return myplot
         
         
-    def __plot_Slice__(self, result, log=False, vmin=None, vmax=None, dresult=None, colorbar=True, cblabel=None, contour=False, newlabels=False, newfig=True, axes=None, **params):          
+    def _plot_Slice(self, result, log=False, vmin=None, vmax=None, dresult=None, colorbar=True, cblabel=None, contour=False, newlabels=False, newfig=True, axes=None, **params):          
         slice = result['grid']
         x = result['x']
         y = result['y']
@@ -630,7 +630,7 @@ class Simulation(Snapshot):
         return pc
 
 
-    def __plot_Line__(self, result, log=False, newlabels=False, newfig=True, axes=None, **params):          
+    def _plot_Line(self, result, log=False, newlabels=False, newfig=True, axes=None, **params):          
         slice = result['grid']
         x = result['x2']
                    
@@ -666,8 +666,8 @@ class Simulation(Snapshot):
         if group is None:
             group = self.part0
             
-        center = self.__validate_vector__(center, self.center)
-        box = self.__validate_vector__(box, self.box)
+        center = self._validate_vector(center, self.center)
+        box = self._validate_vector(box, self.box)
 
         c = center
 
@@ -680,12 +680,12 @@ class Simulation(Snapshot):
         print("Selected %d of %d particles." % (pp.size,self.npart))
 
         posdata = pos[pp,:]
-        valdata = self.__validate_value__(value, posdata.shape[0], group)[pp].astype('float64')
+        valdata = self._validate_value(value, posdata.shape[0], group)[pp].astype('float64')
         
         if  gradient is None:
             data = calcGrid.calcASlice(posdata, valdata, res, res, box[0], box[1], c[0], c[1], c[2], 0, 1, boxz=box[2], grid3D=True)
         else:
-            data = calcGrid.calcASlice(posdata, valdata, res, res, box[0], box[1], c[0], c[1], c[2], 0, 1, grad=self.__validate_value__(gradient, posdata.shape[0], group)[pp].astype('float64'), boxz=box[2], grid3D=True)
+            data = calcGrid.calcASlice(posdata, valdata, res, res, box[0], box[1], c[0], c[1], c[2], 0, 1, grad=self._validate_value(gradient, posdata.shape[0], group)[pp].astype('float64'), boxz=box[2], grid3D=True)
         
         data[ "neighbours" ] = pp[ data["neighbours"] ]
         
@@ -703,24 +703,24 @@ class Simulation(Snapshot):
         if group is None:
             group = self.part0
             
-        center = self.__validate_vector__(center, self.center)
-        box = self.__validate_vector__(box, self.box)
+        center = self._validate_vector(center, self.center)
+        box = self._validate_vector(box, self.box)
 
         c = center
         
-        domainlen = np.max(self.__domain__)        
+        domainlen = np.max(self._domain)        
         domainc = np.zeros(3)
-        domainc[0] = np.max(self.__domain__)/2
-        domainc[1] = np.max(self.__domain__)/2.
-        domainc[2] = np.max(self.__domain__)/2.
+        domainc[0] = np.max(self._domain)/2
+        domainc[1] = np.max(self._domain)/2.
+        domainc[2] = np.max(self._domain)/2.
 
         posdata = group.pos.astype( 'float64' )
-        valdata = self.__validate_value__(value, posdata.shape[0], group).astype('float64')
+        valdata = self._validate_value(value, posdata.shape[0], group).astype('float64')
         
         if gradient is None:
             data = calcGrid.calcAMRSlice( posdata, valdata, res, res, box[0], box[1], c[0], c[1], c[2], domainc[0], domainc[1], domainc[2], domainlen, 0, 1,boxz=box[2], grid3D=True)
         else:
-            data = calcGrid.calcAMRSlice( posdata, valdata, res, res, box[0], box[1], c[0], c[1], c[2], domainc[0], domainc[1], domainc[2], domainlen, 0, 1, grad=self.__validate_value__(gradient, posdata.shape[0], group)[pp].astype('float64'), boxz=box[2], grid3D=True)
+            data = calcGrid.calcAMRSlice( posdata, valdata, res, res, box[0], box[1], c[0], c[1], c[2], domainc[0], domainc[1], domainc[2], domainlen, 0, 1, grad=self._validate_value(gradient, posdata.shape[0], group)[pp].astype('float64'), boxz=box[2], grid3D=True)
 
         if type(value) == str:
             data['name'] = value
@@ -736,20 +736,20 @@ class Simulation(Snapshot):
         if group is None:
             group = self.part0
             
-        center = self.__validate_vector__(center, self.center)
-        box = self.__validate_vector__(box, self.box)
+        center = self._validate_vector(center, self.center)
+        box = self._validate_vector(box, self.box)
 
         c = center
 
         posdata = group.pos.astype( 'float64' )
-        valdata = self.__validate_value__(value, posdata.shape[0], group).astype('float64')
-        hsmldata = self.__validate_value__(hsml, posdata.shape[0], group).astype("float64")
+        valdata = self._validate_value(value, posdata.shape[0], group).astype('float64')
+        hsmldata = self._validate_value(hsml, posdata.shape[0], group).astype("float64")
 
         
         if weights is None:
             grid = calcGrid.calcGrid(posdata, hsmldata, valdata, res, res, res, box[0], box[1], box[2], c[0], c[1], c[2], proj=False, norm=normalized )
         else:
-            weightdata = self.__validate_value__(weights, posdata.shape[0], group).astype("float64")
+            weightdata = self._validate_value(weights, posdata.shape[0], group).astype("float64")
             grid = calcGrid.calcGrid(posdata, hsmldata, valdata, res, res, res, box[0], box[1], box[2], c[0], c[1], c[2], proj=False, norm=normalized, weights=weightdata )
         
         return grid

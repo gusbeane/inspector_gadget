@@ -84,7 +84,7 @@ class Format1:
         if not isinstance(self.sn, gadget.loader.Snapshot):
             raise Exception("Format 1 can only load snapshots")
         
-        self.block_sequence = [self.sn.__normalizeName__(i.strip().lower()) for i in block_sequence]
+        self.block_sequence = [self.sn._normalizeName(i.strip().lower()) for i in block_sequence]
         
         self.snapprefix = snapprefix
         
@@ -101,17 +101,17 @@ class Format1:
         
         self.files = [filename]
         self.filecount = 1
-        if self.sn.__combineFiles__:
+        if self.sn._combineFiles:
             while path.exists( filename + ".%d" % self.filecount ):
                 self.files += [filename + ".%d" % self.filecount]
                 self.filecount += 1
         
-        self.load_header( 0, verbose=self.sn.__verbose__ )
+        self.load_header( 0, verbose=self.sn._verbose )
 
-        if not self.sn.__onlyHeader__:
+        if not self.sn._onlyHeader:
             self.load_data()
             
-        if self.sn.__combineFiles__:
+        if self.sn._combineFiles:
             self.sn.filenum = None
         else:
             self.sn.filenum = num
@@ -119,7 +119,7 @@ class Format1:
         self.sn.snapshot = snapshot
         self.sn.filename = filename
             
-        self.sn.__path__ = path.abspath(self.sn.filename)
+        self.sn._path = path.abspath(self.sn.filename)
 
     def load_header( self, fileid, verbose=False ):
         swap, endian = endianness_check( self.files[fileid] )
@@ -147,7 +147,7 @@ class Format1:
         self.sn.Flag_EntropyInsteadU, self.sn.Flag_DoublePrecision, self.sn.Flag_lpt_ics = struct.unpack( "iii", s )
         s = f.read(52)
         
-        self.sn.__headerfields__ = ['Time', 'Redshift', 'BoxSize', 'Omega0', 'OmegaLambda', 'HubbleParam', 'Flag_Sfr',
+        self.sn._headerfields = ['Time', 'Redshift', 'BoxSize', 'Omega0', 'OmegaLambda', 'HubbleParam', 'Flag_Sfr',
                           'Flag_Feedback', 'Flag_Cooling', 'Flag_StellarAge', 'Flag_Metals', 'Flag_DoublePrecision', 
                           'NumPart_ThisFile', 'NumPart_Total', 'NumPart_Total_HighWord', 'NumFilesPerSnapshot', 'MassTable', 'Flag_lpt_ics', 'Flag_EntropyInsteadU' ]
 
@@ -185,7 +185,7 @@ class Format1:
 
         nparttot = np.zeros( 6, dtype='int32' )    
         for fileid in range( self.filecount ):
-            self.load_header( fileid, verbose=self.sn.__verbose__ )
+            self.load_header( fileid, verbose=self.sn._verbose )
             
             f = open( self.files[fileid], 'r' )
             
@@ -205,17 +205,17 @@ class Format1:
                     break
                 fheader, = struct.unpack( endian + "i", s ) 
                                
-                if self.sn.__fields__ is not None and not block in self.sn.__fields__:
+                if self.sn._fields is not None and not block in self.sn._fields:
                     f.seek( fheader, 1 )
                     ffooter, = struct.unpack( endian + "i", f.read(4) )
                     if fheader != ffooter:
                         raise Exception("Bad field: fheader %d, ffooter %d\n"%(fheader.ffooter))
                     
-                    if self.sn.__verbose__:
+                    if self.sn._verbose:
                         print("Skipping block %s"%(block))
                     continue
 
-                if self.sn.__verbose__:
+                if self.sn._verbose:
                     print("Loading block %s of file %s." % (block, fileid))
 
                 if block in ['id',"nonn"]:
@@ -229,7 +229,7 @@ class Format1:
                         blocktype = 'f4'
                         elementsize = 4
                 
-                if blocktype == 'f4' and self.sn.__toDouble__:
+                if blocktype == 'f4' and self.sn._toDouble:
                     datatype = "float64"
                 else:
                     datatype = blocktype
@@ -243,9 +243,9 @@ class Format1:
                     dim = self.get_block_dim_from_table(block)
                     npartptype = self.sn.NumPart_ThisFile[i]
                     elements = npartptype * dim
-                    pres = self.sn.__learnPresent__(block,gr=i,shape=dim)
+                    pres = self.sn._learnPresent(block,gr=i,shape=dim)
                         
-                    if self.sn.__verbose__:
+                    if self.sn._verbose:
                         print("Loading block %s, type %d, elements %d, dimension %d, particles %d/%d."%(block, i, elements, dim, npartptype, npartall))
                     
                     if not block in self.sn.data:
@@ -258,7 +258,7 @@ class Format1:
                     lb = nsum + nparttot[i]
                     ub = lb + npartptype
                     
-                    if self.sn.__verbose__:
+                    if self.sn._verbose:
                         print("Block contains %d elements (elementsize=%g, lb=%d, ub=%d)." % (elements,elementsize,lb,ub))
     
                     if dim == 1:
@@ -283,7 +283,7 @@ class Format1:
 
         self.sn.npart_loaded = self.sn.nparticlesall
         
-        if self.sn.__verbose__:
+        if self.sn._verbose:
             print('%d particles loaded.' % self.sn.npartall)
 
     def close(self):
@@ -405,7 +405,7 @@ def endianness_check(filename ):
                 return False
     else:
         f.close()
-        if self.sn.__verbose__:
+        if self.sn._verbose:
             print("File %s is empty." % filename)
 
     return (endian_local != endian_data, endian_data)

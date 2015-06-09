@@ -27,7 +27,7 @@ class DGSimulation(Simulation):
         super(DGSimulation, self).__init__(filename, snapshot=snapshot, filenum=filenum, format=format, fields=fields, parttype=parttype,**param)
 
         #store the polynomials in an array
-        self.__polynomials=[self.__P0, self.__P1, self.__P2, self.__P3, self.__P4, self.__P5]
+        self._polynomials=[self._P0, self._P1, self._P2, self._P3, self._P4, self._P5]
 
         #set the number of base functions
         if(self.numdims==2):
@@ -51,22 +51,22 @@ class DGSimulation(Simulation):
                 self.index_to_base_function_table[i,1]=py
                 self.index_to_base_function_table[i,2]=pz
 
-    def __P0(self,x):
+    def _P0(self,x):
         return 1
 
-    def __P1(self,x):
+    def _P1(self,x):
         return np.sqrt(3)*x
 
-    def __P2(self,x):
+    def _P2(self,x):
         return np.sqrt(5.)*0.5*(-1.+x*(x*3.))
 
-    def __P3(self,x):
+    def _P3(self,x):
         return np.sqrt(7.)*0.5*(x*(-3.+x*(x*5.)))
 
-    def __P4(self,x):
+    def _P4(self,x):
         return 3./8.*(3.+x*(x*(-30.+x*(x*35.))))
 
-    def __P5(self,x):
+    def _P5(self,x):
         return np.sqrt(11.)/8.*(x*(15.+x*(x*(-70.+x*(x*63.)))))
 
 
@@ -124,14 +124,14 @@ class DGSimulation(Simulation):
             px=self.index_to_base_function_table[index,0]
             py=self.index_to_base_function_table[index,1]
 
-            return self.__polynomials[px](xi_1)*self.__polynomials[py](xi_2)
+            return self._polynomials[px](xi_1)*self._polynomials[py](xi_2)
 
         else:
             px=self.index_to_base_function_table[index,0]
             py=self.index_to_base_function_table[index,1]
             pz=self.index_to_base_function_table[index,2]
 
-            return self.__polynomials[px](xi_1)*self.__polynomials[py](xi_2)*self.__polynomials[pz](xi_3)
+            return self._polynomials[px](xi_1)*self._polynomials[py](xi_2)*self._polynomials[pz](xi_3)
 
 
     def get_DGvalue(self, value, x, y, z=0, group=None):
@@ -149,10 +149,10 @@ class DGSimulation(Simulation):
         cell_x=self.pos[cell_index][0]
         cell_y=self.pos[cell_index][1]
         cell_z=self.pos[cell_index][2]
-        cell_dl=np.max(self.__domain__)/(2.**self.amrlevel[cell_index])
+        cell_dl=np.max(self._domain)/(2.**self.amrlevel[cell_index])
         
         posdata = group.pos
-        valdata = self.__validate_value__(value, posdata.shape[0], group)
+        valdata = self._validate_value(value, posdata.shape[0], group)
 
         for i in np.arange(0,self.Nof_base_functions):
             result = result + valdata[cell_index][i] * self.base_function_value(i, cell_x, cell_y, cell_z, cell_dl, x, y, z)
@@ -164,8 +164,8 @@ class DGSimulation(Simulation):
         if group is None:
             group = self.part0
 
-        center = self.__validate_vector__(center, self.center)
-        box = self.__validate_vector__(box, self.BoxSize,len=2)
+        center = self._validate_vector(center, self.center)
+        box = self._validate_vector(box, self.BoxSize,len=2)
 
         axis0 = axis[0]
         axis1 = axis[1]
@@ -176,18 +176,18 @@ class DGSimulation(Simulation):
         c[2] = center[3 - axis0 - axis1]
 
 
-        domainlen = np.max(self.__domain__)        
+        domainlen = np.max(self._domain)        
         domainc = np.zeros(3)
-        domainc[0] = np.max(self.__domain__)/2
-        domainc[1] = np.max(self.__domain__)/2.
+        domainc[0] = np.max(self._domain)/2
+        domainc[1] = np.max(self._domain)/2.
         if self.numdims >2:
-            domainc[2] = np.max(self.__domain__)/2.
+            domainc[2] = np.max(self._domain)/2.
 
         posdata = group.pos.astype('float64')
         amrlevel = group.amrlevel.astype('int32')
         dgdims = self.numdims.astype('int32')
         degree_k = self.Degree_K.astype('int32')
-        valdata = self.__validate_value__(value, posdata.shape[0], group).astype('float64')
+        valdata = self._validate_value(value, posdata.shape[0], group).astype('float64')
 
         data = calcGrid.calcDGSlice( posdata, valdata, amrlevel, dgdims, degree_k, res, res, box[0], box[1], c[0], c[1], c[2], domainc[0], domainc[1], domainc[2], domainlen, axis0, axis1, boxz=box[2])
 
@@ -211,7 +211,7 @@ class DGSimulation(Simulation):
         if dvalue != None:
             dresult = self.get_DGslice(dvalue, res=res, center=center, axis=axis, box=box, group=group)
 
-        myplot = self.__plot_Slice__(result,log=log, vmin=vmin, vmax=vmax, dresult=dresult, colorbar=colorbar, cblabel=cblabel, contour=contour, newlabels=newlabels, newfig=newfig, axes=axes, **params)
+        myplot = self._plot_Slice(result,log=log, vmin=vmin, vmax=vmax, dresult=dresult, colorbar=colorbar, cblabel=cblabel, contour=contour, newlabels=newlabels, newfig=newfig, axes=axes, **params)
 
         return myplot
     
@@ -222,22 +222,22 @@ class DGSimulation(Simulation):
         if group is None:
             group = self.part0
             
-        center = self.__validate_vector__(center, self.center)
-        box = self.__validate_vector__(box, self.box)
+        center = self._validate_vector(center, self.center)
+        box = self._validate_vector(box, self.box)
 
         c = center
         
-        domainlen = np.max(self.__domain__)        
+        domainlen = np.max(self._domain)        
         domainc = np.zeros(3)
-        domainc[0] = np.max(self.__domain__)/2
-        domainc[1] = np.max(self.__domain__)/2.
-        domainc[2] = np.max(self.__domain__)/2.
+        domainc[0] = np.max(self._domain)/2
+        domainc[1] = np.max(self._domain)/2.
+        domainc[2] = np.max(self._domain)/2.
         
         posdata = group.pos.astype('float64')
         amrlevel = group.amrlevel.astype('int32')
         dgdims = self.numdims.astype('int32')
         degree_k = self.Degree_K.astype('int32')
-        valdata = self.__validate_value__(value, posdata.shape[0], group).astype('float64')
+        valdata = self._validate_value(value, posdata.shape[0], group).astype('float64')
         
         data = calcGrid.calcDGSlice( posdata, valdata, amrlevel, dgdims, degree_k, res, res, box[0], box[1], c[0], c[1], c[2], domainc[0], domainc[1], domainc[2], domainlen, 0, 1,boxz=box[2], grid3D=True)
                 
@@ -257,17 +257,17 @@ class DGSimulation(Simulation):
 
         ids=np.unique(self.get_AMRline("id",box=box,center=center,axis=axis,res=res,group=group)["grid"])
 
-        center = self.__validate_vector__(center, self.center)
-        box = self.__validate_vector__(box, self.BoxSize,len=2)
+        center = self._validate_vector(center, self.center)
+        box = self._validate_vector(box, self.BoxSize,len=2)
   
         myplot=None
 
         if(colors[0]!=None):
-            self.__color_counter=0
+            self._color_counter=0
 
         for i in ids:
             index=np.where(self.id==i)[0][0]
-            myplot,=self.__plot_1dsolution(cell_index=index, value=value, axis=axis, axes=axes, center=center, res=res_per_cell, group=group, shift=shift,colorful=colorful,colors=colors,**params)
+            myplot,=self._plot_1dsolution(cell_index=index, value=value, axis=axis, axes=axes, center=center, res=res_per_cell, group=group, shift=shift,colorful=colorful,colors=colors,**params)
 
         if(ylim!=None):
             p.ylim(ylim[0],ylim[1])
@@ -291,7 +291,7 @@ class DGSimulation(Simulation):
             params['color']="black"
 
         if colors[0] != None:
-            self.__color_counter=0
+            self._color_counter=0
 
         #plot
         xvals=np.linspace(start[0],end[0], res)
@@ -316,20 +316,20 @@ class DGSimulation(Simulation):
         cell_x=self.pos[cell_index][0]
         cell_y=self.pos[cell_index][1]
         cell_z=self.pos[cell_index][2]
-        cell_dl=np.max(self.__domain__)/(2.**self.amrlevel[cell_index])
+        cell_dl=np.max(self._domain)/(2.**self.amrlevel[cell_index])
 
         cells_crossed=0
         
         posdata = group.pos
-        valdata = self.__validate_value__(value, posdata.shape[0], group)
+        valdata = self._validate_value(value, posdata.shape[0], group)
 
         for j in np.arange(0,res):
 
               if(not(xvals[j]<=cell_x+0.5*cell_dl and xvals[j]>=cell_x-0.5*cell_dl and yvals[j]<=cell_y+0.5*cell_dl and yvals[j]>=cell_y-0.5*cell_dl and zvals[j]<=cell_z+0.5*cell_dl and zvals[j]>=cell_z-0.5*cell_dl)):
                   #cell crossed
                   if colors[0] != None:
-                      params['color']=colors[self.__color_counter%np.shape(colors)[0]] 
-                      self.__color_counter = self.__color_counter+1
+                      params['color']=colors[self._color_counter%np.shape(colors)[0]] 
+                      self._color_counter = self._color_counter+1
   
                   myplot,=axes.plot(X[cmin:cmin+cnof]+shift,Y[cmin:cmin+cnof],**params)
                   cmin=cmin+cnof
@@ -346,7 +346,7 @@ class DGSimulation(Simulation):
                   cell_x=self.pos[cell_index][0]
                   cell_y=self.pos[cell_index][1]
                   cell_z=self.pos[cell_index][2]
-                  cell_dl=np.max(self.__domain__)/(2.**self.amrlevel[cell_index])
+                  cell_dl=np.max(self._domain)/(2.**self.amrlevel[cell_index])
                 
                   cells_crossed=cells_crossed+1
 
@@ -365,25 +365,25 @@ class DGSimulation(Simulation):
         print("cells crossed:", cells_crossed)
 
         if colors[0] != None:
-            params['color']=colors[self.__color_counter%np.shape(colors)[0]] 
-            self.__color_counter = self.__color_counter+1
+            params['color']=colors[self._color_counter%np.shape(colors)[0]] 
+            self._color_counter = self._color_counter+1
 
         myplot,=axes.plot(X[cmin:cmin+cnof]+shift,Y[cmin:cmin+cnof],**params)
         p.show()
 
         return myplot
 
-    def __plot_1dsolution(self, cell_index, value, axis, axes, center, res, group=None, shift=0, colorful=False, colors=[None], **params):
+    def _plot_1dsolution(self, cell_index, value, axis, axes, center, res, group=None, shift=0, colorful=False, colors=[None], **params):
         if group is None:
             group = self.part0
             
         cell_x=self.pos[cell_index][0]
         cell_y=self.pos[cell_index][1]
         cell_z=self.pos[cell_index][2]
-        cell_dl=np.max(self.__domain__)/(2.**self.amrlevel[cell_index])
+        cell_dl=np.max(self._domain)/(2.**self.amrlevel[cell_index])
         
         posdata = group.pos
-        valdata = self.__validate_value__(value, posdata.shape[0], group)
+        valdata = self._validate_value(value, posdata.shape[0], group)
 
         #line in x-direction
         if(axis==0):
@@ -449,8 +449,8 @@ class DGSimulation(Simulation):
 
 
         if colors[0] != None:
-            params['color']=colors[self.__color_counter%np.shape(colors)[0]] 
-            self.__color_counter = self.__color_counter+1
+            params['color']=colors[self._color_counter%np.shape(colors)[0]] 
+            self._color_counter = self._color_counter+1
 
 
         myplot=axes.plot(X+shift,Y,**params)
