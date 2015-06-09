@@ -110,7 +110,7 @@ class DGSimulation(Simulation):
                             else:
                                 counter=counter+1
 
-        print "Index:", k
+        print("Index:", k)
         raise Exception("shouldn't be reached!")
 
 
@@ -338,8 +338,8 @@ class DGSimulation(Simulation):
                   id=np.int(self.get_AMRline("id",center=[xvals[j],yvals[j],zvals[j]],box=[0,0,0],res=1,group=group)['grid'][0])
 
 
-                  print "xval, yval, zval", (xvals[j],yvals[j],zvals[j])
-                  print "cx, cy, cz, dl", (cell_x,cell_y,cell_z, cell_dl)
+                  print("xval, yval, zval", (xvals[j],yvals[j],zvals[j]))
+                  print("cx, cy, cz, dl", (cell_x,cell_y,cell_z, cell_dl))
 
                   cell_index=np.where(self.id==id)[0][0]
 
@@ -362,7 +362,7 @@ class DGSimulation(Simulation):
         if(ylim!=None):
             p.ylim(ylim[0],ylim[1])
 
-        print "cells crossed:", cells_crossed
+        print("cells crossed:", cells_crossed)
 
         if colors[0] != None:
             params['color']=colors[self.__color_counter%np.shape(colors)[0]] 

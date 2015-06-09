@@ -89,7 +89,7 @@ class Format2:
         
         if sn.__fields__ != None:
             self.loadlist = sn.__fields__
-    	else:
+        else:
             self.loadlist = []
             
         self.nommap=nommap
@@ -119,7 +119,7 @@ class Format2:
                 self.filecount += 1
 
             if not self.nommap and self.filecount > 1:
-                print "Multiple files detected, thus mmap is deactivated."
+                print("Multiple files detected, thus mmap is deactivated.")
                 self.nommap = True
         
         self.load_header( 0, verbose=self.sn.__verbose__ )
@@ -164,7 +164,7 @@ class Format2:
                 return False
 
             if verbose:
-                print "Block %s, length %d, offset %d." %(name, length, fpos)
+                print("Block %s, length %d, offset %d." %(name, length, fpos))
 
             f.seek( length, 1 )
             fpos = f.tell()
@@ -173,18 +173,18 @@ class Format2:
             self.origdata += [name]
 
         if verbose:
-            print "%d blocks detected." % len(self.blocks.keys())
+            print("%d blocks detected." % len(self.blocks.keys()))
         return True
 
     def get_block_length( self, fileid, start, name, length, endian, verbose=False ):
         if verbose:
-            print "Getting block length of block %s." % (name)
+            print("Getting block length of block %s." % (name))
             
         if self.check_block_length( fileid, start, length, endian ):
             return length
 
         if verbose:
-            print "First check failed."
+            print("First check failed.")
 
         if name == "XNUC" or name == "PASS":
             bs, bsall = self.get_block_size_from_table( name )
@@ -197,10 +197,10 @@ class Format2:
                 length = bs * dim * ele + 8
                 if self.check_block_length( fileid, start, length, endian ):
                     if verbose:
-                        print "Block %s solved, bs=%d, dim=%d." % (name, bs, dim)
+                        print("Block %s solved, bs=%d, dim=%d." % (name, bs, dim))
                     return length
 
-            print "Error determining the length of block %s." % (name)
+            print("Error determining the length of block %s." % (name))
             return -1
 			
         else:
@@ -216,7 +216,7 @@ class Format2:
             if self.check_block_length( fileid, start, length, endian ):
                 return length
             else:
-                print "Error determining the length of block %s." % (name)
+                print("Error determining the length of block %s." % (name))
                 return -1
 		
         return length
@@ -299,13 +299,13 @@ class Format2:
                 self.sn.npartall = self.sn.nparticlesall.sum()
 
                 if verbose:
-                    print "nparticlesall:", self.sn.nparticlesall, "sum:", self.sn.npartall
+                    print("nparticlesall:", self.sn.nparticlesall, "sum:", self.sn.npartall)
 
                 if fileid == 0:
                     if (self.sn.NumFilesPerSnapshot != self.filecount) and not (self.sn.NumFilesPerSnapshot == 0 and self.filecount == 1):
                         raise Exception( "Number of files detected (%d) and NumFilesPerSnapshot in the header (%d) are inconsistent." % (self.filecount, self.sn.NumFilesPerSnapshot) )
         if verbose:
-            print "Snapshot contains %d particles." % self.sn.npartall
+            print("Snapshot contains %d particles." % self.sn.npartall)
         return
 
     def load_data_mmap( self ):
@@ -353,7 +353,7 @@ class Format2:
             dim = elements / nsum
             
             if self.sn.__verbose__:
-                print "Loading block %s, offset %d, length %d, elements %d, dimension %d, particles %d/%d." % (block, self.blocks[block], length, elements, dim, nsum, self.sn.nparticlesall.sum())
+                print("Loading block %s, offset %d, length %d, elements %d, dimension %d, particles %d/%d." % (block, self.blocks[block], length, elements, dim, nsum, self.sn.nparticlesall.sum()))
 
             offset = f.tell() + 4
             blockname = block.strip().lower()
@@ -384,7 +384,7 @@ class Format2:
                     continue
 
                 if self.sn.__verbose__:
-                    print "Loading block %s of file %s." % (block, fileid)
+                    print("Loading block %s of file %s." % (block, fileid))
 
                 f.seek( self.blocks[block], 0 )
                 fheader, name, length, ffooter = struct.unpack( endian + "i4sii", f.read(16) )
@@ -416,10 +416,10 @@ class Format2:
                     elements = npartptype * dim
                     
                     if self.sn.__verbose__:
-                        print "Loading block %s, offset %d, length %d, elements %d, dimension %d, type %d, particles %d/%d." % (block, self.blocks[block], length, elements, dim, ptype, npartptype, npartall)
+                        print("Loading block %s, offset %d, length %d, elements %d, dimension %d, type %d, particles %d/%d." % (block, self.blocks[block], length, elements, dim, ptype, npartptype, npartall))
                     
                     blockname = block.strip().lower()
-                    if not self.sn.data.has_key( blockname ):
+                    if not blockname in self.sn.data:
                         if dim == 1:
                             self.sn.data[ blockname ] = np.zeros( npartall, dtype=blocktype )
                         else:
@@ -432,7 +432,7 @@ class Format2:
                     ub = lb + npartptype
                     
                     if self.sn.__verbose__:
-                        print "Block contains %d elements (length=%g, elementsize=%g, lb=%d, ub=%d)." % (elements,length,elementsize,lb,ub)
+                        print("Block contains %d elements (length=%g, elementsize=%g, lb=%d, ub=%d)." % (elements,length,elementsize,lb,ub))
 
                     if dim == 1:
                         self.sn.data[ blockname ][lb:ub] = np.fromfile( f, dtype=endian+blocktype, count=elements )
@@ -449,7 +449,7 @@ class Format2:
         self.sn.npart_loaded = self.sn.nparticlesall
         
         if self.sn.__verbose__:
-            print '%d particles loaded.' % self.sn.npartall
+            print('%d particles loaded.' % self.sn.npartall)
 
     def close(self):
         pass
@@ -529,7 +529,7 @@ def endianness_local():
 
 def endianness_check(filename ):
     if not path.exists( filename ):
-        print "File %s does not exist." % filename
+        print("File %s does not exist." % filename)
         return False
 
     filesize = path.getsize( filename )
@@ -540,34 +540,34 @@ def endianness_check(filename ):
     f = open( filename )
     s = f.read(4)
     if len(s) > 0:
-    	size, = struct.unpack( "<i", s )
-    	size = abs( size )
+        size, = struct.unpack( "<i", s )
+        size = abs( size )
 
-    	if size < filesize:
-    		f.seek( size, 1 )
-    		s = f.read(4)
-    	else:
-    		s = ""
-    	
-    	if (len(s) > 0) and (struct.unpack( "<i", s )[0] == size):
-    		f.close()
-    		endian_data = "<"
-    	else:
-    		f.seek( 0, 0 )
-    		size, = struct.unpack( ">i", f.read(4) )
-    		size = abs( size )
-    		
-    		if size < filesize:
-    			f.seek( size, 1 )
-    			s = f.read(4)
-    		else:
-    			s = ""
-    		
-    		if (len(s) > 0) and (struct.unpack( ">i", s )[0] == size):
-    			f.close()
-    			endian_data = ">"
-    		else:
-    			f.close()
+        if size < filesize:
+            f.seek( size, 1 )
+            s = f.read(4)
+        else:
+            s = ""
+            
+        if (len(s) > 0) and (struct.unpack( "<i", s )[0] == size):
+            f.close()
+            endian_data = "<"
+        else:
+            f.seek( 0, 0 )
+            size, = struct.unpack( ">i", f.read(4) )
+            size = abs( size )
+            
+            if size < filesize:
+                f.seek( size, 1 )
+                s = f.read(4)
+            else:
+                s = ""
+            
+            if (len(s) > 0) and (struct.unpack( ">i", s )[0] == size):
+                f.close()
+                endian_data = ">"
+            else:
+                f.close()
                 raise Exception("Format 1: File %s is corrupt." % filename)
                 return False
     else:

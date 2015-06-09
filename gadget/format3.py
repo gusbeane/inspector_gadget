@@ -222,9 +222,9 @@ class Format3:
             for gr in self.sn.__parttype__:
                 if "PartType%d"%gr in self.file.keys():
                     for item in self.file["PartType%d"%gr].keys():
-                        if not self.dict.has_key(item):
+                        if not item in self.dict:
                             if self.sn.__verbose__:
-                                print "warning: hdf5 key '%s' could not translated"%item
+                                print("warning: hdf5 key '%s' could not translated"%item)
                                 self.dict[item] = item
 
                         name  = self.dict.get(item,item)
@@ -289,7 +289,7 @@ class Format3:
                             d = self.file["PartType%d/%s"%(gr,item)]
                             shape = np.array(d.shape)
                                 
-                            if not self.sn.data.has_key(name):
+                            if not name in self.sn.data:
                                 num = np.where(pres > 0, self.sn.npart_loaded, np.zeros(6,dtype=np.longlong)).sum()
                 
                                 #get propertiers of dataset
@@ -348,9 +348,9 @@ class Format3:
             for gr in self.sn.__parttype__:
                 if groupnames[gr] in self.file.keys():
                     for item in self.file[groupnames[gr]].keys():
-                        if not self.dict.has_key(item):
+                        if not item in self.dict:
                             if self.sn.__verbose__:
-                                print "warning: hdf5 key '%s' could not translated"%item
+                                print("warning: hdf5 key '%s' could not translated"%item)
                                 self.dict[item] = item
                                 
                         name  = self.dict.get(item,item)
@@ -396,7 +396,7 @@ class Format3:
                             d = self.file["%s/%s"%(groupnames[gr],item)]
                             shape = np.array(d.shape)
                                 
-                            if not self.sn.data.has_key(name):
+                            if not name in self.sn.data:
                                 if self.sn.__combineFiles__:
                                     num = np.where(pres > 0, self.sn.nparticlesall, np.zeros(6,dtype=np.longlong)).sum()
                                 else:

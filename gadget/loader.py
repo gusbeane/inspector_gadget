@@ -93,7 +93,7 @@ class Loader(object):
         if hasattr(self, "data"):
             for i in self.data.keys():
                 dir.append(i)
-                if flds.rev_hdf5toformat2.has_key(i):
+                if i in flds.rev_hdf5toformat2:
                     dir.append(flds.rev_hdf5toformat2[i])
         
         return dir 
@@ -104,25 +104,25 @@ class Loader(object):
         if item in self.data:
             return self.data[item]
         else:
-	    s=item[::-1]
+            s=item[::-1]
             s=s.split("_",1)
 
             if(s[0]!=item[::-1]): #string contains an underscore
                 g=[s[1][::-1],s[0]]
                                 
-	        it = self.__normalizeName__(g[0])
-                if it in self.data:
-	       	    if g[1] == 'x':
-		        i = 0
-		    elif g[1] == 'y':
-		        i = 1
-		    elif g[1] == 'z':
-		        i = 2
-		    else:
-		        i = int(g[1])
-		    d = self.data[it]
-	    	    if d.ndim == 2 and d.shape[1] > i:
-		        return d[:,i]
+            it = self.__normalizeName__(g[0])
+            if it in self.data:
+                if g[1] == 'x':
+                    i = 0
+                elif g[1] == 'y':
+                    i = 1
+                elif g[1] == 'z':
+                    i = 2
+                else:
+                    i = int(g[1])
+                d = self.data[it]
+                if d.ndim == 2 and d.shape[1] > i:
+                    return d[:,i]
         
         raise AttributeError("unknown field '%s'"%item)
     
@@ -232,13 +232,13 @@ class Loader(object):
                 num = self.filenum+1
             else:
                 if self.__verbose__:
-                    print "last chunk reached"
+                    print("last chunk reached")
                 return False
             
         else:
             if num >= self.NumFilesPerSnapshot or num < 0:
                 if self.__verbose__:
-                    print "invalide file number %d"%num
+                    print("invalide file number %d"%num)
                 return False
             
         if self.filenum == num:
@@ -366,7 +366,7 @@ class Snapshot(Loader):
         self.__sortID__ = sortID
         if sortID:
             for gr in self.groups:
-                if gr.data.has_key("id"):
+                if "id" in gr.data.has_key("id"):
                     ind = np.argsort(gr.data['id'])
                     for d in gr.data.values():
                         d[...] = d[ind,...]
@@ -521,8 +521,8 @@ class Subfind(Loader):
         parttype_filter = []
         for i in parttype:
             if i!=0 and i!=1:
-		if verbose:
-	            print "ignoring part type %d for subfind output"%i
+                if verbose:
+                    print("ignoring part type %d for subfind output"%i)
             else:
                 parttype_filter.append(i)
            
@@ -644,7 +644,7 @@ class PartGroup(object):
             
         for i in self.data.keys():
             tmp += "  " + i
-            if flds.rev_hdf5toformat2.has_key(i):
+            if i in flds.rev_hdf5toformat2:
                 tmp += '/'+flds.rev_hdf5toformat2[i]
             tmp += "\n"
         return tmp
@@ -749,7 +749,7 @@ class PartGroup(object):
                     pres = parent.__isPresent__(key)
                     if pres[num]>0:
                         dir.append(key)
-                        if flds.rev_hdf5toformat2.has_key(key):
+                        if key in flds.rev_hdf5toformat2:
                             dir.append(flds.rev_hdf5toformat2[key])
         return dir   
         

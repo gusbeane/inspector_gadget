@@ -170,13 +170,13 @@ class Format1:
         self.sn.npartall = self.sn.nparticlesall.sum()
 
         if verbose:
-            print "nparticlesall:", self.sn.nparticlesall, "sum:", self.sn.npartall
+            print("nparticlesall:", self.sn.nparticlesall, "sum:", self.sn.npartall)
 
         if fileid == 0:
             if (self.sn.NumFilesPerSnapshot != self.filecount) and not (self.sn.NumFilesPerSnapshot == 0 and self.filecount == 1):
                 raise Exception( "Number of files detected (%d) and NumFilesPerSnapshot in the header (%d) are inconsistent." % (self.filecount, self.sn.NumFilesPerSnapshot) )
         if verbose:
-            print "Snapshot contains %d particles." % self.sn.npartall
+            print("Snapshot contains %d particles." % self.sn.npartall)
         return
 
     def load_data( self ):
@@ -216,7 +216,7 @@ class Format1:
                     continue
 
                 if self.sn.__verbose__:
-                    print "Loading block %s of file %s." % (block, fileid)
+                    print("Loading block %s of file %s." % (block, fileid))
 
                 if block in ['id',"nonn"]:
                     blocktype = "i4"
@@ -246,9 +246,9 @@ class Format1:
                     pres = self.sn.__learnPresent__(block,gr=i,shape=dim)
                         
                     if self.sn.__verbose__:
-                        print "Loading block %s, type %d, elements %d, dimension %d, particles %d/%d."%(block, i, elements, dim, npartptype, npartall)
+                        print("Loading block %s, type %d, elements %d, dimension %d, particles %d/%d."%(block, i, elements, dim, npartptype, npartall))
                     
-                    if not self.sn.data.has_key(block):
+                    if not block in self.sn.data:
                         if dim == 1:
                             self.sn.data[block] = np.zeros(npartall, dtype=datatype)
                         else:
@@ -259,7 +259,7 @@ class Format1:
                     ub = lb + npartptype
                     
                     if self.sn.__verbose__:
-                        print "Block contains %d elements (elementsize=%g, lb=%d, ub=%d)." % (elements,elementsize,lb,ub)
+                        print("Block contains %d elements (elementsize=%g, lb=%d, ub=%d)." % (elements,elementsize,lb,ub))
     
                     if dim == 1:
                         self.sn.data[block][lb:ub] = np.fromfile(f, dtype=endian+blocktype, count=elements)
@@ -284,7 +284,7 @@ class Format1:
         self.sn.npart_loaded = self.sn.nparticlesall
         
         if self.sn.__verbose__:
-            print '%d particles loaded.' % self.sn.npartall
+            print('%d particles loaded.' % self.sn.npartall)
 
     def close(self):
         pass
@@ -362,7 +362,7 @@ def endianness_local():
 
 def endianness_check(filename ):
     if not path.exists( filename ):
-        print "File %s does not exist." % filename
+        print("File %s does not exist." % filename)
         return False
 
     filesize = path.getsize( filename )
