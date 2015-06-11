@@ -612,10 +612,14 @@ class Parameter(object):
             
         for entry in self._attrs:
             val = getattr(self,entry)
-            if type(val) ==  np.ndarray or type(val) == list:
+            if type(val) == np.ndarray or type(val) == list:
                 tmp += '  '+entry+': '+', '.join([str(x) for x in val])+'\n'
-            else:
+            elif (type(val) != np.bytes_ and type(val) != np.string_) or len(val) > 0:
+                if type(val) is np.bytes_:
+                    val = val.decode('UTF-8')
                 tmp += '  '+entry+': '+str(val)+'\n'
+            else:
+                tmp += '  '+entry+'\n'
         return tmp
 
     def __repr__(self):
