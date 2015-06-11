@@ -21,12 +21,14 @@ def writefile(filename):
     
     
 def getFilename(filename, snapshot=None, filenum=None, snapprefix = None, dirprefix=None, snap = None):
-    
     if snapprefix is None:
         if isinstance(snap, gadget.loader.Subfind):
-            snapprefix = "fof_subhalo_tab"
+            snapprefix = ["fof_subhalo_tab"]
         else:
-            snapprefix = "snap"
+            snapprefix = ["snap","snapshot"]
+            
+    else:
+            snapprefix = [snapprefix]
             
     if dirprefix is None:
         if isinstance(snap, gadget.loader.Subfind):
@@ -35,8 +37,9 @@ def getFilename(filename, snapshot=None, filenum=None, snapprefix = None, dirpre
             dirprefix = "snapdir"
     
     if snapshot is not None:
-        filename = re.sub(r"%s_[0-9]+"%dirprefix,r"%s_%3d"%(dirprefix,snapshot), filename)
-        filename = re.sub(r"%s_[0-9]+\."%snapprefix,r"%s_%3d."%(snapprefix,snapshot), filename)
+        filename = re.sub(r"%s_[0-9]+"%dirprefix,r"%s_%03d"%(dirprefix,snapshot), filename)
+        for sp in snapprefix:
+            filename = re.sub(r"%s_[0-9]+\."%sp,r"%s_%03d."%(sp,snapshot), filename)
     
     if filenum is not None:
         filename = re.sub(r"\.[0-9]+\.(hdf5|h5)$",r".%d.\1"%filenum, filename)
@@ -46,27 +49,31 @@ def getFilename(filename, snapshot=None, filenum=None, snapprefix = None, dirpre
         
     if filename == "":
         filename = "."
-        
+    
     if path.isfile( filename ) and (filename.endswith(".hdf5") or filename.endswith(".h5")):
         filename = filename  
-    elif path.isfile( filename + ".hdf5" ):
-        filename += ".hdf5"
-    elif  path.isfile( filename + ".0.hdf5" ):
-        filename += ".0.hdf5"
-    elif path.isfile( filename + ".h5" ):
-        filename += ".h5"
-    elif path.isfile( filename + ".0.h5" ):
-        filename += ".0.h5"
-    elif snapshot is not None and path.isfile( filename + "/" + snapprefix +"_%3d"%snapshot + ".hdf5"):
-        filename = filename + "/"  + snapprefix +"_%3d"%snapshot + ".hdf5"
-    elif snapshot is not None and  path.isfile( filename + "/"  + snapprefix +"_%3d"%snapshot + ".h5"):
-        filename = filename + "/"  + snapprefix +"_%3d"%snapshot + ".h5"
-    elif snapshot is not None and path.isfile( filename + "/"  + dirprefix + "_%3d/"%snapshot + snapprefix +"_%3d"%snapshot + ".%d"%filenum + ".hdf5"):
-        filename = filename + "/"  + dirprefix + "_%3d/"%snapshot + snapprefix +"_%3d"%snapshot + ".%d"%filenum + ".hdf5"
-    elif snapshot is not None and path.isfile( filename + "/"  + dirprefix+ "_%3d/"%snapshot + snapprefix +"_%3d"%snapshot + ".%d"%filenum + ".h5"):
-        filename = filename + "/"  + dirprefix + "_%3d/"%snapshot + snapprefix +"_%3d"%snapshot + ".%d"%filenum + ".h5"
-    else:
-        return (None, None, None)
+    else: 
+        filename_candidates = []    
+        if snapshot is not None:
+            for sp in snapprefix:
+                filename_candidates.append(filename + "/" + sp +"_%03d"%snapshot + ".hdf5")
+                filename_candidates.append(filename + "/" + sp +"_%03d"%snapshot + ".h5")
+        
+                filename_candidates.append(filename + "/" + sp +"_%03d"%snapshot + ".%d"%filenum + ".hdf5")
+                filename_candidates.append(filename + "/" + sp +"_%03d"%snapshot + ".%d"%filenum + ".h5")
+            
+                filename_candidates.append(filename + "/" + dirprefix + "_%03d/"%snapshot + sp +"_%03d"%snapshot + ".%d"%filenum + ".hdf5")
+                filename_candidates.append(filename + "/" + dirprefix + "_%03d/"%snapshot + sp +"_%03d"%snapshot + ".%d"%filenum + ".h5")
+        
+        found = False
+        for fname in filename_candidates:
+            if path.isfile(fname):
+                filename = fname
+                found = True
+                break
+            
+        if not found:
+            return (None, None, None)
         
         
     res = re.findall(r"_([0-9]+)\.(([0-9]*)\.)?(hdf5|h5)$", filename)
