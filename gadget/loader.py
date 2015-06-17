@@ -368,7 +368,7 @@ class Snapshot(Loader):
         self._sortID = sortID
         if sortID:
             for gr in self.groups:
-                if "id" in gr.data.has_key("id"):
+                if "id" in gr.data:
                     ind = np.argsort(gr.data['id'])
                     for d in gr.data.values():
                         d[...] = d[ind,...]
