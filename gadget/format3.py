@@ -461,7 +461,7 @@ class Format3:
             if hasattr(self.sn, i):
                 value = getattr(self.sn, i)
                 if i == "Flag_DoublePrecision":
-                    if self.sn._precison == np.float64:
+                    if self.sn._precision == np.float64:
                         value = 1
                     else:
                         value = 0
