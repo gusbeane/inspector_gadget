@@ -10,7 +10,7 @@ def usage():
     print("  -c  --config  print config options used (if available)")
     print("  -d  --dir     show which data fields are stored in this file")
     print("  -f  --format  specify file format if not auto detected")
-    print("  -s  --subfind teat file as subfind output")
+    print("  -s  --subfind treat file as subfind output if not auto detected")
     exit()
 
 if __name__ == "__main__":

@@ -74,10 +74,9 @@ class Halo(Filter):
         return ind
     
     def reset(self):
-        self.sn_offset = np.zeros(6)
+        self.sn_offset = np.zeros(6, dtype=np.uint64)
         
-        self.halo_offset = np.zeros((self.cat.npart_loaded[0],6))
-        #self.sub_offset = np.zeros((self.cat.npart_loaded[1],6))
+        self.halo_offset = np.zeros((self.cat.npart_loaded[0],6), dtype=np.uint64)
         
         self.halo_offset[1:,:] = np.cumsum(self.cat.group.GroupLenType[:-1,:], axis=0, dtype=np.uint64)
         
