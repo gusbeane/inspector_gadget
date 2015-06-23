@@ -269,8 +269,8 @@ class Simulation(Snapshot):
         box = self._validate_vector(box, b, len=2)
         
         r = np.zeros(2)
-        r[0] = int(1024 * box[0]/box.min())
-        r[1] = int(1024 * box[1]/box.min())
+        r[0] = int(1024 * box[0]/box.max())
+        r[1] = int(1024 * box[1]/box.max())
         res = self._validate_vector(res, r, len=2).astype(np.int)
 
         c = np.zeros( 3 )
@@ -336,8 +336,8 @@ class Simulation(Snapshot):
         box = self._validate_vector(box, b, len=2)
         
         r = np.zeros(2)
-        r[0] = int(1024 * box[0]/box.min())
-        r[1] = int(1024 * box[1]/box.min())
+        r[0] = int(1024 * box[0]/box.max())
+        r[1] = int(1024 * box[1]/box.max())
         res = self._validate_vector(res, r, len=2).astype(np.int)
 
         c = np.zeros( 3 )
@@ -506,9 +506,9 @@ class Simulation(Snapshot):
         box = self._validate_vector(box, b)
         
         r = np.zeros(3)
-        r[0] = int(1024 * box[0]/box.min())
-        r[1] = int(1024 * box[1]/box.min())
-        r[2] = int(1024 * box[2]/box.min())
+        r[0] = int(1024 * box[0]/box.max())
+        r[1] = int(1024 * box[1]/box.max())
+        r[2] = int(1024 * box[2]/box.max())
         res = self._validate_vector(res, r, len=3).astype(np.int)
 
         c = np.zeros( 3 )
@@ -691,9 +691,9 @@ class Simulation(Snapshot):
         box = self._validate_vector(box, self.box)
         
         r = np.zeros(3)
-        r[0] = int(1024 * box[0]/box.min())
-        r[1] = int(1024 * box[1]/box.min())
-        r[2] = int(1024 * box[2]/box.min())
+        r[0] = int(1024 * box[0]/box.max())
+        r[1] = int(1024 * box[1]/box.max())
+        r[2] = int(1024 * box[2]/box.max())
         res = self._validate_vector(res, r, len=3).astype(np.int)
 
         c = center
@@ -734,9 +734,9 @@ class Simulation(Snapshot):
         box = self._validate_vector(box, self.box)
         
         r = np.zeros(3)
-        r[0] = int(1024 * box[0]/box.min())
-        r[1] = int(1024 * box[1]/box.min())
-        r[2] = int(1024 * box[2]/box.min())
+        r[0] = int(1024 * box[0]/box.max())
+        r[1] = int(1024 * box[1]/box.max())
+        r[2] = int(1024 * box[2]/box.max())
         res = self._validate_vector(res, r, len=3).astype(np.int)
 
         c = center
@@ -773,9 +773,9 @@ class Simulation(Snapshot):
         box = self._validate_vector(box, self.box)
         
         r = np.zeros(3)
-        r[0] = int(1024 * box[0]/box.min())
-        r[1] = int(1024 * box[1]/box.min())
-        r[2] = int(1024 * box[2]/box.min())
+        r[0] = int(1024 * box[0]/box.max())
+        r[1] = int(1024 * box[1]/box.max())
+        r[2] = int(1024 * box[2]/box.max())
         res = self._validate_vector(res, r, len=3).astype(np.int)
 
         c = center
