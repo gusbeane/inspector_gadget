@@ -140,7 +140,7 @@ class Simulation(Snapshot):
             
         center = self._validate_vector(center, self.center)
         
-        group.pos -= center[None,:]
+        group.pos[...] -= center[None,:]
         self.set_center(np.zeros(3))
         
         return
@@ -401,16 +401,24 @@ class Simulation(Snapshot):
         lines=np.zeros((4*np.shape(ids)[0],2,2))
 
         j=0
+        k=0
 
+        shape=np.shape(ids)
+       
         for i in ids:
+            print "%d / %d" % (k,shape[0])
+            
             index=np.where(self.id==i)[0][0]
             self._add_square(lines, j, group.pos[index,axis[0]], group.pos[index,axis[1]], group.volume[index]**(1./(self.numdims)))
             j=j+4
+            k=k+1
 
         if(not 'color' in params):
             params['color']='black'    
 
         lc = mc.LineCollection(lines, **params)
+
+        return lc
 
         if(axes==None):
             ax=p.subplot(1,1,1)
