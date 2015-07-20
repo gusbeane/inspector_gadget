@@ -8,9 +8,9 @@ def usage():
     print("[OPTIONS] are:")
     print("  -fin  --informat       specify the input file format if not auto detected")
     print("  -fout --outformat      specify the output file format (default is format 3/hdf5)")
-    print("  -bs   --blocksequence  list of blocks in file seperated by ','; only allowed for format 1 files")
+    print("  -bs   --blocksequence  list of blocks in format 1 files, seperated by ',' without spaces. This option is only allowed for format 1 files")
     print("  -d    --todouble       convert floating point values to double")
-    print("  -s    --subfind        treat file as subfind output")
+    print("  -s    --subfind        treat file as subfind output if not auto detected")
     exit()
 
 if __name__ == "__main__":
@@ -62,13 +62,10 @@ if __name__ == "__main__":
         else:
             sn = arepo.Snapshot(fin, format=formatin, combineFiles=False, toDouble=toDouble)
     else:
-        if bs is not None:
-            sn = arepo.Subfind(fin, format=formatin, combineFiles=False, block_sequence=bs, toDouble=toDouble)
-        else:
-            sn = arepo.Subfind(fin, format=formatin, combineFiles=False, toDouble=toDouble)
+        sn = arepo.Subfind(fin, format=formatin, combineFiles=False, toDouble=toDouble)
     
 
-    if (sn.__format__ == 1 or sn.__format__ == 2) and formatout==3:
+    if (sn._format == 1 or sn._format == 2) and formatout==3:
         end = False
         for k in sn.data.keys():
             if k not in rev_hdf5toformat2:
@@ -79,3 +76,5 @@ if __name__ == "__main__":
             exit()
             
     sn.write(fout, format=formatout)
+    
+    

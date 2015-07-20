@@ -112,19 +112,22 @@ class Loader(object):
             if(s[0]!=item[::-1]): #string contains an underscore
                 g=[s[1][::-1],s[0]]
                                 
-            it = self._normalizeName(g[0])
-            if it in self.data:
-                if g[1] == 'x':
-                    i = 0
-                elif g[1] == 'y':
-                    i = 1
-                elif g[1] == 'z':
-                    i = 2
-                else:
-                    i = int(g[1])
-                d = self.data[it]
-                if d.ndim == 2 and d.shape[1] > i:
-                    return d[:,i]
+                it = self._normalizeName(g[0])
+                if it in self.data:
+                    if g[1] == 'x':
+                        i = 0
+                    elif g[1] == 'y':
+                        i = 1
+                    elif g[1] == 'z':
+                        i = 2
+                    else:
+                        try:
+                            i = int(g[1])
+                        except:
+                            raise AttributeError("unknown field '%s'"%item)
+                    d = self.data[it]
+                    if d.ndim == 2 and d.shape[1] > i:
+                        return d[:,i]
         
         raise AttributeError("unknown field '%s'"%item)
     
@@ -281,7 +284,7 @@ class Loader(object):
         if snapshot is None:
             snapshot = self.snapshot + 1
             
-        if backends_modules[self._format].getFilename(self.filename, snapshot, self.filenum)[0] is None:
+        if backends_modules[self._format].handlesfile(self.filename, snapshot=snapshot, filenum=self.filenum, snap=self):
             return False
              
         self.close()
@@ -301,7 +304,9 @@ class Loader(object):
             else:
                 self.group = PartGroup(self,0)
                 self.subhalo = PartGroup(self,1)
-                self.groups = [self.group, self.subhalo]   
+                self.groups = [self.group, self.subhalo]  
+                
+        return True 
 
     def close(self):
         self._backend.close()
@@ -683,10 +688,10 @@ class PartGroup(object):
         else:
             s=item[::-1]
             s=s.split("_",1)
-
+            
             if(s[0]!=item[::-1]): #string contains an underscore
                 g=[s[1][::-1],s[0]]
-
+                                
                 it = parent._normalizeName(g[0])
                 if it in parent.data:
                     if g[1] == 'x':
@@ -696,11 +701,14 @@ class PartGroup(object):
                     elif g[1] == 'z':
                         i = 2
                     else:
-                        i = int(g[1])
-                            
-                        d = parent.data[it]
-                        if d.ndim == 2 and d.shape[1] > i:
-                            f = d[:,i]
+                        try:
+                            i = int(g[1])
+                        except:
+                            raise AttributeError("unknown field '%s'"%item)
+                    d = parent.data[it]
+                    if d.ndim == 2 and d.shape[1] > i:
+                        f = d[:,i]
+
         if not f is None:
             pres = parent._isPresent(it)
             if pres[num]>0:       

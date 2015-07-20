@@ -255,8 +255,8 @@ class Format3:
                                 for fld in f.requieredFields:
                                     fld2 = self.rev_dict.get(fld,fld)
                                     data[fld] = self.file["PartType%d"%gr][fld2][...][ind]
-                            
-                                ind = ind[f.getIndices(data)]
+                                ind_tmp = f.getIndices(data)
+                                ind = ind[ind_tmp]
                             
                         indices[gr].append(np.copy(ind))
                         self.sn.npart_loaded[gr] += len(ind)

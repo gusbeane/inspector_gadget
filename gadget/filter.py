@@ -62,9 +62,8 @@ class Halo(Filter):
         ind = None
         gr = data['group']
         if self.offset[gr] + self.len[gr] > self.sn_offset[gr] and self.offset[gr] < self.sn_offset[gr]+data['NumPart_ThisFile']:
-              start = np.max([0, self.offset[gr] - self.sn_offset[gr]])
+              start = np.max([np.int64(0), self.offset[gr] - self.sn_offset[gr]])
               stop = np.min([(self.offset[gr]+self.len[gr])-self.sn_offset[gr], data['NumPart_ThisFile']])
-              
               ind = slice(start,stop)
         else:
             ind = slice(0,0)
@@ -74,12 +73,11 @@ class Halo(Filter):
         return ind
     
     def reset(self):
-        self.sn_offset = np.zeros(6)
+        self.sn_offset = np.zeros(6, dtype=np.int64)
         
-        self.halo_offset = np.zeros((self.cat.npart_loaded[0],6))
-        #self.sub_offset = np.zeros((self.cat.npart_loaded[1],6))
+        self.halo_offset = np.zeros((self.cat.npart_loaded[0],6), dtype=np.int64)
         
-        self.halo_offset[1:,:] = np.cumsum(self.cat.group.GroupLenType[:-1,:], axis=0, dtype=np.uint64)
+        self.halo_offset[1:,:] = np.cumsum(self.cat.group.GroupLenType[:-1,:], axis=0, dtype=np.int64)
         
         if self.halo != None:
             self.offset = self.halo_offset[self.halo,:]
@@ -90,9 +88,9 @@ class Halo(Filter):
             halo = self.cat.subhalo.SubhaloGrNr[self.subhalo]
             self.offset = self.halo_offset[halo,:]   
 
-            first =  np.uint64(self.cat.group.GroupFirstSub[halo])
+            first =  np.int64(self.cat.group.GroupFirstSub[halo])
             if self.subhalo - first > 0:
-                self.offset += np.sum(self.cat.subhalo.SubhaloLenType[first:self.subhalo,:], axis=0, dtype=np.uint64)
+                self.offset += np.sum(self.cat.subhalo.SubhaloLenType[first:self.subhalo,:], axis=0, dtype=np.int64)
 
             self.len = self.cat.subhalo.SubhaloLenType[self.subhalo,:]  
                 
