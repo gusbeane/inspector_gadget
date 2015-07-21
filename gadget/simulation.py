@@ -35,6 +35,7 @@ class Simulation(Snapshot):
         self.set_box(None)
         
         self._shift = np.zeros(3)
+        self._trafomatrix = np.matrix([[1,0,0],[0,1,0],[0,0,1]])
         
         self._domain = np.zeros(3)
         self._domain[:] = self.box
@@ -149,6 +150,42 @@ class Simulation(Snapshot):
         self.set_center(np.zeros(3))
         
         return
+
+    def coordtransform(self, zaxis, center=None, xaxis=None, fields=["pos", "vel"]):
+
+        if(center==None):
+            center=self.center
+
+        cn=center
+
+        if(xaxis != None):
+            axx=np.array(xaxis)
+
+        elif(zaxis[0]==0 and zaxis[1]==0 and zaxis[2]==1):
+            axx=np.array([1,0,0])
+
+        elif(zaxis[0]!=0 and zaxis[2]!=0):
+            axx=np.array([zaxis[2],0,-zaxis[0]])
+
+        axz=np.array(zaxis)
+        axy=np.cross(axz,axx)
+
+        axx=axx/np.sqrt(np.sum(axx*axx))
+        axy=axy/np.sqrt(np.sum(axy*axy))
+        axz=axz/np.sqrt(np.sum(axz*axz))
+
+        if(np.abs(np.dot(axx,axz))>1e-12):
+            raise Exception("The coordinate axes have to be orthogonal!\n")
+
+        M=np.matrix([[axx[0], axy[0], axz[0]], [axx[1], axy[1], axz[1]], [axx[2], axy[2], axz[2]]])
+
+        self.centerat(cn)
+
+        for field in fields:
+            field=self[field]
+            field[...] = np.dot(field, np.dot(self._trafomatrix,M))           
+
+        self._trafomatrix = np.linalg.inv(M)
     
     def _get_radhist(self, value, center=None, bins=100, range=None, log=False, periodic=True, group=None):
         if group is None:
