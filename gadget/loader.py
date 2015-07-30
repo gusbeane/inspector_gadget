@@ -111,7 +111,7 @@ class Loader(object):
         if attr_n in self.data:
             raise AttributeError("you can not exchange the array %s with your own object , write into the array using %s[...] instead"%(attr,attr))
         
-        object.__setattr__(self,attr,val)
+        object.__setattr__(self,attr_n,val)
         
     def __dir__(self):
         dir = list(self.__dict__.keys())
@@ -124,8 +124,8 @@ class Loader(object):
         
         return dir 
 
-    def __getitem__(self, item):
-        item = self._normalizeName(item)
+    def __getitem__(self, item_original):
+        item = self._normalizeName(item_original)
         
         if item in self.data:
             return self.data[item]
@@ -148,12 +148,12 @@ class Loader(object):
                         try:
                             i = int(g[1])
                         except:
-                            raise AttributeError("unknown field '%s'"%item)
+                            raise AttributeError("unknown field '%s'"%item_original)
                     d = self.data[it]
                     if d.ndim == 2 and d.shape[1] > i:
                         return d[:,i]
         
-        raise AttributeError("unknown field '%s'"%item)
+        raise AttributeError("unknown field '%s'"%item_original)
     
     def __contains__(self, item):
         item = self._normalizeName(item)
@@ -675,8 +675,8 @@ class PartGroup(object):
 
 
 
-    def __getitem__(self, item):
-        item = self._parent._normalizeName(item)
+    def __getitem__(self, item_original):
+        item = self._parent._normalizeName(item_original)
         parent = self._parent
         num = self._num
         
@@ -704,7 +704,7 @@ class PartGroup(object):
                         try:
                             i = int(g[1])
                         except:
-                            raise AttributeError("unknown field '%s'"%item)
+                            raise AttributeError("unknown field '%s'"%item_original)
                     d = parent.data[it]
                     if d.ndim == 2 and d.shape[1] > i:
                         f = d[:,i]
@@ -716,7 +716,7 @@ class PartGroup(object):
                 tmp = np.sum(n1[0:num])
                 return f[tmp:tmp+parent.npart_loaded[num]]
         
-        raise AttributeError("unknown field '%s'"%item)
+        raise AttributeError("unknown field '%s'"%item_original)
     
     def __contains__(self, item):
         item = self._parent._normalizeName(item)
@@ -765,19 +765,17 @@ class PartGroup(object):
         elif attr =='data':
             raise AttributeError("you are not allowed to set attribute 'data'")
         
-        attr = self._parent._normalizeName(attr)
+        attr_n = self._parent._normalizeName(attr)
         
-        if attr in self._parent.data:
+        if attr_n in self._parent.data:
             raise AttributeError("you can not exchange the array '%s' with your own object, write into the array using %s[...] instead"%(attr,attr))
         
-        object.__setattr__(self,attr,val)
+        object.__setattr__(self,attr_n,val)
     
-    def __getattr__(self,attr):       
-        parent = self._parent
-        num = self._num
-        attr = self._parent._normalizeName(attr)
-        
+    def __getattr__(self,attr):
         if attr == "data":
+            parent = self._parent
+            num = self._num
             data = {}
             if parent.npart_loaded[num]>0:
                 if hasattr(parent,"data"):
