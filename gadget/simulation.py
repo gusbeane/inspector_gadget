@@ -153,10 +153,6 @@ class Simulation(Snapshot):
 
     def coordtransform(self, zaxis, center=None, xaxis=None, fields=["pos", "vel"]):
 
-        if(center==None):
-            center=self.center
-
-        cn=center
 
         if(xaxis != None):
             axx=np.array(xaxis)
@@ -179,7 +175,9 @@ class Simulation(Snapshot):
 
         M=np.matrix([[axx[0], axy[0], axz[0]], [axx[1], axy[1], axz[1]], [axx[2], axy[2], axz[2]]])
 
-        self.centerat(cn)
+        if(center!=None):
+            cn=center
+            self.centerat(cn)
 
         for field in fields:
             field=self[field]
