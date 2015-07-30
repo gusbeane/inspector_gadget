@@ -61,6 +61,7 @@ def test_iter(create_snapshot):
     for s in sn.iterFiles():
         assert(s.NumPart_ThisFile[0]==N)
         assert(sn.filenum==i)
+        sn.part0.pos
         i = i + 1
     assert(i==2)
     s.close()
@@ -70,6 +71,7 @@ def test_iter2(create_snapshot):
     assert(sn.snapshot==0)
     assert(sn.nextSnapshot()==True)
     assert(sn.snapshot==1)
+    sn.part0.pos
     sn.close()
     
     
@@ -79,9 +81,10 @@ def test_load_combine(create_snapshot):
     sn.close()
     
 def test_load_fields(create_snapshot):
-    sn = arepo.Snapshot(".",0, fields=['pos'])
+    sn = arepo.Snapshot(".",0, fields=['pos','Velocities'])
     sn.pos
-    assert(hasattr(sn,"vel")==False)
+    assert(hasattr(sn,"id")==False)
+    assert(hasattr(sn,"vel")==True)
     assert(hasattr(sn,"pos")==True)
     sn.close()
     
@@ -167,5 +170,10 @@ def test_in2(snapshot):
     assert("pos_x" in snapshot.part0)
     assert("pos_0" in snapshot.part0)
     assert(("pos_w" in snapshot.part0) == False)
+    
+    
+def test_print(snapshot):
+    print(snapshot)
+    
     
     

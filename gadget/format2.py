@@ -122,6 +122,8 @@ class Format2:
                 print("Multiple files detected, thus mmap is deactivated.")
                 self.nommap = True
         
+        self.sn.ntypes = 6
+        
         self.load_header( 0, verbose=self.sn._verbose )
         self.get_blocks( 0, verbose=self.sn._verbose )
 

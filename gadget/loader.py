@@ -38,13 +38,15 @@ class Loader(object):
 
         self._format = format
         
-        self._present = flds.present.copy()
+        self._present = {}
         self._headerfields = []
         
         self._fields = fields
-        self._normalizeFields()
-        
-        self._writeable = True
+
+        if self._fields is not None:
+            for i in np.arange(len(fields)):
+                self._fields[i] = self._normalizeName(fields[i])
+
         self._verbose = verbose
         self._onlyHeader = onlyHeader
         self._combineFiles = combineFiles
@@ -59,14 +61,36 @@ class Loader(object):
         self._parttype = parttype
 
         self._backend = backends[format](self, **param) 
-            
-        
-    def _normalizeFields(self):
-        if self._fields is None:
-            return
 
-        for i in np.arange(len(self._fields)):
-            self._fields[i] = self._normalizeName(self._fields[i])
+
+    def _initGroups(self):
+        self.header = Header(self)
+        
+        if not self._onlyHeader: 
+            if  isinstance(self, Snapshot) or isinstance(self, ICs):
+                self.groups = []
+                for i in np.arange(self.ntypes):
+                    group = PartGroup(self,i)
+                    setattr(self, "part%d"%i, group)
+                    self.groups.append(group)
+            else:
+                self.group = PartGroup(self,0)
+                self.subhalo = PartGroup(self,1)
+                self.groups = [self.group, self.subhalo]
+        else:
+            self.groups = []
+            
+            
+    def _rmGroups(self):
+        del self.header
+        del self.groups
+        if not self._onlyHeader: 
+            if  isinstance(self, Snapshot) or isinstance(self, ICs):
+                for i in np.arange(self.ntypes):
+                    delattr(self, "part%d"%i)
+            else:
+                del self.group
+                del self.subhalo
                     
     def __getattr__(self,attr):
         if attr in flds.legacy_header_names:
@@ -78,13 +102,13 @@ class Loader(object):
         if attr in flds.legacy_header_names:
             setattr(self, flds.legacy_header_names[attr], val)
             return
-            
-        attr = self._normalizeName(attr)
         
         if attr =='data':
             object.__setattr__(self,attr,val)
+            
+        attr_n = self._normalizeName(attr)
         
-        if attr in self.data:
+        if attr_n in self.data:
             raise AttributeError("you can not exchange the array %s with your own object , write into the array using %s[...] instead"%(attr,attr))
         
         object.__setattr__(self,attr,val)
@@ -167,7 +191,6 @@ class Loader(object):
         name = flds.rev_shortnames.get(name,name)
         return name
         
-        
     def _isPresent(self, name):
         try:
             pres = self._present[name]
@@ -175,28 +198,28 @@ class Loader(object):
             raise Exception("Unkonwn array shape for field %s"%name)
     
         #filter for loaded particle types
-        tmp = np.zeros(6,dtype=np.longlong)
+        tmp = np.zeros(self.ntypes,dtype=np.longlong)
         tmp[self._parttype] = pres[self._parttype]
         return tmp
 
     def _learnPresent(self, name, gr=None, shape=1):           
         if gr !=None:
-            pres = np.zeros(6,dtype=np.int64)
+            pres = np.zeros(self.ntypes,dtype=np.int64)
             pres[gr] = shape
             if name == 'mass':
                 pres[gr] = (0 if self.MassTable[gr]>0  else 1)
-            old = self._present.get(name,np.zeros(6,dtype=np.longlong))
+            old = self._present.get(name,np.zeros(self.ntypes,dtype=np.longlong))
             pres = np.maximum(old,pres)
             self._present[name] = pres
         else:
             shape = np.array(shape)
-            if shape.shape!=(6,):
+            if shape.shape!=(self.ntypes,):
                raise Exception("invalide present array")
             pres = shape
             self._present[name] = pres
     
         #filter for loaded particle types
-        tmp = np.zeros(6,dtype=np.longlong)
+        tmp = np.zeros(self.ntypes,dtype=np.longlong)
         tmp[self._parttype] = pres[self._parttype]
         return tmp
     
@@ -204,7 +227,7 @@ class Loader(object):
         tmp = str(self.header)
         
         if not self._onlyHeader:
-            for i in np.arange(6):
+            for i in np.arange(self.ntypes):
                 if self.npart_loaded[i] > 0:
                     tmp += re.sub("[^\n]*\n","\n",str(self.groups[i]),count=1)
 
@@ -214,12 +237,9 @@ class Loader(object):
         return repr(self.header)
 
     def addField(self, name, pres=None, dtype=None):
-        if not self._writeable:
-            raise Exception("This snapshot can not be modified")
-        
         name = self._normalizeName(name)
 
-        if pres != None:
+        if pres is not None:
             pres = self._learnPresent(name,shape=pres)
         else:
             pres = self._isPresent(name)
@@ -244,10 +264,8 @@ class Loader(object):
             
         self.data[name] = f
         
-    def write(self, filename=None, format=None):
-        if not self._writeable:
-            raise Exception("This snapshot can not be written")
         
+    def write(self, filename=None, format=None):      
         if filename is None:
             filename = self.filename
             
@@ -259,7 +277,8 @@ class Loader(object):
         else:
             tmp_backend = backends[format](self)
             tmp_backend.write(filename=filename)
-    
+
+
     def nextFile(self, num=None):
         if self.filenum is None:
             return False
@@ -281,25 +300,12 @@ class Loader(object):
             return True
         
         self.close()
-
-
+        
         #open next file
         self._backend.load(num, self.snapshot)
         
-        if self._onlyHeader: 
-            if  isinstance(self, Snapshot):       
-                self.part0 = PartGroup(self,0)
-                self.part1 = PartGroup(self,1)
-                self.part2 = PartGroup(self,2)
-                self.part3 = PartGroup(self,3)
-                self.part4 = PartGroup(self,4)
-                self.part5 = PartGroup(self,5)
-                self.groups = [self.part0, self.part1, self.part2, self.part3, self.part4, self.part5]
-            else:
-                self.group = PartGroup(self,0)
-                self.subhalo = PartGroup(self,1)
-                self.groups = [self.group, self.subhalo]
-
+        self._initGroups()
+        
         return True
 
     def iterFiles(self):
@@ -323,19 +329,7 @@ class Loader(object):
         #open next file
         self._backend.load(self.filenum, snapshot)
         
-        if self._onlyHeader: 
-            if  isinstance(self, Snapshot):       
-                self.part0 = PartGroup(self,0)
-                self.part1 = PartGroup(self,1)
-                self.part2 = PartGroup(self,2)
-                self.part3 = PartGroup(self,3)
-                self.part4 = PartGroup(self,4)
-                self.part5 = PartGroup(self,5)
-                self.groups = [self.part0, self.part1, self.part2, self.part3, self.part4, self.part5]
-            else:
-                self.group = PartGroup(self,0)
-                self.subhalo = PartGroup(self,1)
-                self.groups = [self.group, self.subhalo]  
+        self._initGroups()
                 
         return True 
 
@@ -353,10 +347,14 @@ class Loader(object):
             del self.data
             self.data = {}
             
-            
+        self._rmGroups()
+                
         for i in self._headerfields:
+            if i == "NumFiles":
+                i = "NumFilesPerSnapshot"
             delattr(self,i)
         self._headerfields = []
+        
         if hasattr(self,"parameters"):
             del self.parameters
         if hasattr(self,"config"):
@@ -379,7 +377,7 @@ class Snapshot(Loader):
         *filter* : Only load a filtered subset of the snapshot, specified by the filter object.
         *sortID* : sort all loaded data in each group by particle id
 
-        *num_part* : (ic generation) generate an empty snapshot instead; num_part must be an array with 6 integers, giving the number of particles for each particle species
+        *num_part* : (ic generation) generate an empty snapshot instead; num_part must be an array with NTYPES integers, giving the number of particles for each particle species
         *masses* : (ic generation, optinal) array with masses of each particle species, (0 if specified in the mass array)
         """
         super(Snapshot,self).__init__(filename, snapshot=snapshot, filenum=filenum, format=format, fields=fields, parttype=parttype, combineFiles=combineFiles, toDouble=toDouble, onlyHeader=onlyHeader, verbose=verbose, **param)
@@ -388,18 +386,7 @@ class Snapshot(Loader):
     
         self._backend.load(filenum, snapshot)
         
-        self.header = Header(self)
-        
-        if not self._onlyHeader: 
-            self.part0 = PartGroup(self,0)
-            self.part1 = PartGroup(self,1)
-            self.part2 = PartGroup(self,2)
-            self.part3 = PartGroup(self,3)
-            self.part4 = PartGroup(self,4)
-            self.part5 = PartGroup(self,5)
-            self.groups = [self.part0, self.part1, self.part2, self.part3, self.part4, self.part5]
-        else:
-            self.groups = []
+        self._initGroups()
             
         self._sortID = sortID
         if sortID:
@@ -437,49 +424,42 @@ class Snapshot(Loader):
         #open next file
         self._backend.load(self.filenum, self.snapshot)
         
-        if not self._onlyHeader:        
-            self.part0 = PartGroup(self,0)
-            self.part1 = PartGroup(self,1)
-            self.part2 = PartGroup(self,2)
-            self.part3 = PartGroup(self,3)
-            self.part4 = PartGroup(self,4)
-            self.part5 = PartGroup(self,5)
-            self.groups = [self.part0, self.part1, self.part2, self.part3, self.part4, self.part5]
-        else:
-            self.groups = []
+        self._initGroups()
 
         return True
 
 
 
 class ICs(Loader):
-    def __init__(self,filename, num_part, format=None, fields=None, masses=None, precision=None, longids=False, verbose=False, **param): 
+    def __init__(self,filename, num_part, format=None, masses=None, precision=None, longids=False, verbose=False, **param): 
         """
         Creates an empty snapshot used for ic generation
         
         *filename* : The name of the snapshot file
-        *num_part* : (ic generation) generate an empty snapshot instead; num_part must be an array with 6 integers, giving the number of particles for each particle species
+        *num_part* : (ic generation) generate an empty snapshot instead; num_part must be an array with NTYPES integers, giving the number of particles for each particle species
         *masses* : (ic generation, optinal) array with masses of each particle species, (0 if specified in the mass array)
         *format* : (optional) file format of the snapshot, otherwise this is guessed from the file name
-        *fields* : (optional) list of fields to add beside the basic fields
-       
         *verbose* : (optional) enable debug output
         """
         num_part = np.array(num_part)
+        
+        if len(num_part) < 6:
+            num_part = np.append(num_part, np.zeros(6-len(num_part)))
+        
         if masses != None:
             masses = np.array(masses)
         
         super(ICs,self).__init__(filename, format=format, verbose=verbose, **param)
         
-        #if format!=2:
-        #    raise Exception( "Only Format 3 ICs are supported at the moment")
-        
         self._path = os.path.abspath(filename)
         
+        self.ntypes = len(num_part)
         self._parttype = np.where(num_part>0)[0]
         
+
+        
         if masses is None:
-            masses = np.zeros(6)
+            masses = np.zeros(self.ntypes)
             
         if precision is None:
             precision = np.float32
@@ -487,12 +467,13 @@ class ICs(Loader):
         self._precision = precision
         self._longids = longids
             
-        self.NumPart_ThisFile = np.longlong(num_part).copy()
-        self.NumPart_Total = np.longlong(num_part).copy()
-        self.NumPart_Total_HighWord = np.zeros(6)
+        self.NumPart_ThisFile = num_part.copy().astype(np.longlong)
+        self.NumPart_Total = num_part.copy().astype(np.longlong)
+        self.NumPart_Total_HighWord = np.zeros(self.ntypes)
         
-        self.nparticlesall = np.longlong(self.NumPart_Total)
-        self.npart_loaded = self.NumPart_ThisFile
+        self.nparticlesall = self.NumPart_Total.copy()
+        self.npart_loaded = self.NumPart_ThisFile.copy()
+        
         self.npart = self.NumPart_ThisFile.sum()
         self.npartall = self.nparticlesall.sum()
         
@@ -520,32 +501,26 @@ class ICs(Loader):
                                   'Flag_Feedback', 'Flag_Cooling', 'Flag_StellarAge', 'Flag_Metals', 'Flag_DoublePrecision', 
                                   'NumPart_ThisFile', 'NumPart_Total', 'NumPart_Total_HighWord', 'NumFilesPerSnapshot', 'MassTable']
         
-        self.header = Header(self)
-        
         #initiate mass field
         self._learnPresent('mass',shape=np.where(masses==0,1,0))
-    
-        self.part0 = PartGroup(self,0)
-        self.part1 = PartGroup(self,1)
-        self.part2 = PartGroup(self,2)
-        self.part3 = PartGroup(self,3)
-        self.part4 = PartGroup(self,4)
-        self.part5 = PartGroup(self,5)
-        self.groups = [ self.part0, self.part1, self.part2, self.part3, self.part4, self.part5]
-        
+
         self._fields = []
         
         for field in flds.default:
-            self._fields.append(field)
-            
-        if fields != None:
-            for field in fields:
-                f = self._normalizeName(field)
-                if not f in self._fields:
-                    self._fields.append(f)
-                
-        for field in self._fields:
+            if field == 'mass':
                 self.addField(field)
+            else:
+                type = flds.default[field]    
+            
+                present = np.zeros(self.ntypes)
+                if type[0] == -1:    
+                    present[:] = type[1]
+                else:
+                    present[type[0]] = type[1]
+                  
+                self.addField(field, present, type[2])
+                
+        self._initGroups()
 
 class Subfind(Loader):
     def __init__(self,filename, snapshot=None, filenum=None,  format=None, fields=None, parttype=None, combineFiles=False, toDouble=False, onlyHeader=False, verbose=False, **param):
@@ -565,16 +540,10 @@ class Subfind(Loader):
                 parttype_filter.append(i)
            
         super(Subfind,self).__init__(filename, snapshot=snapshot, filenum=filenum, format=format, fields=fields, parttype=parttype_filter, combineFiles=combineFiles, toDouble=toDouble, onlyHeader=onlyHeader, verbose=verbose, **param)
+        
         self._backend.load(filenum, snapshot)
 
-        self.header = Header(self)
-        
-        if not onlyHeader:
-            self.group = PartGroup(self,0)
-            self.subhalo = PartGroup(self,1)
-            self.groups = [self.group, self.subhalo]   
-    
-        self._writeable = False
+        self._initGroups()
     
 
 class Header(object):
@@ -743,7 +712,7 @@ class PartGroup(object):
         if not f is None:
             pres = parent._isPresent(it)
             if pres[num]>0:       
-                n1 = np.where(pres>0, parent.npart_loaded,np.zeros(6,dtype=np.longlong))
+                n1 = np.where(pres>0, parent.npart_loaded,np.zeros(parent.ntypes,dtype=np.longlong))
                 tmp = np.sum(n1[0:num])
                 return f[tmp:tmp+parent.npart_loaded[num]]
         
@@ -816,7 +785,7 @@ class PartGroup(object):
                         pres = parent._isPresent(key)
                         if pres[num]>0:
                             f = parent.data[key]
-                            n1 = np.where(pres>0, parent.npart_loaded,np.zeros(6,dtype=np.longlong))
+                            n1 = np.where(pres>0, parent.npart_loaded,np.zeros(parent.ntypes,dtype=np.longlong))
                             tmp = np.sum(n1[0:num])
                             data[key] = f[tmp:tmp+parent.npart_loaded[num]]
             return data  

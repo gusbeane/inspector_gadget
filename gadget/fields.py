@@ -192,19 +192,12 @@ hdf5toformat2 = {
 
 rev_hdf5toformat2 = dict((v,k) for k, v in hdf5toformat2.items())
 
-default = [
-    'id',
-    'pos',
-    'vel',
-    'u',
-    'mass'
-    ]
-
-present = {
-    'id' : np.array([1,1,1,1,1,1]),
-    'pos' : np.array([3,3,3,3,3,3]),
-    'vel' : np.array([3,3,3,3,3,3]),
-    'u'  : np.array([1,0,0,0,0,0]),           
+default = {
+    'id'  : (-1,1,None),
+    'pos' : (-1,3,None),
+    'vel' : (-1,3,None),
+    'u'   : ([0],1,None),
+    'mass': (-1,None,None)
     }
 
 legacy_header_names = {

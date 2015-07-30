@@ -105,6 +105,8 @@ class Format1:
             while path.exists( filename + ".%d" % self.filecount ):
                 self.files += [filename + ".%d" % self.filecount]
                 self.filecount += 1
+                
+        self.sn.ntypes = 6
         
         self.load_header( 0, verbose=self.sn._verbose )
 
