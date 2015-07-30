@@ -131,6 +131,37 @@ class Loader(object):
         
         raise AttributeError("unknown field '%s'"%item)
     
+    def __contains__(self, item):
+        item = self._normalizeName(item)
+        
+        if item in self.data:
+            return True
+        else:
+            s=item[::-1]
+            s=s.split("_",1)
+
+            if(s[0]!=item[::-1]): #string contains an underscore
+                g=[s[1][::-1],s[0]]
+                                
+                it = self._normalizeName(g[0])
+                if it in self.data:
+                    if g[1] == 'x':
+                        i = 0
+                    elif g[1] == 'y':
+                        i = 1
+                    elif g[1] == 'z':
+                        i = 2
+                    else:
+                        try:
+                            i = int(g[1])
+                        except:
+                            return False
+                    d = self.data[it]
+                    if d.ndim == 2 and d.shape[1] > i:
+                        return True
+        
+        return False
+    
     def _normalizeName(self, name):
         name = flds.hdf5toformat2.get(name,name)
         name = flds.rev_shortnames.get(name,name)
@@ -284,7 +315,7 @@ class Loader(object):
         if snapshot is None:
             snapshot = self.snapshot + 1
             
-        if backends_modules[self._format].handlesfile(self.filename, snapshot=snapshot, filenum=self.filenum, snap=self):
+        if not backends_modules[self._format].handlesfile(self.filename, snapshot=snapshot, filenum=self.filenum, snap=self):
             return False
              
         self.close()
@@ -440,8 +471,8 @@ class ICs(Loader):
         
         super(ICs,self).__init__(filename, format=format, verbose=verbose, **param)
         
-        if format!=2:
-            raise Exception( "Only Format 3 ICs are supported at the moment")
+        #if format!=2:
+        #    raise Exception( "Only Format 3 ICs are supported at the moment")
         
         self._path = os.path.abspath(filename)
         
@@ -456,8 +487,8 @@ class ICs(Loader):
         self._precision = precision
         self._longids = longids
             
-        self.NumPart_ThisFile = np.longlong(num_part)
-        self.NumPart_Total = np.longlong(num_part)
+        self.NumPart_ThisFile = np.longlong(num_part).copy()
+        self.NumPart_Total = np.longlong(num_part).copy()
         self.NumPart_Total_HighWord = np.zeros(6)
         
         self.nparticlesall = np.longlong(self.NumPart_Total)
@@ -717,6 +748,47 @@ class PartGroup(object):
                 return f[tmp:tmp+parent.npart_loaded[num]]
         
         raise AttributeError("unknown field '%s'"%item)
+    
+    def __contains__(self, item):
+        item = self._parent._normalizeName(item)
+        parent = self._parent
+        num = self._num
+        
+        f = None
+        
+        if item in parent.data:
+            f = parent.data[item]
+            it = item
+        else:
+            s=item[::-1]
+            s=s.split("_",1)
+            
+            if(s[0]!=item[::-1]): #string contains an underscore
+                g=[s[1][::-1],s[0]]
+                                
+                it = parent._normalizeName(g[0])
+                if it in parent.data:
+                    if g[1] == 'x':
+                        i = 0
+                    elif g[1] == 'y':
+                        i = 1
+                    elif g[1] == 'z':
+                        i = 2
+                    else:
+                        try:
+                            i = int(g[1])
+                        except:
+                            return False
+                    d = parent.data[it]
+                    if d.ndim == 2 and d.shape[1] > i:
+                        f = d[:,i]
+
+        if not f is None:
+            pres = parent._isPresent(it)
+            if pres[num]>0:       
+                return True
+        
+        return False
     
     def __setattr__(self,attr,val):
         if attr =='_parent':

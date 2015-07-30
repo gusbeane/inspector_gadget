@@ -161,8 +161,8 @@ class Format3:
             self.sn.nparticlesall = np.longlong(self.sn.NumPart_Total)
             self.sn.nparticlesall += np.longlong(self.sn.NumPart_Total_HighWord)<<32
 
-            self.sn.npart = np.array( self.sn.NumPart_Total ).sum()
-            self.sn.npartall = np.array( self.sn.nparticlesall ).sum()
+            self.sn.npart = np.array(self.sn.NumPart_ThisFile).sum()
+            self.sn.npartall = np.array(self.sn.nparticlesall).sum()
       
         else:
             self.sn.NumPart_ThisFile = np.array([self.sn.Ngroups_ThisFile, self.sn.Nsubgroups_ThisFile,0,0,0,0])

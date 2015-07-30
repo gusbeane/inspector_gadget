@@ -42,3 +42,9 @@ docs/_build/
 .DS_Store
 .project
 .pydevproject
+
+*.hdf5
+*.h5
+
+
+.gdb_history
