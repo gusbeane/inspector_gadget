@@ -245,14 +245,14 @@ class Loader(object):
             pres = self._isPresent(name)
             
         num = np.where(pres>0,self.npart_loaded,0)
-        
-        if dtype==None:
+
+        if dtype is None:
             if name=='id':
                 if self._longids:
                     dtype = np.uint64
                 else:
                     dtype = np.uint32
-            elif self._precision != None:
+            elif self._precision is not None:
                 dtype = self._precision
             else:
                 dtype = np.float32
