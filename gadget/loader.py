@@ -237,6 +237,13 @@ class Loader(object):
         return repr(self.header)
 
     def addField(self, name, pres=None, dtype=None):
+        """Adds a field to the snapshot
+        
+        :param name: name of the fields
+        :param pres: array conating the number of elements per particle for each particle type (ex. for a 3 comp. for gas only [3,0,0,0,0,0])
+        :param dtype: data type of the new field (default is used floating point precision)
+        
+        """
         name = self._normalizeName(name)
 
         if pres is not None:
@@ -265,7 +272,13 @@ class Loader(object):
         self.data[name] = f
         
         
-    def write(self, filename=None, format=None):      
+    def write(self, filename=None, format=None):
+        """Writes the snapshot or subfind object to a file
+        
+        :param filename: (optional) name of the file
+        :param format: (otional) file format to use (Currently only format 3 is supported)
+        
+        """
         if filename is None:
             filename = self.filename
             
@@ -280,6 +293,11 @@ class Loader(object):
 
 
     def nextFile(self, num=None):
+        """Changes to the next file within the same snapshot (only if combineFiles=flase)
+        
+        :param num: (optional) number of the fiule to load . If not given, the next file is loaded. 
+        
+        """
         if self.filenum is None:
             return False
         if num is None:
@@ -309,6 +327,7 @@ class Loader(object):
         return True
 
     def iterFiles(self):
+
         if self.filenum is None:
             yield self
             return
@@ -318,6 +337,11 @@ class Loader(object):
             yield self
             
     def nextSnapshot(self, snapshot=None):
+        """Changes to the next snapshot
+        
+        :param snapshot: (optional) number of the snapshot to load. If not given, the next snapshot is loaded
+        
+        """
         if snapshot is None:
             snapshot = self.snapshot + 1
             
@@ -334,6 +358,9 @@ class Loader(object):
         return True 
 
     def close(self):
+        """This closes the snapshot
+
+        """
         self._backend.close()
         
         if hasattr(self,"data"):
@@ -361,25 +388,37 @@ class Loader(object):
             del self.config
 
 class Snapshot(Loader):
-    """
-    This class loads Gadget snapshots. Currently file format 2 and 3 (hdf5) are supported.
+    """This class loads Gadget snapshots. Currently reading of file  format 1, 2 and 3 (hdf5) is supported. Writing is only supported for format 3.
+    
+    The snapshot can be selected through:
+      * by providing the path of the snapshot as filename, i.e.
+      
+        sn = arepo.Snapshot("snap_001.hdf5")
+        
+      * by providing the output folder and the snapshot number (and file number if needed), i.e.
+      
+        sn = arepo.Snapshot("output", 1) would load snapshot 1 in folder output
+        
+        sn = arepo.Snapshot("output", 1, 10) would load file number 10 of snapshot 1 of a multifile snapshot (if combineFiles=False, default is file number 0)
+       
+    The file format is autodetected. If autodetection files, try specifying teh format through the format option. If the file name or snapshot folder name is not detected (i.e. for subboxes), it can be provided using the optional parameters ``snapprefix`` and ``dirprefix``.  
+    
+    :param filename: The name of the snapshot file
+    :param snapshot: snapshot number to load
+    :param filenum: file of snapshot to load (if combineFiles = false)
+    :param format: (optional) file format of the snapshot, otherwise this is guessed from the file name
+    :param fields: (optional) list of fields to load, if None, all fields available in the snapshot are loaded
+    :param parttype: (optional) array with particle type numbers to load, if None, all particles are loaded
+    :param combineFiles: (optinal) if False only on part of the snapshot is loaded at a time, use nextFile() to go the next file.
+    :param toDouble: (optinal) converts all values of type float to double precision
+    :param onlyHeader: (optinal) load only the snapshot header
+    :param verbose: (optional) enable debug output
+    :param filter: Only load a filtered subset of the snapshot, specified by the filter object.
+    :param sortID: sort all loaded data in each group by particle id
+    
     """
     def __init__(self,filename, snapshot=None, filenum=None, format=None, fields=None, parttype=None, combineFiles=False, toDouble=False, onlyHeader=False, verbose=False, filter=None, sortID=False, **param):     
-        """
-        *filename* : The name of the snapshot file
-        *format* : (optional) file format of the snapshot, otherwise this is guessed from the file name
-        *fields* : (optional) list of fields to load, if None, all fields available in the snapshot are loaded
-        *parttype* : (optional) array with particle type numbers to load, if None, all particles are loaded
-        *combineFiles* : (optinal) if False only on part of the snapshot is loaded at a time, use nextFile() to go the next file.
-        *toDouble* : (optinal) converts all values of type float to double precision
-        *onlyHeader* : (optinal) load only the snapshot header
-        *verbose* : (optional) enable debug output
-        *filter* : Only load a filtered subset of the snapshot, specified by the filter object.
-        *sortID* : sort all loaded data in each group by particle id
-
-        *num_part* : (ic generation) generate an empty snapshot instead; num_part must be an array with NTYPES integers, giving the number of particles for each particle species
-        *masses* : (ic generation, optinal) array with masses of each particle species, (0 if specified in the mass array)
-        """
+        
         super(Snapshot,self).__init__(filename, snapshot=snapshot, filenum=filenum, format=format, fields=fields, parttype=parttype, combineFiles=combineFiles, toDouble=toDouble, onlyHeader=onlyHeader, verbose=verbose, **param)
     
         self._filter = filter
@@ -417,6 +456,11 @@ class Snapshot(Loader):
              self._longids = False
              
     def newFilter(self,filter):
+        """Reloads the snapshot using a new filter
+        
+        :param filter: Only load a filtered subset of the snapshot, specified by the filter object.
+        
+        """
         self.close()
         
         self._filter = filter
@@ -431,16 +475,17 @@ class Snapshot(Loader):
 
 
 class ICs(Loader):
-    def __init__(self,filename, num_part, format=None, masses=None, precision=None, longids=False, verbose=False, **param): 
-        """
-        Creates an empty snapshot used for ic generation
-        
-        *filename* : The name of the snapshot file
-        *num_part* : (ic generation) generate an empty snapshot instead; num_part must be an array with NTYPES integers, giving the number of particles for each particle species
-        *masses* : (ic generation, optinal) array with masses of each particle species, (0 if specified in the mass array)
-        *format* : (optional) file format of the snapshot, otherwise this is guessed from the file name
-        *verbose* : (optional) enable debug output
-        """
+    """Creates an empty snapshot object for ic generation
+    
+    :param filename: The name of the snapshot file
+    :param num_part: num_part must be an array with NTYPES integers, giving the number in each particle species
+    :param format: (optional) file format of the snapshot, otherwise this is guessed from the file name
+    :param masses: (optinal) array with masses of each particle species, (0 if specified in the mass array)
+    :param precision: (optional) precision used for floating point fields (default is np.float32)
+    :param longids: (optional) wheter particle IDs are 32 bit or 64 bit integers (default is 32 bit)
+    :param verbose: (optional) enable debug output
+    """
+    def __init__(self,filename, num_part, format=None, masses=None, precision=np.float32, longids=False, verbose=False, **param): 
         num_part = np.array(num_part)
         
         if len(num_part) < 6:
@@ -460,9 +505,6 @@ class ICs(Loader):
         
         if masses is None:
             masses = np.zeros(self.ntypes)
-            
-        if precision is None:
-            precision = np.float32
             
         self._precision = precision
         self._longids = longids
