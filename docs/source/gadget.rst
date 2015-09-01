@@ -9,7 +9,6 @@ gadget.Loader
     :undoc-members:
     :show-inheritance:
 
-.. _gadget_snapshot_label:
 gadget.Snapshot
 -----------------------
 
@@ -44,3 +43,10 @@ gadget.Simulation
     :show-inheritance:
 
 
+gadget.Filters
+-----------------------
+
+.. automodule:: gadget.filter
+    :members:
+    :undoc-members:
+    :show-inheritance:

@@ -23,7 +23,10 @@ Now the module should be available systemwide.
 Usage
 =====
 
-First load the module (both modules are the same)::
+Inspector gadget installs two command line tools.
+``arepoinfo`` gives shows you the header and contents of a snapshot and ``arepoconvert`` can convert snapshots to format 3 snapshots. Start them with ``--help`` to get a list of options
+
+To use inspector gadget, start ipython and load the module (both modules are the same)::
 
   import arepo
   # or
@@ -35,7 +38,7 @@ A snapshot is stored in a Snapshot object:
 
   sn.gadget.Snapshot("output", 10)
   
-will load the 10-th snapshot in the folder output. Alternativey the full path of the snapshot file can be specified::
+will load the 10-th snapshot in the folder output. Alternatively the full path of the snapshot file can be specified::
 
   sn.gadget.Snapshot("output/snap_010.hdf5")
 
@@ -71,14 +74,18 @@ If you want to access a field for all particles, you may use::
   sn.Masses
   sn['Masses']
   
-Note: ``Masses`` only contains the masses of particle types which have a zero in the Mass Table  (``sn.header.MassTable``).
+Note: ``Masses`` only contains the masses of particle types which have a zero in the Mass Table  (``sn.header.MassTable``). In ipython, tab completion is provided. 
 
+You can not exchange these arrays, but have to write into them, i.e.::
+
+  sn.Masses = np.ones(2*128**3) #wrong
+  sn.Masses[:] = 1. #ok
 
 
 Loading a Subfind Catalog
 *************************
 
-For sunfind cataloges a similar interface is provided. A cataloge can be loaded using the Subfind class::
+For subfind catalogs a similar interface is provided. A catalog can be loaded using the Subfind class::
 
    sub = gadget.Subfind('./groups_135/fof_subhalo_tab_135.0.hdf5')
 
@@ -139,12 +146,4 @@ Initial conditions can be created using the ``ICs`` class. An empty snapshot is 
   ics.ids[:] = np.arange(2*128**3) + 1
   
   ics.write()
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
 
