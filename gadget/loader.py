@@ -327,7 +327,9 @@ class Loader(object):
         return True
 
     def iterFiles(self):
-
+        """Provides an iterator over all files of the snapshot
+        
+        """
         if self.filenum is None:
             yield self
             return
@@ -393,15 +395,15 @@ class Snapshot(Loader):
     The snapshot can be selected through:
       * by providing the path of the snapshot as filename, i.e.
       
-        sn = arepo.Snapshot("snap_001.hdf5")
+        sn = gadget.Snapshot("snap_001.hdf5")
         
       * by providing the output folder and the snapshot number (and file number if needed), i.e.
       
-        sn = arepo.Snapshot("output", 1) would load snapshot 1 in folder output
+        sn = gadget.Snapshot("output", 1) would load snapshot 1 in folder output
         
-        sn = arepo.Snapshot("output", 1, 10) would load file number 10 of snapshot 1 of a multifile snapshot (if combineFiles=False, default is file number 0)
+        sn = gadget.Snapshot("output", 1, 10) would load file number 10 of snapshot 1 of a multifile snapshot (if combineFiles=False; default file number is 0, if none is provided)
        
-    The file format is autodetected. If autodetection files, try specifying teh format through the format option. If the file name or snapshot folder name is not detected (i.e. for subboxes), it can be provided using the optional parameters ``snapprefix`` and ``dirprefix``.  
+    The file format is autodetected. If autodetection failes, try specifying the file format through the ``format`` option. If the file name or snapshot folder name is not detected (i.e. for subboxes), it can be provided using the optional parameters ``snapprefix`` and ``dirprefix``.  
     
     :param filename: The name of the snapshot file
     :param snapshot: snapshot number to load
@@ -475,7 +477,7 @@ class Snapshot(Loader):
 
 
 class ICs(Loader):
-    """Creates an empty snapshot object for ic generation
+    """Provides an empty snapshot object used for initial condictions generation
     
     :param filename: The name of the snapshot file
     :param num_part: num_part must be an array with NTYPES integers, giving the number in each particle species
@@ -565,6 +567,33 @@ class ICs(Loader):
         self._initGroups()
 
 class Subfind(Loader):
+    """This class loads subfind cataloges.
+    
+    The subfind catalog can be selected through:
+      * by providing the path of the subfind cataloge as filename, i.e.
+      
+        sn = gadget.Subfind("snap_001.hdf5")
+        
+      * by providing the output folder and the cataloge number (and file number if needed), i.e.
+      
+        sn = gadget.Subfind("output", 1) would load catalog 1 in folder output
+        
+        sn = gadget.Subfind("output", 1, 10) would load file number 10 of catalog 1 of a multifile cataloge (if combineFiles=False; default file number is 0, if none is provided)
+       
+    The file format is autodetected. If autodetection failes, try specifying the file format through the ``format`` option. If the file name or cataloge folder name is not detected (i.e. for subboxes), it can be provided using the optional parameters ``snapprefix`` and ``dirprefix``.  
+    
+    :param filename: The name of the cataloge file
+    :param snapshot: snapshot number to load
+    :param filenum: file of cataloge to load (if combineFiles = false)
+    :param format: (optional) file format of the cataloge, otherwise this is guessed from the file name
+    :param fields: (optional) list of fields to load, if None, all fields available in the cataloge are loaded
+    :param parttype: (optional) array with particle type numbers to load, (groups : 0, subhalos : 1) if None, all particles are loaded
+    :param combineFiles: (optinal) if False only on part of the cataloge is loaded at a time, use nextFile() to go the next file.
+    :param toDouble: (optinal) converts all values of type float to double precision
+    :param onlyHeader: (optinal) load only the cataloge header
+    :param verbose: (optional) enable debug output
+    
+    """
     def __init__(self,filename, snapshot=None, filenum=None,  format=None, fields=None, parttype=None, combineFiles=False, toDouble=False, onlyHeader=False, verbose=False, **param):
         if parttype is None:
             parttype = np.array([0,1])
@@ -589,6 +618,10 @@ class Subfind(Loader):
     
 
 class Header(object):
+    """ This object stores the header attributes of a snapshot file
+    
+    An attribute can be accessed or changes via snapshot.header.<attribute name> or directly via snapshot.<attribute name>.
+    """
     def __init__(self,parent):
         self._parent = parent
                 
@@ -641,6 +674,9 @@ class Header(object):
             return "subfind output "+filename
         
 class Parameter(object):
+    """This object stores additional informations of a snapshot file such as the used parameter or config options.
+    
+    """
     def __init__(self,parent,name):
         self._parent = parent
         self._name = name
@@ -679,6 +715,10 @@ class Parameter(object):
             return "subfind output "+filename
 
 class PartGroup(object):
+    """ This object provides access to data of a single particle type
+    
+    Data can be accessed via snapshot.part<N>.<field name> or via snapshot.<field name>, while the former only contains data for particle type <N>.
+    """
     def __init__(self,parent,num):
         self._parent = parent
         self._num = num

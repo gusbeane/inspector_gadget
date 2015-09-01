@@ -34,9 +34,13 @@ To use inspector gadget, start ipython and load the module (both modules are the
 
 Loading a Snapshot
 ******************
+The snapshot object provides functionality to load the data into python.
+Further analysis routines are provided in subclasses such as Simulation,
+which contains elementary plotting routines.
+
 A snapshot is stored in a Snapshot object:
 
-  sn.gadget.Snapshot("output", 10)
+  sn = gadget.Snapshot("output", 10)
   
 will load the 10-th snapshot in the folder output. Alternatively the full path of the snapshot file can be specified::
 

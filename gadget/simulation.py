@@ -16,7 +16,10 @@ except:
 
 
 class Simulation(Snapshot):
+    """ Loades a snapshot with additional analysis and plotting routines available
     
+    The parameters are the same as for the Snapshot object.
+    """
     def __init__(self,filename, snapshot=None, filenum=None, format=None, fields=None, parttype=None, **param):
         param['combineFiles'] = True
         super(Simulation,self).__init__(filename, snapshot=snapshot, filenum=filenum, format=format, fields=fields, parttype=parttype,**param)
@@ -89,6 +92,11 @@ class Simulation(Snapshot):
         return ret
         
     def set_center(self, center):
+        """ Sets the default center used in plotting routines
+        
+        :param center: array containing the coordinates of the plotting center.
+        
+        """
         c =  self._validate_vector(center, self.BoxSize/2, len=3, req=self.numdims)
         
         if center is None:
@@ -104,6 +112,11 @@ class Simulation(Snapshot):
         return
     
     def set_box(self, box):
+        """Sets the default region showen in plotting routines
+        
+        :param box: array containing the side length of the box.
+        
+        """
         c = self._validate_vector(box, self.BoxSize, len=3, req=self.numdims)
         
         if box is None:
@@ -119,6 +132,13 @@ class Simulation(Snapshot):
         return
     
     def r(self, center=None, periodic=True, group=None):
+        """Computes the radial distance of particles.
+        
+        :param center: center, if None the dault center is used
+        :param periodic: whether the boundaries are periodic or not
+        :param group: particle group used, if ``None`` all particles are considered
+        
+        """
         if group is None:
             group = self
             
@@ -141,6 +161,14 @@ class Simulation(Snapshot):
         return radius
     
     def centerat(self, center, group=None):
+        """Recenters all particles to ``center``
+        
+        In consecutive calls, center ios always relative to the original center of the snapshot.
+        
+        :param center: new center 
+        :param group: particle group used, if ``None`` all particles are affected
+        
+        """
         if group is None:
             group = self
             
@@ -155,7 +183,6 @@ class Simulation(Snapshot):
         return
 
     def coordtransform(self, zaxis, center=None, xaxis=None, fields=["pos", "vel"]):
-
 
         if(xaxis != None):
             axx=np.array(xaxis)
@@ -220,12 +247,36 @@ class Simulation(Snapshot):
         return (profile, xpos, xbins, range)
 
     def get_raddens(self, value='mass', center=None, bins=100, range=None, log=False, periodic=True, group=None):
+        """ Computes a radial density profile
+        
+        The binned profile is normalized by the volume of each bin.
+        
+        :param value: quantity for which the denity profile is computed
+        :param center: center, if None the dault center is used
+        :param bins: number of bins used
+        :param range: lower and upper end of the profile
+        :param log: whether to generate a log scaled profile
+        :param periodic: whether the boundaries are periodic or not
+        :param group: particle group used, if ``None`` all particles are considered
+        """
         (profile, xpos, xbins, range) = self._get_radhist(value=value, center=center, bins=bins ,range=range, log=log, periodic=periodic, group=group)
         profile /= 4./3*np.pi * (xbins[1:]**3-xbins[:1]**3)
         
         return (profile,xpos)
     
     def get_radprof(self, value, weights=None, center=None, bins=100, range=None, log=False, periodic=True, group=None):
+        """ Computes a radial profile
+        
+        The binned profile is nomalized by the number of particles in the bins.
+        
+        :param value: quantity for which the denity profile is computed
+        :param center: center, if None the dault center is used
+        :param bins: number of bins used
+        :param range: lower and upper end of the profile
+        :param log: whether to generate a log scaled profile
+        :param periodic: whether the boundaries are periodic or not
+        :param group: particle group used, if ``None`` all particles are considered
+        """
         (profile, xpos, xbins, range) = self._get_radhist(value=value, center=center, bins=bins ,range=range, log=log, periodic=periodic, group=group)
         (norm, xpos, xbins, range) = self._get_radhist(value=weights, center=center, bins=bins ,range=range, log=log, periodic=periodic, group=group)
         
