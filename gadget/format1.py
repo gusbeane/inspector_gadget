@@ -16,7 +16,7 @@ def handlesfile(filename, snapshot=None, filenum=None, snapprefix = "snap", snap
         try:
             swap, endian = endianness_check(fname)
             
-            f = open(fname , 'r' )
+            f = open(fname , 'rb' )
             f.seek( 0, 0 )
             fheader, = struct.unpack( endian + "i", f.read(4) )
             f.seek( fheader, 1 )
@@ -126,7 +126,7 @@ class Format1:
     def load_header( self, fileid, verbose=False ):
         swap, endian = endianness_check( self.files[fileid] )
         
-        f = open( self.files[fileid], 'r' )
+        f = open( self.files[fileid], 'rb' )
 
         f.seek( 4, 1 ) # skip fortran header of data block
         s = f.read(24)
@@ -189,7 +189,7 @@ class Format1:
         for fileid in range( self.filecount ):
             self.load_header( fileid, verbose=self.sn._verbose )
             
-            f = open( self.files[fileid], 'r' )
+            f = open( self.files[fileid], 'rb' )
             
             #skip header
             fheader, = struct.unpack( endian + "i", f.read(4) )
@@ -372,7 +372,7 @@ def endianness_check(filename ):
     endian_local = endianness_local()
     endian_data = endian_local
 
-    f = open( filename )
+    f = open( filename, 'rb' )
     s = f.read(4)
     if len(s) > 0:
         size, = struct.unpack( "<i", s )

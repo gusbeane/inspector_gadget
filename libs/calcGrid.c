@@ -862,8 +862,30 @@ static PyMethodDef calcGridmethods[] = {
 	{ NULL, NULL, 0, NULL }
 };
 
+
+#if PY_MAJOR_VERSION >= 3
+static struct PyModuleDef moduledef = {
+  PyModuleDef_HEAD_INIT,
+  "calcGrid", /* m_name */
+  NULL,      /* m_doc */
+  -1,                  /* m_size */
+  calcGridmethods,     /* m_methods */
+  NULL,                /* m_reload */
+  NULL,                /* m_traverse */
+  NULL,                /* m_clear */
+  NULL,                /* m_free */
+};
+
+PyMODINIT_FUNC PyInit_calcGrid(void)
+{
+        import_array();
+        return PyModule_Create( &moduledef );
+}
+#else
 PyMODINIT_FUNC initcalcGrid(void)
 {
-	Py_InitModule( "calcGrid", calcGridmethods );
-	import_array();
+        Py_InitModule( "calcGrid", calcGridmethods );
+        import_array();
 }
+#endif
+

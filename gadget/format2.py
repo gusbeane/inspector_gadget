@@ -16,7 +16,7 @@ def handlesfile(filename, snapshot=None, filenum=None, snapprefix = "snap", snap
         try:
             swap, endian = endianness_check(fname)
             
-            f = open(fname, 'r' )
+            f = open(fname, 'rb' )
             s = f.read(16)
             while len(s) > 0:
                 fheader, name, length, ffooter = struct.unpack( endian + "i4sii", s )
@@ -148,7 +148,7 @@ class Format2:
 		
         self.blocks = {}
         self.origdata = []
-        f = open( self.files[fileid], 'r' )
+        f = open( self.files[fileid], 'rb' )
 		
         fpos = f.tell()
         s = f.read(16)
@@ -224,7 +224,7 @@ class Format2:
         return length
 
     def check_block_length( self, fileid, start, length, endian ):
-        f = open( self.files[fileid], 'r' )
+        f = open( self.files[fileid], 'rb' )
 
         f.seek( start, 0 )
         fheader, = struct.unpack( endian + "i", f.read(4) )
@@ -247,7 +247,7 @@ class Format2:
     def load_header( self, fileid, verbose=False ):
         swap, endian = endianness_check( self.files[fileid] )
 		
-        f = open( self.files[fileid], 'r' )
+        f = open( self.files[fileid], 'rb' )
         s = f.read(16)
         while len(s) > 0:
             fheader, name, length, ffooter = struct.unpack( endian + "i4sii", s )
@@ -316,7 +316,7 @@ class Format2:
         self.sn.data = {}
 
         self.get_blocks( 0, verbose=self.sn._verbose )
-        f = open( self.files[0], 'r' )
+        f = open( self.files[0], 'rb' )
         for block in self.blocks.keys():
             # skip some blocks
             if block in self.datablocks_skip:
@@ -376,7 +376,7 @@ class Format2:
             self.load_header( fileid, verbose=self.sn._verbose )
             self.get_blocks( fileid, verbose=self.sn._verbose )
             
-            f = open( self.files[fileid], 'r' )
+            f = open( self.files[fileid], 'rb' )
             for block in self.blocks.keys():
                 # skip some blocks
                 if block in self.datablocks_skip:
@@ -539,7 +539,7 @@ def endianness_check(filename ):
     endian_local = endianness_local()
     endian_data = endian_local
 
-    f = open( filename )
+    f = open( filename, 'rb' )
     s = f.read(4)
     if len(s) > 0:
         size, = struct.unpack( "<i", s )
