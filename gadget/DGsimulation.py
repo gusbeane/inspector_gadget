@@ -9,7 +9,10 @@ except:
 from gadget.loader import Snapshot
 from gadget.simulation import Simulation
 
-import gadget.calcGrid as calcGrid
+try:
+    import gadget.calcGrid as calcGrid
+except:
+    print("Could not load calcGrid, plotting function will not work")
 
 class DGSimulation(Simulation):
 

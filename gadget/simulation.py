@@ -5,11 +5,14 @@ try:
     from matplotlib import collections  as mc
     import matplotlib
 except:
-    print("Could not load matplotlib, plotting function will not work")
+    print("Could not load matplotlib, plotting functions will not work")
 
 from gadget.loader import Snapshot
 
-import gadget.calcGrid as calcGrid
+try:
+    import gadget.calcGrid as calcGrid
+except:
+    print("Could not load calcGrid, plotting function will not work")
 
 
 class Simulation(Snapshot):
