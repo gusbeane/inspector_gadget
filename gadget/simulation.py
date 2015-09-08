@@ -614,14 +614,14 @@ class Simulation(Snapshot):
         print("Selected %d of %d particles." % (pp.size,self.npart))
 
         posdata = pos[pp,:]
-        valdata = self._validate_value(value, posdata.shape[0], group)[pp].astype('float64')
-        hsmldata = self._validate_value(hsml, posdata.shape[0], group)[pp].astype("float64")
+        valdata = self._validate_value(value, pos.shape[0], group)[pp].astype('float64')
+        hsmldata = self._validate_value(hsml, pos.shape[0], group)[pp].astype("float64")
 
         
         if weights is None:
             grid = calcGrid.calcGrid(posdata, hsmldata, valdata, res[0], res[1], res[2], box[0], box[1], box[2], c[0], c[1], c[2], proj=True, norm=normalized )
         else:
-            weightdata = self._validate_value(weights, posdata.shape[0], group).astype("float64")
+            weightdata = self._validate_value(weights, pos.shape[0], group)[pp].astype("float64")
             grid = calcGrid.calcGrid(posdata, hsmldata, valdata, res[0], res[1], res[2], box[0], box[1], box[2], c[0], c[1], c[2], proj=True, norm=normalized, weights=weightdata )
             
         data = {}
