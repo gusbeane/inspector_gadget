@@ -375,7 +375,7 @@ class Simulation(Snapshot):
         zdist = 2. * group.vol.astype('float64')**(1./3.)
 
         pp, = np.where( (px <= 0.5*box[0]) & (py <= 0.5*box[1]) & (pz <= zdist) )
-        print("Selected %d of %d particles." % (pp.size,self.npart))
+        print("Selected %d of %d particles." % (pp.size,px.size))
 
         posdata = pos[pp,:]
         valdata = self._validate_value(value, posdata.shape[0], group)[pp].astype('float64')
@@ -611,7 +611,7 @@ class Simulation(Snapshot):
         pz = np.abs( pos[:,3 - axis0 - axis1] - c[2] )
 
         pp, = np.where( (px <= 0.5*box[0]) & (py <= 0.5*box[1]) & (pz <= 0.5*box[2]) )
-        print("Selected %d of %d particles." % (pp.size,self.npart))
+        print("Selected %d of %d particles." % (pp.size,px.size))
 
         posdata = pos[pp,:]
         valdata = self._validate_value(value, pos.shape[0], group)[pp].astype('float64')
@@ -793,7 +793,7 @@ class Simulation(Snapshot):
         pz = np.abs( pos[:,2] - c[2] )
 
         pp, = np.where( (px < 0.5*box[0]) & (py < 0.5*box[1]) & (pz < 0.5*box[2]) )
-        print("Selected %d of %d particles." % (pp.size,self.npart))
+        print("Selected %d of %d particles." % (pp.size,px.size))
 
         posdata = pos[pp,:]
         valdata = self._validate_value(value, posdata.shape[0], group)[pp].astype('float64')
