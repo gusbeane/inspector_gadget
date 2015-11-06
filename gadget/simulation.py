@@ -803,8 +803,6 @@ class Simulation(Snapshot):
         else:
             data = calcGrid.calcASlice(posdata, valdata, res[0], res[1], box[0], box[1], c[0], c[1], c[2], 0, 1, grad=self._validate_value(gradient, posdata.shape[0], group)[pp].astype('float64'), boxz=box[2], nz=res[2], grid3D=True)
         
-        data[ "neighbours" ] = pp[ data["neighbours"] ]
-        
         if type(value) == str:
             data['name'] = value
         else:
