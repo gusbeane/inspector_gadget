@@ -88,6 +88,9 @@ class Format1:
         
         self.snapprefix = snapprefix
         
+        if self.sn._parttype is None:
+            self.sn._parttype = np.array([0,1,2,3,4,5])
+        
     def load(self, num, snapshot):
         self.sn.npart_loaded = np.zeros(6,dtype=np.longlong)
         

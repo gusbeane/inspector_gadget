@@ -159,6 +159,9 @@ class Format3:
             self.sn.nparticlesall = np.array([self.sn.Ngroups_Total, self.sn.Nsubgroups_Total])
             
             self.sn.ntypes = 2
+        
+        if self.sn._parttype is None:
+            self.sn._parttype = np.arange(self.sn.ntypes)
             
 
     def load_parameter(self,group, name):

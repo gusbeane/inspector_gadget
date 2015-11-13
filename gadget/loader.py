@@ -52,9 +52,7 @@ class Loader(object):
         self._combineFiles = combineFiles
         self._toDouble = toDouble
         
-        if parttype is None:
-            parttype = np.array([0,1,2,3,4,5])
-        elif type(parttype) == list:
+        if type(parttype) == list:
             parttype = np.array(parttype)
         elif type(parttype) != np.ndarray:
             parttype = np.array([parttype])
@@ -198,13 +196,13 @@ class Loader(object):
             raise Exception("Unkonwn array shape for field %s"%name)
     
         #filter for loaded particle types
-        tmp = np.zeros(self.ntypes,dtype=np.longlong)
+        tmp = np.zeros(self.ntypes,dtype=np.int32)
         tmp[self._parttype] = pres[self._parttype]
         return tmp
 
     def _learnPresent(self, name, gr=None, shape=1):           
         if gr !=None:
-            pres = np.zeros(self.ntypes,dtype=np.int64)
+            pres = np.zeros(self.ntypes,dtype=np.int32)
             pres[gr] = shape
             if name == 'mass':
                 pres[gr] = (0 if self.MassTable[gr]>0  else 1)
@@ -219,7 +217,7 @@ class Loader(object):
             self._present[name] = pres
     
         #filter for loaded particle types
-        tmp = np.zeros(self.ntypes,dtype=np.longlong)
+        tmp = np.zeros(self.ntypes,dtype=np.int32)
         tmp[self._parttype] = pres[self._parttype]
         return tmp
     
@@ -556,7 +554,7 @@ class ICs(Loader):
             else:
                 type = flds.default[field]    
             
-                present = np.zeros(self.ntypes)
+                present = np.zeros(self.ntypes, dtype=np.int32)
                 if type[0] == -1:    
                     present[:] = type[1]
                 else:
