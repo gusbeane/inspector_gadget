@@ -88,12 +88,12 @@ class Format1:
         
         self.snapprefix = snapprefix
         
-        if self.sn._parttype is None:
-            self.sn._parttype = np.array([0,1,2,3,4,5])
-        
     def load(self, num, snapshot):
         self.sn.npart_loaded = np.zeros(6,dtype=np.longlong)
-        
+                
+        if self.sn._parttype is None:
+            self.sn._parttype = np.array([0,1,2,3,4,5])
+
         if num is None:
             num = self.sn.filenum
             
@@ -105,9 +105,10 @@ class Format1:
         self.files = [filename]
         self.filecount = 1
         if self.sn._combineFiles:
-            while path.exists( filename + ".%d" % self.filecount ):
-                self.files += [filename + ".%d" % self.filecount]
+            while path.exists( re.sub("\.[0-9]*$",".%d"%self.filecount, filename) ):
+                self.files += [ re.sub("\.[0-9]*$",".%d"%self.filecount, filename)]
                 self.filecount += 1
+
                 
         self.sn.ntypes = 6
         
@@ -177,9 +178,9 @@ class Format1:
         if verbose:
             print("nparticlesall:", self.sn.nparticlesall, "sum:", self.sn.npartall)
 
-        if fileid == 0:
-            if (self.sn.NumFilesPerSnapshot != self.filecount) and not (self.sn.NumFilesPerSnapshot == 0 and self.filecount == 1):
-                raise Exception( "Number of files detected (%d) and NumFilesPerSnapshot in the header (%d) are inconsistent." % (self.filecount, self.sn.NumFilesPerSnapshot) )
+        #if fileid == 0:
+        #    if (self.sn.NumFilesPerSnapshot != self.filecount) and not (self.sn.NumFilesPerSnapshot == 0 and self.filecount == 1):
+        #        raise Exception( "Number of files detected (%d) and NumFilesPerSnapshot in the header (%d) are inconsistent." % (self.filecount, self.sn.NumFilesPerSnapshot) )
         if verbose:
             print("Snapshot contains %d particles." % self.sn.npartall)
         return
@@ -214,7 +215,7 @@ class Format1:
                     f.seek( fheader, 1 )
                     ffooter, = struct.unpack( endian + "i", f.read(4) )
                     if fheader != ffooter:
-                        raise Exception("Bad field: fheader %d, ffooter %d\n"%(fheader.ffooter))
+                        raise Exception("Bad field: fheader %d, ffooter %d\n"%(fheader,ffooter))
                     
                     if self.sn._verbose:
                         print("Skipping block %s"%(block))
@@ -223,7 +224,17 @@ class Format1:
                 if self.sn._verbose:
                     print("Loading block %s of file %s." % (block, fileid))
 
-                if block in ['id',"nonn"]:
+                if block == 'id':
+                    num = self.get_block_size_from_table('id')[0]
+                    if fheader == 4*num:
+                        blocktype = "i4"
+                        elementsize = 4
+                    elif fheader == 8*num:
+                        blocktype = "i8"
+                        elementsize = 8
+                    else:
+                        raise Exception("bad id block size, fheader %d, num %d in file num %d"%(fheader, num, fileid))
+                elif block in ["nonn"]:
                     blocktype = "i4"
                     elementsize = 4
                 else:
@@ -254,10 +265,14 @@ class Format1:
                         print("Loading block %s, type %d, elements %d, dimension %d, particles %d/%d."%(block, i, elements, dim, npartptype, npartall))
                     
                     if not block in self.sn.data:
-                        if dim == 1:
-                            self.sn.data[block] = np.zeros(npartall, dtype=datatype)
+                        if self.sn._combineFiles:
+                            num = npartall
                         else:
-                            self.sn.data[block] = np.zeros((npartall, dim), dtype=datatype)
+                            num = npart
+                        if dim == 1:
+                            self.sn.data[block] = np.zeros(num, dtype=datatype)
+                        else:
+                            self.sn.data[block] = np.zeros((num, dim), dtype=datatype)
     
     
                     lb = nsum + nparttot[i]

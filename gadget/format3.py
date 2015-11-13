@@ -235,7 +235,7 @@ class Format3:
                             shape = np.array(d.shape)
                             elem = 1
                             if shape.size == 2:
-                                elem=shape[1]
+                                elem=np.int32(shape[1])
                                 
                             pres = self.sn._learnPresent(name,gr=gr,shape=elem)
                 if filter != None:

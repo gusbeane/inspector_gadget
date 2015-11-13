@@ -52,7 +52,9 @@ class Loader(object):
         self._combineFiles = combineFiles
         self._toDouble = toDouble
         
-        if type(parttype) == list:
+        if parttype is None:
+            pass
+        elif type(parttype) == list:
             parttype = np.array(parttype)
         elif type(parttype) != np.ndarray:
             parttype = np.array([parttype])
@@ -206,11 +208,11 @@ class Loader(object):
             pres[gr] = shape
             if name == 'mass':
                 pres[gr] = (0 if self.MassTable[gr]>0  else 1)
-            old = self._present.get(name,np.zeros(self.ntypes,dtype=np.longlong))
+            old = self._present.get(name,np.zeros(self.ntypes,dtype=np.int32))
             pres = np.maximum(old,pres)
             self._present[name] = pres
         else:
-            shape = np.array(shape)
+            shape = np.array(shape, dtype = np.int32)
             if shape.shape!=(self.ntypes,):
                raise Exception("invalide present array")
             pres = shape

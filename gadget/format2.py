@@ -100,11 +100,11 @@ class Format2:
         
         self.snapprefix = snapprefix
         
-        if self.sn._parttype is None:
-            self.sn._parttype = np.array([0,1,2,3,4,5])
-        
     def load(self, num, snapshot):
         self.sn.npart_loaded = np.zeros(6,dtype=np.longlong)
+        
+        if self.sn._parttype is None:
+            self.sn._parttype = np.array([0,1,2,3,4,5])
         
         if num is None:
             num = self.sn.filenum
@@ -117,8 +117,8 @@ class Format2:
         self.files = [filename]
         self.filecount = 1
         if self.sn._combineFiles:
-            while path.exists( filename + ".%d" % self.filecount ):
-                self.files += [filename + ".%d" % self.filecount]
+            while path.exists( re.sub("\.[0-9]*$",".%d"%self.filecount, filename) ):
+                self.files += [ re.sub("\.[0-9]*$",".%d"%self.filecount, filename) ]
                 self.filecount += 1
 
             if not self.nommap and self.filecount > 1:
@@ -306,9 +306,9 @@ class Format2:
                 if verbose:
                     print("nparticlesall:", self.sn.nparticlesall, "sum:", self.sn.npartall)
 
-                if fileid == 0:
-                    if (self.sn.NumFilesPerSnapshot != self.filecount) and not (self.sn.NumFilesPerSnapshot == 0 and self.filecount == 1):
-                        raise Exception( "Number of files detected (%d) and NumFilesPerSnapshot in the header (%d) are inconsistent." % (self.filecount, self.sn.NumFilesPerSnapshot) )
+                #if fileid == 0:
+                #    if (self.sn.NumFilesPerSnapshot != self.filecount) and not (self.sn.NumFilesPerSnapshot == 0 and self.filecount == 1):
+                #        raise Exception( "Number of files detected (%d) and NumFilesPerSnapshot in the header (%d) are inconsistent." % (self.filecount, self.sn.NumFilesPerSnapshot) )
         if verbose:
             print("Snapshot contains %d particles." % self.sn.npartall)
         return
@@ -425,10 +425,14 @@ class Format2:
                     
                     blockname = block.strip().lower()
                     if not blockname in self.sn.data:
-                        if dim == 1:
-                            self.sn.data[ blockname ] = np.zeros( npartall, dtype=blocktype )
+                        if self.sn._combineFiles:
+                            num = npartall
                         else:
-                            self.sn.data[ blockname ] = np.zeros( (npartall, dim), dtype=blocktype )
+                            num = npart
+                        if dim == 1:
+                            self.sn.data[ blockname ] = np.zeros( npart, dtype=blocktype )
+                        else:
+                            self.sn.data[ blockname ] = np.zeros( (npart, dim), dtype=blocktype )
 
                     if blocktype == 'f4' and self.sn._toDouble:
                         self.sn.data[ blockname ] = self.sn.data[ blockname ].astype( 'float64' ) # change array type to float64
