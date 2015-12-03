@@ -104,10 +104,16 @@ class Format1:
         
         self.files = [filename]
         self.filecount = 1
+        fname = re.sub("\.[0-9]*$",".%d"%self.filecount, filename)
+        
         if self.sn._combineFiles:
-            while path.exists( re.sub("\.[0-9]*$",".%d"%self.filecount, filename) ):
-                self.files += [ re.sub("\.[0-9]*$",".%d"%self.filecount, filename)]
-                self.filecount += 1
+            while path.exists( fname ):
+                if fname not in self.files:
+                    self.files += [ fname ]
+                    self.filecount += 1
+                    fname = re.sub("\.[0-9]*$",".%d"%self.filecount, filename)
+                else:
+                    break
 
                 
         self.sn.ntypes = 6
