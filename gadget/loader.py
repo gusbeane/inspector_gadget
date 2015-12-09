@@ -114,15 +114,17 @@ class Loader(object):
         object.__setattr__(self,attr_n,val)
         
     def __dir__(self):
-        dir = list(self.__dict__.keys())
-        
+        d = list(self.__dict__.keys())
+        d.extend(dir(self.__class__))
+
+
         if hasattr(self, "data"):
             for i in self.data.keys():
-                dir.append(i)
+                d.append(i)
                 if i in flds.rev_hdf5toformat2:
-                    dir.append(flds.rev_hdf5toformat2[i])
+                    d.append(flds.rev_hdf5toformat2[i])
         
-        return dir 
+        return d 
 
     def __getitem__(self, item_original):
         item = self._normalizeName(item_original)
@@ -643,7 +645,10 @@ class Header(object):
             raise AttributeError
         
     def __dir__(self):
-        return list(self.__dict__.keys()) + self._parent._headerfields
+        d = list(self.__dict__.keys()) + self._parent._headerfields
+        d.extend(dir(self.__class__))
+        
+        return d
     
     def __str__(self):
         filename = self._parent._path
@@ -798,7 +803,7 @@ class PartGroup(object):
                 tmp = np.sum(n1[0:num])
                 return f[tmp:tmp+parent.npart_loaded[num]]
         
-        raise AttributeError("unknown field '%s'"%item_original)
+        raise AttributeError("unknown field '%s' for particle group %d"%(item_original,num))
     
     def __contains__(self, item):
         item = self._parent._normalizeName(item)
@@ -876,15 +881,17 @@ class PartGroup(object):
         parent = self._parent
         num = self._num
         
-        dir = list(self.__dict__.keys())
-        dir.append('data')
+        d = list(self.__dict__.keys())
+        d.extend(dir(self.__class__))
+        
+        d.append('data')
         if parent.npart_loaded[num]>0:
             if hasattr(parent,"data"):
                 for key in parent.data.keys():
                     pres = parent._isPresent(key)
                     if pres[num]>0:
-                        dir.append(key)
+                        d.append(key)
                         if key in flds.rev_hdf5toformat2:
-                            dir.append(flds.rev_hdf5toformat2[key])
-        return dir   
+                            d.append(flds.rev_hdf5toformat2[key])
+        return d  
         

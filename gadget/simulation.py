@@ -90,6 +90,14 @@ class Simulation(Snapshot):
                     raise Exception("wrong array format: %s\n"%str(value.shape))
                 
         return ret
+    
+    def _validate_group(self, value):
+        if value is None:
+            return self
+        elif type(value) == int:
+            return self.groups[value]
+        
+        return value
         
     def set_center(self, center):
         """ Sets the default center used in plotting routines
@@ -139,8 +147,7 @@ class Simulation(Snapshot):
         :param group: particle group used, if ``None`` all particles are considered
         
         """
-        if group is None:
-            group = self
+        group = self._validate_group(group)
             
         center = self._validate_vector(center, self.center, len=3)
 
@@ -169,8 +176,7 @@ class Simulation(Snapshot):
         :param group: particle group used, if ``None`` all particles are affected
         
         """
-        if group is None:
-            group = self
+        group = self._validate_group(group)
             
         center = self._validate_vector(center, self.center)
         
@@ -216,8 +222,7 @@ class Simulation(Snapshot):
         self._trafomatrix = np.linalg.inv(M)
     
     def _get_radhist(self, value, center=None, bins=100, range=None, log=False, periodic=True, group=None):
-        if group is None:
-            group = self
+        group = self._validate_group(group)
 
         center = self._validate_vector(center, self.center)
         
@@ -304,8 +309,7 @@ class Simulation(Snapshot):
 
 
     def plot_pos(self, center=None, axis=[0,1], box=None, periodic=True, group=None, newfig=True, axes=None, **params):
-        if group is None:
-            group = self.part0
+        group = self._validate_group(group)
                
         center = self._validate_vector(center,self.center)
         box = self._validate_vector(box,self.box)
@@ -346,6 +350,8 @@ class Simulation(Snapshot):
     def get_Aslice( self, value, gradient=None, res=None, center=None, axis=[0,1], box=None, group=None):
         if group is None:
             group = self.part0
+            
+        group = self._validate_group(group)
                         
         axis0 = axis[0]
         axis1 = axis[1]
@@ -414,6 +420,8 @@ class Simulation(Snapshot):
         if group is None:
             group = self.part0
                 
+        group = self._validate_group(group)
+        
         axis0 = axis[0]
         axis1 = axis[1]
         
@@ -492,6 +500,8 @@ class Simulation(Snapshot):
     def plot_AMRmesh(self, res=None, center=None, axis=[0,1], box=None, group=None, newfig=False, axes=None, **params):
         if(group==None):
             group=self.part0
+            
+        group = self._validate_group(group)
 
         if(newfig and axes==None):
             fig = p.figure()
@@ -527,6 +537,8 @@ class Simulation(Snapshot):
     def get_AMRline(self, value, gradient=None, res=1024, center=None, axis=0, box=None, group=None):
         if group is None:
             group = self.part0
+            
+        group = self._validate_group(group)
                
         resx=res
         resy=1
@@ -582,6 +594,8 @@ class Simulation(Snapshot):
     def get_SPHproj( self, value, hsml="hsml", weights=None, normalized=True, res=None, center=None, axis=[0,1], box=None, group=None):
         if group is None:
             group = self.part0
+            
+        group = self._validate_group(group)
             
         axis0 = axis[0]
         axis1 = axis[1]
@@ -776,6 +790,8 @@ class Simulation(Snapshot):
         if group is None:
             group = self.part0
             
+        group = self._validate_group(group)
+            
         center = self._validate_vector(center, self.center)
         box = self._validate_vector(box, self.box)
         
@@ -817,6 +833,8 @@ class Simulation(Snapshot):
         if group is None:
             group = self.part0
             
+        group = self._validate_group(group)
+            
         center = self._validate_vector(center, self.center)
         box = self._validate_vector(box, self.box)
         
@@ -855,6 +873,8 @@ class Simulation(Snapshot):
         
         if group is None:
             group = self.part0
+            
+        group = self._validate_group(group)
             
         center = self._validate_vector(center, self.center)
         box = self._validate_vector(box, self.box)
