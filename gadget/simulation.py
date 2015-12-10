@@ -26,15 +26,18 @@ class Simulation(Snapshot):
         
 
         self.numdims = np.int32(3)
+        self.threedim = True
         self.twodim = False
         self.onedim = False
                 
         if hasattr(self,'pos'):
             if np.abs( self['pos'][:,2] ).max() == 0.:
                 self.twodim = True
+                self.threedim = False
                 self.numdims = np.int32(2)
             if self.twodim and np.abs( self['pos'][:,1] ).max() == 0.:
                 self.onedim = True
+                self.threedim = False
                 self.numdims = np.int32(1)
             
         self.set_center(None)
@@ -254,35 +257,65 @@ class Simulation(Snapshot):
     def get_raddens(self, value='mass', center=None, bins=100, range=None, log=False, periodic=True, group=None):
         """ Computes a radial density profile
         
-        The binned profile is normalized by the volume of each bin.
+        The values are added to a binned profile and divided by the volume of each bin.
+        The i-th bin for data d_j is computed as b_i = 1/V_i \sum_j d_j, where the sum goes over
+        all cells/particles in bin i and V_i is the volume of the i-th bin.
         
-        :param value: quantity for which the denity profile is computed
-        :param center: center, if None the dault center is used
+        Examples:
+        Density profile:  sn.get_raddens(sn.Masses)
+        
+        :param value: quantity for which the density profile is computed
+        :param center: center, if None the default center is used
         :param bins: number of bins used
         :param range: lower and upper end of the profile
         :param log: whether to generate a log scaled profile
         :param periodic: whether the boundaries are periodic or not
         :param group: particle group used, if ``None`` all particles are considered
         """
+        
+        group = self._validate_group(group)
+                
         (profile, xpos, xbins, range) = self._get_radhist(value=value, center=center, bins=bins ,range=range, log=log, periodic=periodic, group=group)
-        profile /= 4./3*np.pi * (xbins[1:]**3-xbins[:1]**3)
+        if self.threedim:
+            profile /= 4./3*np.pi * (xbins[1:]**3-xbins[:-1]**3)
+        elif self.twodim:
+            profile /= np.pi * (xbins[1:]**2-xbins[:-1]**2)
+        elif self.onedim:
+            profile /= (xbins[1:]-xbins[:-1])
         
         return (profile,xpos)
     
     def get_radprof(self, value, weights=None, center=None, bins=100, range=None, log=False, periodic=True, group=None):
         """ Computes a radial profile
         
-        The binned profile is nomalized by the number of particles in the bins.
+        The binned profile is normalized by the weights, or if non given by the number of particles in the bins.
+        The i=th bin for data d_j and coresponding weights w_jis computed as 
+        b_i =  \sum_j w_j * d_j / \sum_j w_j, where the sum goes over all cells/particles in bin i.
         
-        :param value: quantity for which the denity profile is computed
-        :param center: center, if None the dault center is used
+        Examples:
+        Density profile (Volume weighted):  sn.get_radprof(sn.Masses, weights=sn.Volume)
+        Temperature profile: sn.get_radprof(sn.Temperature, weights=sn.Masses)
+        
+        :param value: quantity for which the density profile is computed
+        :param weights: weights of each cell/particle
+        :param center: center, if None the default center is used
         :param bins: number of bins used
         :param range: lower and upper end of the profile
         :param log: whether to generate a log scaled profile
         :param periodic: whether the boundaries are periodic or not
         :param group: particle group used, if ``None`` all particles are considered
         """
-        (profile, xpos, xbins, range) = self._get_radhist(value=value, center=center, bins=bins ,range=range, log=log, periodic=periodic, group=group)
+        group = self._validate_group(group)
+        
+        value = self._validate_value(value, group.pos.shape[0], group)
+        weights = self._validate_value(weights, group.pos.shape[0], group)
+        
+        if weights is not None:
+            v = value*weights
+        else:
+            v = value
+        
+        (profile, xpos, xbins, range) = self._get_radhist(value=v, center=center, bins=bins ,range=range, log=log, periodic=periodic, group=group)
         (norm, xpos, xbins, range) = self._get_radhist(value=weights, center=center, bins=bins ,range=range, log=log, periodic=periodic, group=group)
         
         profile /= norm
@@ -290,6 +323,24 @@ class Simulation(Snapshot):
         return (profile,xpos)
     
     def plot_raddens(self, value='mass', center=None, bins=100, range=None, log=False, periodic=True, group=None, **params):
+        """ Plots a radial density profile
+        
+        The values are added to a binned profile and divided by the volume of each bin.
+        The i-th bin for data d_j is computed as b_i = 1/V_i \sum_j d_j, where the sum goes over 
+        all cells/particles in bin i and V_i is the volume of the i-th bin.
+        No new figure is created, additional parameters are passed to the matplotlib pollting command.
+        
+        Examples:
+        Density profile:  sn.plot_raddens(sn.Masses)
+        
+        :param value: quantity for which the density profile is computed
+        :param center: center, if None the default center is used
+        :param bins: number of bins used
+        :param range: lower and upper end of the profile
+        :param log: whether to generate a log scaled profile
+        :param periodic: whether the boundaries are periodic or not
+        :param group: particle group used, if ``None`` all particles are considered
+        """
         (profile, xpos) = self.get_raddens(value=value, center=center, bins=bins, range=range, log=log, periodic=periodic, group=group)
         if log:
             myplot = p.loglog(xpos, profile, **params)
@@ -299,6 +350,26 @@ class Simulation(Snapshot):
         return myplot
 
     def plot_radprof(self, value, weights=None, center=None, bins=100, range=None, log=False, periodic=True, group=None, **params):
+        """ Plots a radial profile
+        
+        The binned profile is normalized by the weights, or if non given by the number of particles in the bins.
+        The i=th bin for data d_j and coresponding weights w_jis computed as 
+        b_i =  \sum_j w_j * d_j / \sum_j w_j, where the sum goes over all cells/particles in bin i.
+        No new figure is created, additional parameters are passed to the matplotlib pollting command.
+        
+        Examples:
+        Density profile (Volume weighted):  sn.plot_radprof(sn.Masses, weights=sn.Volume)
+        Temperature profile: sn.plot_radprof(sn.Temperature, weights=sn.Masses)
+        
+        :param value: quantity for which the density profile is computed
+        :param weights: weights of each cell/particle
+        :param center: center, if None the default center is used
+        :param bins: number of bins used
+        :param range: lower and upper end of the profile
+        :param log: whether to generate a log scaled profile
+        :param periodic: whether the boundaries are periodic or not
+        :param group: particle group used, if ``None`` all particles are considered
+        """
         (profile, xpos) = self.get_radprof(value=value, weights=weights, center=center, bins=bins, range=range, log=log, periodic=periodic, group=group)
         if log:
             myplot = p.loglog(xpos,profile, **params)
