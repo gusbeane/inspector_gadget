@@ -258,11 +258,11 @@ class Simulation(Snapshot):
         """ Computes a radial density profile
         
         The values are added to a binned profile and divided by the volume of each bin.
-        The i-th bin for data d_j is computed as b_i = 1/V_i \sum_j d_j, where the sum goes over
-        all cells/particles in bin i and V_i is the volume of the i-th bin.
+        The i-th bin for data :math:`d_j` is computed as :math:`b_i = 1/V_i \sum_j d_j`, where the sum goes over
+        all cells/particles in bin i and :math:`V_i` is the volume of the i-th bin.
         
         Examples:
-        Density profile:  sn.get_raddens(sn.Masses)
+           Density profile:  sn.get_raddens(sn.Masses)
         
         :param value: quantity for which the density profile is computed
         :param center: center, if None the default center is used
@@ -289,12 +289,13 @@ class Simulation(Snapshot):
         """ Computes a radial profile
         
         The binned profile is normalized by the weights, or if non given by the number of particles in the bins.
-        The i=th bin for data d_j and coresponding weights w_jis computed as 
-        b_i =  \sum_j w_j * d_j / \sum_j w_j, where the sum goes over all cells/particles in bin i.
+        The i-th bin for data :math:`d_j` and corresponding weights :math:`w_j` is computed as 
+        :math:`b_i =  \sum_j w_j * d_j / \sum_j` :math:`w_j`, where the sum goes over all cells/particles in bin i.
         
         Examples:
-        Density profile (Volume weighted):  sn.get_radprof(sn.Masses, weights=sn.Volume)
-        Temperature profile: sn.get_radprof(sn.Temperature, weights=sn.Masses)
+           Density profile (Volume weighted):  sn.get_radprof(sn.Masses, weights=sn.Volume)
+           
+           Temperature profile: sn.get_radprof(sn.Temperature, weights=sn.Masses)
         
         :param value: quantity for which the density profile is computed
         :param weights: weights of each cell/particle
@@ -326,12 +327,12 @@ class Simulation(Snapshot):
         """ Plots a radial density profile
         
         The values are added to a binned profile and divided by the volume of each bin.
-        The i-th bin for data d_j is computed as b_i = 1/V_i \sum_j d_j, where the sum goes over 
-        all cells/particles in bin i and V_i is the volume of the i-th bin.
+        The i-th bin for data :math:`d_j` is computed as :math:`b_i = 1/V_i \sum_j d_j`, where the sum goes over 
+        all cells/particles in bin i and :math:`V_i` is the volume of the i-th bin.
         No new figure is created, additional parameters are passed to the matplotlib pollting command.
         
         Examples:
-        Density profile:  sn.plot_raddens(sn.Masses)
+           Density profile:  sn.plot_raddens(sn.Masses)
         
         :param value: quantity for which the density profile is computed
         :param center: center, if None the default center is used
@@ -353,13 +354,14 @@ class Simulation(Snapshot):
         """ Plots a radial profile
         
         The binned profile is normalized by the weights, or if non given by the number of particles in the bins.
-        The i=th bin for data d_j and coresponding weights w_jis computed as 
-        b_i =  \sum_j w_j * d_j / \sum_j w_j, where the sum goes over all cells/particles in bin i.
+        The i-th bin for data d_j and corresponding weights :math:`w_j` is computed as 
+        :math:`b_i =  \sum_j w_j * d_j / \sum_j w_j`, where the sum goes over all cells/particles in bin i.
         No new figure is created, additional parameters are passed to the matplotlib pollting command.
         
         Examples:
-        Density profile (Volume weighted):  sn.plot_radprof(sn.Masses, weights=sn.Volume)
-        Temperature profile: sn.plot_radprof(sn.Temperature, weights=sn.Masses)
+           Density profile (Volume weighted):  sn.plot_radprof(sn.Masses, weights=sn.Volume)
+        
+           Temperature profile: sn.plot_radprof(sn.Temperature, weights=sn.Masses)
         
         :param value: quantity for which the density profile is computed
         :param weights: weights of each cell/particle
