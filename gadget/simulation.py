@@ -457,7 +457,7 @@ class Simulation(Snapshot):
         print("Selected %d of %d particles." % (pp.size,px.size))
 
         posdata = pos[pp,:]
-        valdata = self._validate_value(value, posdata.shape[0], group)[pp].astype('float64')
+        valdata = self._validate_value(value, pos.shape[0], group)[pp].astype('float64')
         
         if gradient is None:
             data = calcGrid.calcASlice(posdata, valdata, res[0], res[1], box[0], box[1], c[0], c[1], c[2], axis0, axis1)
