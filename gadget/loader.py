@@ -4,6 +4,7 @@ import functools
 import os
 
 import gadget.fields as flds
+import gadget.units as units
 
 import gadget.format1
 import gadget.format2
@@ -238,7 +239,7 @@ class Loader(object):
     def __repr__(self):
         return repr(self.header)
 
-    def addField(self, name, pres=None, dtype=None):
+    def addField(self, name, pres=None, dtype=None, unit=None):
         """Adds a field to the snapshot
         
         :param name: name of the fields
@@ -270,6 +271,9 @@ class Loader(object):
             f = np.zeros([num.sum(),np.max(pres)], dtype=dtype)
         else:
             f = np.zeros([num.sum(),], dtype=dtype)
+            
+        if unit is not None:
+            f = units.Quantity(f,unit)
             
         self.data[name] = f
         
@@ -390,7 +394,41 @@ class Loader(object):
             del self.parameters
         if hasattr(self,"config"):
             del self.config
-
+            
+    def to_physical(self):
+        for i in self.data:    
+            if type(self.data[i]) == units.Quantity:
+                self.data[i].to_physical(self.Time, self.HubbleParam)
+                
+        if type(self.MassTable) == units.Quantity:
+            self.MassTable.to_physical(self.Time, self.HubbleParam)
+            
+        if type(self.BoxSize) == units.Quantity:
+            self.BoxSize.to_physical(self.Time, self.HubbleParam)
+    
+    def to_comoving(self):
+        for i in self.data:    
+            if type(self.data[i]) == units.Quantity:
+                self.data[i].to_comoving(self.Time, self.HubbleParam)
+                
+        if type(self.MassTable) == units.Quantity:
+            self.MassTable.to_comoving(self.Time, self.HubbleParam)
+            
+        if type(self.BoxSize) == units.Quantity:
+            self.BoxSize.to_comoving(self.Time, self.HubbleParam)
+    
+    def to_unit_system(self, system):
+        for i in self.data:    
+            if type(self.data[i]) == units.Quantity:
+                self.data[i].to_unit_system(system)
+                
+        if type(self.MassTable) == units.Quantity:
+            self.MassTable.to_unit_system(system)
+            
+        if type(self.BoxSize) == units.Quantity:
+            self.BoxSize.to_unit_system(system)
+                
+        
 class Snapshot(Loader):
     """This class loads Gadget snapshots. Currently reading of file  format 1, 2 and 3 (hdf5) is supported. Writing is only supported for format 3.
     
@@ -419,10 +457,10 @@ class Snapshot(Loader):
     :param verbose: (optional) enable debug output
     :param filter: Only load a filtered subset of the snapshot, specified by the filter object.
     :param sortID: sort all loaded data in each group by particle id
+    :param physical: where possible comoving units are converted to physical units and h factors are added
     
     """
-    def __init__(self,filename, snapshot=None, filenum=None, format=None, fields=None, parttype=None, combineFiles=False, toDouble=False, onlyHeader=False, verbose=False, filter=None, sortID=False, **param):     
-        
+    def __init__(self,filename, snapshot=None, filenum=None, format=None, fields=None, parttype=None, combineFiles=False, toDouble=False, onlyHeader=False, verbose=False, filter=None, sortID=False, physicalUnits=False, **param):     
         super(Snapshot,self).__init__(filename, snapshot=snapshot, filenum=filenum, format=format, fields=fields, parttype=parttype, combineFiles=combineFiles, toDouble=toDouble, onlyHeader=onlyHeader, verbose=verbose, **param)
     
         self._filter = filter
@@ -458,6 +496,10 @@ class Snapshot(Loader):
                 self._longids = False
         else:
              self._longids = False
+             
+        self._physicalUnits = physicalUnits
+        if self._physicalUnits:
+            self.to_physical()
              
     def newFilter(self,filter):
         """Reloads the snapshot using a new filter
@@ -740,10 +782,13 @@ class PartGroup(object):
             else:
                 tmp = "subfind output "+filename+"\nsubhalos (%d subhalos):\n"%(self._parent.npart_loaded[self._num])
             
-        for i in self.data.keys():
+        data = self.data
+        for i in data.keys():
             tmp += "  " + i
             if i in flds.rev_hdf5toformat2:
                 tmp += '/'+flds.rev_hdf5toformat2[i]
+            if type(data[i]) == units.Quantity:
+                tmp += " [" + str(data[i].unit) + "]"
             tmp += "\n"
         return tmp
         

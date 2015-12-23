@@ -6,6 +6,7 @@ import os
 
 import gadget
 import gadget.fields as fields
+import gadget.units as units
 
 def handlesfile(filename, snapshot=None, filenum=None, snapprefix=None, dirprefix=None, snap=None, **param):
     if getFilename(filename, snapshot, filenum, snapprefix, dirprefix, snap)[0] is not None:
@@ -153,6 +154,19 @@ class Format3:
             self.sn.npartall = np.array(self.sn.nparticlesall).sum()
             
             self.sn.ntypes = len(self.sn.NumPart_ThisFile)
+            
+            if hasattr(self.sn, "parameters"):
+                if self.sn.parameters.ComovingIntegrationOn == 0:
+                    mu = gadget.units.Unit(0.,0.,0.,1.,0.,self.sn.parameters.UnitMass_in_g)
+                else:
+                    mu = gadget.units.Unit(0.,-1.,0.,1.,0.,self.sn.parameters.UnitMass_in_g)
+                
+                if self.sn.parameters.ComovingIntegrationOn == 0:
+                    lu = gadget.units.Unit(0.,0.,1.,0.,0.,self.sn.parameters.UnitMass_in_g)
+                else:
+                    lu = gadget.units.Unit(1.,-1.,1.,0.,0.,self.sn.parameters.UnitLength_in_cm)
+                self.sn.MassTable = gadget.units.Quantity(self.sn.MassTable, mu)
+                self.sn.BoxSize = gadget.units.Quantity(self.sn.BoxSize, lu)
       
         else:
             self.sn.NumPart_ThisFile = np.array([self.sn.Ngroups_ThisFile, self.sn.Nsubgroups_ThisFile])
@@ -296,8 +310,13 @@ class Format3:
                                 if self.sn._toDouble and dtype == np.float32:
                                     dtype = np.float64
                                     
-                                self.sn.addField(name, dtype=dtype)
+                                unit = None
+                                if 'A_SCALING' in d.attrs:
+                                    unit = units.Unit(d.attrs['A_SCALING'], d.attrs['H_SCALING'], d.attrs['LENGTH_SCALING'], d.attrs['MASS_SCALING'], d.attrs['VELOCITY_SCALING'],d.attrs['TO_CGS'])
                                     
+                                self.sn.addField(name, dtype=dtype, unit = unit)
+                                
+                                
                             if filter is None:
                                 self.sn.data[name][n2[0:gr].sum()+n1[gr]:n2[0:gr].sum()+n1[gr]+shape[0]] = d
                                 elements = d.shape[0]

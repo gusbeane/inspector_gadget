@@ -20,9 +20,9 @@ class Simulation(Snapshot):
     
     The parameters are the same as for the Snapshot object.
     """
-    def __init__(self,filename, snapshot=None, filenum=None, format=None, fields=None, parttype=None, **param):
+    def __init__(self,filename, snapshot=None, filenum=None, format=None, fields=None, parttype=None, toDouble=False, onlyHeader=False, verbose=False, filter=None, sortID=False, physicalUnits=False, **param):
         param['combineFiles'] = True
-        super(Simulation,self).__init__(filename, snapshot=snapshot, filenum=filenum, format=format, fields=fields, parttype=parttype,**param)
+        super(Simulation,self).__init__(filename, snapshot=snapshot, filenum=filenum, format=format, fields=fields, parttype=parttype, toDouble=toDouble, onlyHeader=onlyHeader, verbose=verbose, filter=filter, sortID=sortID, physicalUnits=physicalUnits, **param)
         
 
         self.numdims = np.int32(3)
@@ -128,7 +128,13 @@ class Simulation(Snapshot):
         :param box: array containing the side length of the box.
         
         """
-        c = self._validate_vector(box, self.BoxSize, len=3, req=self.numdims)
+        
+        bx = self.BoxSize
+        
+        if bx == 0.:
+            bx = np.abs(self.pos).max()
+            
+        c = self._validate_vector(box, bx, len=3, req=self.numdims)
         
         if box is None:
             if hasattr(self,"config"):
