@@ -116,9 +116,9 @@ class Format3:
         except Exception:
             raise Exception("could not open file '%s'"%str((self.sn.filename, snapshot_load, num_load, self.snapprefix, self.dirprefix)))
         
-        self.load_header()
         self.load_parameter("Parameters", "parameters")
         self.load_parameter("Config", "config")
+        self.load_header()
         self.file.close()
         del self.file
         
@@ -165,8 +165,14 @@ class Format3:
                     lu = gadget.units.Unit(0.,0.,1.,0.,0.,self.sn.parameters.UnitMass_in_g)
                 else:
                     lu = gadget.units.Unit(1.,-1.,1.,0.,0.,self.sn.parameters.UnitLength_in_cm)
+                    
+                if self.sn.parameters.ComovingIntegrationOn == 0:
+                    tu = gadget.units.Unit(0.,0.,1.,0.,-1.,self.sn.parameters.UnitLength_in_cm/self.sn.parameters.UnitVelocity_in_cm_per_s)
+                    self.sn.Time = gadget.units.Quantity(self.sn.Time,tu)
+                     
                 self.sn.MassTable = gadget.units.Quantity(self.sn.MassTable, mu)
                 self.sn.BoxSize = gadget.units.Quantity(self.sn.BoxSize, lu)
+                
       
         else:
             self.sn.NumPart_ThisFile = np.array([self.sn.Ngroups_ThisFile, self.sn.Nsubgroups_ThisFile])

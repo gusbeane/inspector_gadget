@@ -706,9 +706,12 @@ class Header(object):
         for entry in self._parent._headerfields:
             val = getattr(self,entry)
             if type(val) ==  np.ndarray or type(val) == list:
-                tmp += '  '+entry+': '+', '.join([str(x) for x in val])+'\n'
+                tmp += '  '+entry+': '+', '.join([str(x) for x in val])
             else:
-                tmp += '  '+entry+': '+str(val)+'\n'
+                tmp += '  '+entry+': '+str(val)
+            if type(val) == units.Quantity:
+                tmp += " [" + str(val.unit) + "]"
+            tmp += '\n'
         return tmp
 
     def __repr__(self):
