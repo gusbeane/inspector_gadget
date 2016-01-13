@@ -427,6 +427,9 @@ class Loader(object):
             
         if type(self.BoxSize) == units.Quantity:
             self.BoxSize.to_unit_system(system)
+        
+        if type(self.Time) == units.Quantity:
+            self.Time.to_unit_system(system)
                 
         
 class Snapshot(Loader):

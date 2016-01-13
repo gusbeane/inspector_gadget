@@ -157,17 +157,17 @@ class Format3:
             
             if hasattr(self.sn, "parameters"):
                 if self.sn.parameters.ComovingIntegrationOn == 0:
-                    mu = gadget.units.Unit(0.,0.,0.,1.,0.,self.sn.parameters.UnitMass_in_g)
+                    mu = gadget.units.Unit(0.,0.,{'M':1.},self.sn.parameters.UnitMass_in_g)
                 else:
-                    mu = gadget.units.Unit(0.,-1.,0.,1.,0.,self.sn.parameters.UnitMass_in_g)
+                    mu = gadget.units.Unit(0.,-1.,{'M':1.},self.sn.parameters.UnitMass_in_g)
                 
                 if self.sn.parameters.ComovingIntegrationOn == 0:
-                    lu = gadget.units.Unit(0.,0.,1.,0.,0.,self.sn.parameters.UnitMass_in_g)
+                    lu = gadget.units.Unit(0.,0.,{'L':1.},self.sn.parameters.UnitMass_in_g)
                 else:
-                    lu = gadget.units.Unit(1.,-1.,1.,0.,0.,self.sn.parameters.UnitLength_in_cm)
+                    lu = gadget.units.Unit(1.,-1.,{'L':1.},self.sn.parameters.UnitLength_in_cm)
                     
                 if self.sn.parameters.ComovingIntegrationOn == 0:
-                    tu = gadget.units.Unit(0.,0.,1.,0.,-1.,self.sn.parameters.UnitLength_in_cm/self.sn.parameters.UnitVelocity_in_cm_per_s)
+                    tu = gadget.units.Unit(0.,0.,{'L':1.,'V':-1.},self.sn.parameters.UnitLength_in_cm/self.sn.parameters.UnitVelocity_in_cm_per_s)
                     self.sn.Time = gadget.units.Quantity(self.sn.Time,tu)
                      
                 self.sn.MassTable = gadget.units.Quantity(self.sn.MassTable, mu)
@@ -317,8 +317,8 @@ class Format3:
                                     dtype = np.float64
                                     
                                 unit = None
-                                if 'A_SCALING' in d.attrs:
-                                    unit = units.Unit(d.attrs['A_SCALING'], d.attrs['H_SCALING'], d.attrs['LENGTH_SCALING'], d.attrs['MASS_SCALING'], d.attrs['VELOCITY_SCALING'],d.attrs['TO_CGS'])
+                                if 'a_scaling' in d.attrs:
+                                    unit = units.Unit(d.attrs['a_scaling'], d.attrs['h_scaling'], {'L':d.attrs['length_scaling'], 'M':d.attrs['mass_scaling'], 'V':d.attrs['velocity_scaling']},d.attrs['to_cgs'])
                                     
                                 self.sn.addField(name, dtype=dtype, unit = unit)
                                 

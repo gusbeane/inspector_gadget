@@ -8,6 +8,7 @@ except:
     print("Could not load matplotlib, plotting functions will not work")
 
 from gadget.loader import Snapshot
+from gadget.units import Quantity
 
 try:
     import gadget.calcGrid as calcGrid
@@ -299,7 +300,7 @@ class Simulation(Snapshot):
         :math:`b_i =  \sum_j w_j * d_j / \sum_j` :math:`w_j`, where the sum goes over all cells/particles in bin i.
         
         Examples:
-           Density profile (Volume weighted):  sn.get_radprof(sn.Masses, weights=sn.Volume)
+           Density profile (Volume weighted):  sn.get_radprof(sn.Density, weights=sn.Volume)
            
            Temperature profile: sn.get_radprof(sn.Temperature, weights=sn.Masses)
         
@@ -353,7 +354,14 @@ class Simulation(Snapshot):
             myplot = p.loglog(xpos, profile, **params)
         else:
             myplot = p.plot(xpos, profile, **params)
-
+            
+        group = self._validate_group(group)
+        value = self._validate_value(value, group.pos.shape[0], group)
+        if type(group.pos) == Quantity:
+            p.xlabel(group.pos.unit.__repr__(latex=True))
+        if type(value) == Quantity:
+            p.ylabel((value.unit/group.pos.unit**self.numdims).__repr__(latex=True))
+            
         return myplot
 
     def plot_radprof(self, value, weights=None, center=None, bins=100, range=None, log=False, periodic=True, group=None, **params):
@@ -365,7 +373,7 @@ class Simulation(Snapshot):
         No new figure is created, additional parameters are passed to the matplotlib pollting command.
         
         Examples:
-           Density profile (Volume weighted):  sn.plot_radprof(sn.Masses, weights=sn.Volume)
+           Density profile (Volume weighted):  sn.plot_radprof(sn.Density, weights=sn.Volume)
         
            Temperature profile: sn.plot_radprof(sn.Temperature, weights=sn.Masses)
         
@@ -384,6 +392,13 @@ class Simulation(Snapshot):
         else:
             myplot = p.plot(xpos, profile, **params)
 
+        group = self._validate_group(group)
+        value = self._validate_value(value, group.pos.shape[0], group)
+        if type(group.pos) == Quantity:
+            p.xlabel(group.pos.unit.__repr__(latex=True))
+        if type(value) == Quantity:
+            p.ylabel(value.unit.__repr__(latex=True))
+            
         return myplot
 
 
@@ -422,6 +437,11 @@ class Simulation(Snapshot):
         pp, = np.where( (np.abs(x-c[0]) <= 0.5*box[0]) & (np.abs(y-c[1]) <= 0.5*box[1]) & (np.abs(z-c[2]) <= 0.5*box[2]) )
         
         myplot = axes.scatter(x[pp], y[pp], **params)
+        
+        if type(group.pos) == Quantity:
+            axes.set_xlabel(group.pos.unit.__repr__(latex=True))
+            axes.set_ylabel(group.pos.unit.__repr__(latex=True))
+            
         axes.axis( "scaled" )
 
         return myplot
