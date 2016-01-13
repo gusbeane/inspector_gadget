@@ -1,6 +1,7 @@
 #!python
 import sys
 import arepo
+import re
 
 def usage():
     print("Usage: arepoinfo [OPTIONS] <filename>")
@@ -61,7 +62,7 @@ if __name__ == "__main__":
     print(sn)
     
     if param and hasattr(sn, "parameters"):
-        print(sn.parameters)
+        print(re.sub("[^\n]*\n","",str(sn.parameters),count=1))
         
     if config and hasattr(sn, "config"):
-        print(sn.config)
+        print(re.sub("[^\n]*\n","",str(sn.config),count=1))

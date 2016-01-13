@@ -695,13 +695,13 @@ class Header(object):
     def __str__(self):
         filename = self._parent._path
         if isinstance(self._parent, Snapshot):
-            tmp = "snapshot "+filename+"\n"
+            tmp = "Snapshot "+filename+"\n"
         elif isinstance(self._parent, ICs):
             tmp = "ICs "+filename+"\n"
         else:
-            tmp = "subfind output "+filename+"\n"
+            tmp = "Subfind output "+filename+"\n"
             
-        tmp += "header:\n"
+        tmp += "Header:\n"
             
         for entry in self._parent._headerfields:
             val = getattr(self,entry)
@@ -735,13 +735,13 @@ class Parameter(object):
     def __str__(self):
         filename = self._parent._path
         if isinstance(self._parent, Snapshot):
-            tmp = "snapshot "+filename+"\n"
+            tmp = "Snapshot "+filename+"\n"
         elif isinstance(self._parent, ICs):
             tmp = "ICs "+filename+"\n"
         else:
-            tmp = "subfind output "+filename+"\n"
+            tmp = "Subfind output "+filename+"\n"
             
-        tmp += self._name + ":\n"
+        tmp += self._name.capitalize() + ":\n"
             
         for entry in self._attrs:
             val = getattr(self,entry)
@@ -776,14 +776,14 @@ class PartGroup(object):
     def __str__(self):
         filename = self._parent._path
         if isinstance(self._parent, Snapshot):
-            tmp = "snapshot "+filename+"\nparticle group %d (%d particles):\n"%(self._num,self._parent.npart_loaded[self._num])
+            tmp = "Snapshot "+filename+"\nParticle group %d (%d particles):\n"%(self._num,self._parent.npart_loaded[self._num])
         elif isinstance(self._parent, ICs):
-            tmp = "ICs "+filename+"\nparticle group %d (%d particles):\n"%(self._num,self._parent.npart_loaded[self._num])
+            tmp = "ICs "+filename+"\nParticle group %d (%d particles):\n"%(self._num,self._parent.npart_loaded[self._num])
         else:
             if self._num == 0:
-                tmp = "subfind output "+filename+"\ngroups (%d groups):\n"%(self._parent.npart_loaded[self._num])
+                tmp = "Subfind output "+filename+"\nGroups (%d groups):\n"%(self._parent.npart_loaded[self._num])
             else:
-                tmp = "subfind output "+filename+"\nsubhalos (%d subhalos):\n"%(self._parent.npart_loaded[self._num])
+                tmp = "Subfind output "+filename+"\nSubhalos (%d subhalos):\n"%(self._parent.npart_loaded[self._num])
             
         data = self.data
         for i in data.keys():
@@ -798,14 +798,14 @@ class PartGroup(object):
     def __repr__(self):
         filename = self._parent._path
         if isinstance(self._parent, Snapshot):
-            return "snapshot "+filename+", particle group %d contains %d particles"%(self._num,self._parent.npart_loaded[self._num])
+            return "Snapshot "+filename+", particle group %d contains %d particles"%(self._num,self._parent.npart_loaded[self._num])
         elif isinstance(self._parent, ICs):
             return "ICs "+filename+", particle group %d contains %d particles"%(self._num,self._parent.npart_loaded[self._num])
         else:
             if self._num == 0:
-                return "subfind output "+filename+", contains %d groups"%(self._parent.npart_loaded[self._num])
+                return "Subfind output "+filename+", contains %d groups"%(self._parent.npart_loaded[self._num])
             else:
-                return "subfind output "+filename+", contains %d subhalos"%(self._parent.npart_loaded[self._num])
+                return "Subfind output "+filename+", contains %d subhalos"%(self._parent.npart_loaded[self._num])
 
 
 
