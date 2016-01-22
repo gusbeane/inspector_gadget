@@ -13,18 +13,31 @@ class Filter(object):
     
     
 class Rectangle(Filter):
-    def __init__(self, center, boxsize):
+    def __init__(self, center, boxsize, periodic_wrap_length=None):
         center = np.array(center)
         boxsize = np.array(boxsize)
         
         self.lower = center-boxsize/2.
         self.upper = center+boxsize/2.
+        self.periodic_wrap_length=np.float64(periodic_wrap_length)
         
         self.requieredFields = ['pos']
         self.parttype = [0,1,2,3,4,5]
-    
+   
         
     def getIndices(self, data):
+
+        if(self.periodic_wrap_length): 
+
+            dims=np.arange(0,3)
+            
+            for i in dims:
+
+                ids=np.where(data["pos"][:,i]>self.upper[i])[0]
+                data["pos"][:,i][ids]=data["pos"][:,i][ids]-self.periodic_wrap_length
+                ids=np.where(data["pos"][:,i]<self.lower[i])[0]
+                data["pos"][:,i][ids]=data["pos"][:,i][ids]+self.periodic_wrap_length
+
         ind = np.where( (np.all(data['pos'][:,:]>=self.lower,axis=1)) & (np.all(data['pos'][:,:]<=self.upper,axis=1)) )[0]
 
         return ind
