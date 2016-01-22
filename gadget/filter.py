@@ -19,7 +19,6 @@ class Rectangle(Filter):
         
         self.lower = center-boxsize/2.
         self.upper = center+boxsize/2.
-        self.periodic_wrap_length=np.float64(periodic_wrap_length)
         
         self.requieredFields = ['pos']
         self.parttype = [0,1,2,3,4,5]
@@ -27,8 +26,9 @@ class Rectangle(Filter):
         
     def getIndices(self, data):
 
-        if(self.periodic_wrap_length): 
+        if(self.periodic_wrap_length is not None): 
 
+            self.periodic_wrap_length=np.float64(self.periodic_wrap_length)
             dims=np.arange(0,3)
             
             for i in dims:
