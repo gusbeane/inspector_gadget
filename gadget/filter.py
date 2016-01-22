@@ -19,6 +19,7 @@ class Rectangle(Filter):
         
         self.lower = center-boxsize/2.
         self.upper = center+boxsize/2.
+        self.periodic_wrap_length=periodic_wrap_length
         
         self.requieredFields = ['pos']
         self.parttype = [0,1,2,3,4,5]
