@@ -21,9 +21,8 @@ class Simulation(Snapshot):
     
     The parameters are the same as for the Snapshot object.
     """
-    def __init__(self,filename, snapshot=None, filenum=None, format=None, fields=None, parttype=None, toDouble=False, onlyHeader=False, verbose=False, filter=None, sortID=False, physicalUnits=False, **param):
-        param['combineFiles'] = True
-        super(Simulation,self).__init__(filename, snapshot=snapshot, filenum=filenum, format=format, fields=fields, parttype=parttype, toDouble=toDouble, onlyHeader=onlyHeader, verbose=verbose, filter=filter, sortID=sortID, physicalUnits=physicalUnits, **param)
+    def __init__(self,filename, snapshot=None, filenum=None, format=None, fields=None, parttype=None, combineFiles=True, toDouble=False, onlyHeader=False, verbose=False, filter=None, sortID=False, physicalUnits=False, **param):
+        super(Simulation,self).__init__(filename, snapshot=snapshot, filenum=filenum, format=format, fields=fields, parttype=parttype, combineFiles=combineFiles, toDouble=toDouble, onlyHeader=onlyHeader, verbose=verbose, filter=filter, sortID=sortID, physicalUnits=physicalUnits, **param)
         
 
         self.numdims = np.int32(3)
