@@ -672,8 +672,13 @@ class Header(object):
     def __init__(self,parent):
         self._parent = parent
                 
-    def __getattr__(self,name):       
-        return getattr(self._parent,name)
+    def __getattr__(self,name):     
+        if name in flds.legacy_header_names:
+            name = flds.legacy_header_names[name]     
+        if name in self._parent._headerfields or name=='NumFilesPerSnapshot': #(NumFilesPerSnapshot fix for Subfind Header)   
+            return getattr(self._parent,name)
+        else:
+            raise AttributeError
             
     def __setattr__(self,name, value):
         #we can't handle these

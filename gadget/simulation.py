@@ -30,6 +30,9 @@ class Simulation(Snapshot):
         self.twodim = False
         self.onedim = False
                 
+        self.center = np.zeros(3)
+        self.box = np.zeros(3)
+        
         if hasattr(self,'pos'):
             if np.abs( self['pos'][:,2] ).max() == 0.:
                 self.twodim = True
@@ -40,8 +43,8 @@ class Simulation(Snapshot):
                 self.threedim = False
                 self.numdims = np.int32(1)
             
-        self.set_center(None)
-        self.set_box(None)
+            self.set_center(None)
+            self.set_box(None)
         
         self._shift = np.zeros(3)
         self._trafomatrix = np.matrix([[1,0,0],[0,1,0],[0,0,1]])
