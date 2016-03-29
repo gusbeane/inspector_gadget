@@ -619,7 +619,7 @@ class Simulation(Snapshot):
 
         for i in ids:
             index=np.where(self.id==i)[0][0]
-            self._add_square(lines, j, group.pos[index,axis[0]], group.pos[index,axis[1]], group.volume[index]**(1./(self.numdims)))
+            self._add_square(lines, j, group.pos[index,axis[0]], group.pos[index,axis[1]], self.BoxSize/2**group.amrlevel[index])
             j=j+4
 
         if(not 'color' in params):

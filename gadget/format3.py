@@ -318,7 +318,8 @@ class Format3:
                                     
                                 unit = None
                                 if 'a_scaling' in d.attrs:
-                                    unit = units.Unit(d.attrs['a_scaling'], d.attrs['h_scaling'], {'L':d.attrs['length_scaling'], 'M':d.attrs['mass_scaling'], 'V':d.attrs['velocity_scaling']},d.attrs['to_cgs'])
+                                    if d.attrs['a_scaling'] != 0. or d.attrs['h_scaling'] != 0. or d.attrs['length_scaling'] != 0. or d.attrs['mass_scaling'] != 0. or d.attrs['velocity_scaling'] != 0. or d.attrs['to_cgs'] != 0.:
+                                        unit = units.Unit(d.attrs['a_scaling'], d.attrs['h_scaling'], {'L':d.attrs['length_scaling'], 'M':d.attrs['mass_scaling'], 'V':d.attrs['velocity_scaling']},d.attrs['to_cgs'])
                                     
                                 self.sn.addField(name, dtype=dtype, unit = unit)
                                 
