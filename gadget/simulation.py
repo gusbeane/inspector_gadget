@@ -453,6 +453,15 @@ class Simulation(Snapshot):
             group = self.part0
             
         group = self._validate_group(group)
+        
+        if not hasattr(group,"vol"):
+          if group == self.part0:
+            print "adding field vol to part0!"
+            self.addField("vol",[1,0,0,0,0,0])
+            group.vol[:] = group.mass[:]/group.rho[:]
+          else:
+            raise Exception( "Specified group is not part0 and has no entry group.vol!\n This is not supported!" )
+          
                         
         axis0 = axis[0]
         axis1 = axis[1]
