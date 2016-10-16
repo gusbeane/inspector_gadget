@@ -10,6 +10,11 @@ python setup.py install
 
 Now the gadget module containng inspector gadget should be available
 
+for local installation, run
+#!bash
+
+python setup.py install --user
+
 #Usage #
 
 The Documentation for inspector gadget can now be found at
