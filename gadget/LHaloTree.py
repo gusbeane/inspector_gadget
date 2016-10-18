@@ -3,6 +3,7 @@ import re
 import functools
 import os
 
+import gadget
 import gadget.units as units
 
 import h5py
@@ -72,3 +73,50 @@ class LHaloTree:
             MainBranch.append( halo(self,i_halo,fields=fields, verbose=verbose) )
         
         return MainBranch
+    
+    def getHaloProperty(self, function, i_sub, RunOutputDir=None,parttype=None,fields=None,haloFields=None,verbose=False):
+        if not RunOutputDir:
+            RunOutputDir = self.header.RunOutputDir
+        SnapNum = self.SnapNum[i_sub]
+        
+        if verbose:
+            print "getHaloProperty: opening group catalogue", RunOutputDir+"/groups_%03d/fof_subhalo_tab_%03d.0.hdf5"%(SnapNum, SnapNum)
+        sub = gadget.Subfind(RunOutputDir+"/groups_%03d/fof_subhalo_tab_%03d.0.hdf5"%(SnapNum, SnapNum),combineFiles=True,fields=haloFields )
+        
+        i_halo = np.int(sub.SubhaloGrNr[i_sub])
+        Filter = gadget.filter.Halo(sub,halo=i_halo)
+        
+        if verbose:
+            print "getProperty: getting particle data: ", RunOutputDir+"/snapdir_%03d/snap_%03d.0.hdf5"%(SnapNum,SnapNum)
+        snap = gadget.Simulation(RunOutputDir+"/snapdir_%03d/snap_%03d.0.hdf5"%(SnapNum,SnapNum),combineFiles=True,filter=Filter,parttype=parttype,fields=fields)
+        
+        if verbose:
+            print "getProperty: calling function!"
+        Property = function(snap=snap,sub=sub,i_halo=i_halo,i_sub=i_sub)
+    
+        snap.close()
+        sub.close()
+
+        return Property
+    
+    def getMainBranchProperty(self,function, RunOutputDir=None,parttype=None,fields=None,haloFields=None,verbose=False):
+        i_sub = 0
+        i_next = self.FirstProgenitor[i_sub]
+        
+        Redshift = []
+        Property = []
+        
+        Redshift.append( self.header.Redshifts[self.SnapNum[i_sub]] )
+        Property.append( self.getHaloProperty(function, i_sub, RunOutputDir=RunOutputDir, parttype=parttype, fields=fields, haloFields=haloFields, verbose=verbose) )
+    
+        while i_next > 0:
+            i_sub = i_next
+            i_next = self.FirstProgenitor[i_sub]
+            
+            Redshift.append( self.header.Redshifts[self.SnapNum[i_sub]] )
+            Property.append( self.getHaloProperty(function, i_sub, RunOutputDir=RunOutputDir, parttype=parttype, fields=fields, haloFields=haloFields, verbose=verbose) )
+            
+        return np.array(Redshift), np.array(Property)
+            
+            
+            
