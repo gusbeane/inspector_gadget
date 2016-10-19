@@ -87,11 +87,11 @@ class LHaloTree:
         Filter = gadget.filter.Halo(sub,halo=i_halo)
         
         if verbose:
-            print "getProperty: getting particle data: ", RunOutputDir+"/snapdir_%03d/snap_%03d.0.hdf5"%(SnapNum,SnapNum)
+            print "geHaloProperty: getting particle data: ", RunOutputDir+"/snapdir_%03d/snap_%03d.0.hdf5"%(SnapNum,SnapNum)
         snap = gadget.Simulation(RunOutputDir+"/snapdir_%03d/snap_%03d.0.hdf5"%(SnapNum,SnapNum),combineFiles=True,filter=Filter,parttype=parttype,fields=fields)
         
         if verbose:
-            print "getProperty: calling function!"
+            print "getHaloProperty: calling function!"
         Property = function(snap=snap,sub=sub,i_halo=i_halo,i_sub=i_sub)
     
         snap.close()
@@ -116,7 +116,7 @@ class LHaloTree:
             Redshift.append( self.header.Redshifts[self.SnapNum[i_sub]] )
             Property.append( self.getHaloProperty(function, i_sub, RunOutputDir=RunOutputDir, parttype=parttype, fields=fields, haloFields=haloFields, verbose=verbose) )
             
-        return np.array(Redshift), np.array(Property)
+        return np.array(Redshift), Property
             
             
             
