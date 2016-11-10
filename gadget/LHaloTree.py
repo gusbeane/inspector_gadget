@@ -100,8 +100,9 @@ class LHaloTree:
         return Property
     
     def getMainBranchProperty(self,function, RunOutputDir=None,parttype=None,fields=None,haloFields=None,verbose=False):
-        i_sub = 0
-        i_next = self.FirstProgenitor[i_sub]
+        i_in_tree = 0
+        i_next_in_tree = self.FirstProgenitor[i_in_tree]
+        i_sub = self.SubhaloNumber[i_in_tree]
         
         Redshift = []
         Property = []
@@ -110,8 +111,9 @@ class LHaloTree:
         Property.append( self.getHaloProperty(function, i_sub, RunOutputDir=RunOutputDir, parttype=parttype, fields=fields, haloFields=haloFields, verbose=verbose) )
     
         while i_next > 0:
-            i_sub = i_next
-            i_next = self.FirstProgenitor[i_sub]
+            i_in_tree = i_next_in_tree
+            i_next_in_tree = self.FirstProgenitor[i_in_tree]
+            i_sub = self.SubhaloNumber[i_in_tree]
             
             Redshift.append( self.header.Redshifts[self.SnapNum[i_sub]] )
             Property.append( self.getHaloProperty(function, i_sub, RunOutputDir=RunOutputDir, parttype=parttype, fields=fields, haloFields=haloFields, verbose=verbose) )
