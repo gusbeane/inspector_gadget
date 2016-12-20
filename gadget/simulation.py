@@ -85,7 +85,7 @@ class Simulation(Snapshot):
             ret = group[value]
         elif type(value) == np.ndarray:
             if value.shape[0] != length:
-                raise Exception("wrong array length: %s\n"%str(value.shape))
+                raise Exception("wrong array length: %s instead of %s\n"%(str(value.shape),str(length)))
             ret = value
         else:
             ret = np.ones(length) * value
@@ -922,12 +922,12 @@ class Simulation(Snapshot):
         print("Selected %d of %d particles." % (pp.size,px.size))
 
         posdata = pos[pp,:]
-        valdata = self._validate_value(value, posdata.shape[0], group)[pp].astype('float64')
+        valdata = self._validate_value(value[pp], posdata.shape[0], group).astype('float64')
         
         if  gradient is None:
             data = calcGrid.calcASlice(posdata, valdata, res[0], res[1], box[0], box[1], c[0], c[1], c[2], 0, 1, boxz=box[2], nz=res[2], grid3D=True)
         else:
-            data = calcGrid.calcASlice(posdata, valdata, res[0], res[1], box[0], box[1], c[0], c[1], c[2], 0, 1, grad=self._validate_value(gradient, posdata.shape[0], group)[pp].astype('float64'), boxz=box[2], nz=res[2], grid3D=True)
+            data = calcGrid.calcASlice(posdata, valdata, res[0], res[1], box[0], box[1], c[0], c[1], c[2], 0, 1, grad=self._validate_value(gradient[pp], posdata.shape[0], group).astype('float64'), boxz=box[2], nz=res[2], grid3D=True)
         
         if type(value) == str:
             data['name'] = value
