@@ -936,6 +936,55 @@ class Simulation(Snapshot):
         
         return data
 
+    def plot_Agrid(self, value, gradient=None, log=False, weights=None, res=1024, center=None, axis=[0,1], box=None, group=None, vmin=None, vmax=None, dvalue=None, dgradient=None, colorbar=True, cblabel=None, contour=False, newlabels=False, newfig=True, axes=None, mode="mean", **params):
+        if not (weights == None):
+            val = value*weights
+        else:
+            val = value
+            
+        if box == None:
+            box = np.array([self.BoxSize]*3, dtype=np.float64)
+            
+        if center == None:
+            center = np.array([0.5 * self.BoxSize]*3, dtype=np.float64)
+            
+        resolution = np.array([res*box[0]/np.max(box), \
+                                res*box[1]/np.max(box), \
+                                res*box[2]/np.max(box)], dtype=np.int16)
+        result = self.get_Agrid(val, gradient=gradient, res=resolution, center=center, box=box, group=group)
+        if not (weights == None):
+            norm = self.get_Agrid(weights, gradient=gradient, res=resolution, center=center, box=box, group=group)
+            
+        proj_axis = 3-np.sum(axis)
+        
+        result["grid"] = np.sum(result["grid"],axis=proj_axis) / np.float64(resolution[proj_axis])
+        if not (weights == None):
+            norm["grid"] = np.sum(norm["grid"],axis=proj_axis) / np.float64(resolution[proj_axis])
+            if norm["grid"].any() == 0:
+                print "plot_Agrid: warning: zero encountered in normalization!"
+            result["grid"] /= norm["grid"]
+            
+        if mode == "proj":
+            result["grid"] *= box[proj_axis]
+        else:
+            if mode != "mean":
+                print "plot_Agrid: invalid mode used: ", mode
+                raise ValueError("incorrect mode!")
+                
+        if axis[0] > axis[1]:
+            result["grid"] = result["grid"].T
+            
+        result['x'] = np.arange( resolution[axis[0]]+1, dtype="float64" ) / resolution[axis[0]] * box[axis[0]] - .5 * box[axis[0]] + center[axis[0]]
+        result['y'] = np.arange( resolution[axis[1]]+1, dtype="float64" ) / resolution[axis[1]] * box[axis[1]] - .5 * box[axis[1]] + center[axis[1]]
+        result['x2'] = (np.arange( resolution[axis[0]], dtype="float64" ) + 0.5) / resolution[axis[0]] * box[axis[0]] - .5 * box[axis[0]] + center[axis[0]]
+        result['y2'] = (np.arange( resolution[axis[1]], dtype="float64" ) + 0.5) / resolution[axis[1]] * box[axis[1]] - .5 * box[axis[1]] + center[axis[1]]
+        
+        
+        myplot = self._plot_Slice(result,log=log, vmin=vmin, vmax=vmax, colorbar=colorbar, cblabel=cblabel, contour=contour, newlabels=newlabels, newfig=newfig, axes=axes, **params)
+
+        return myplot
+        #ToDo: test this!
+
     def get_AMRgrid( self, value, gradient=None, res=1024, center=None, box=None, group=None):
         if self.numdims != 3:
             raise Exception( "not supported" )
