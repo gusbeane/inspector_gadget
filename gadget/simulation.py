@@ -514,14 +514,14 @@ class Simulation(Snapshot):
         
         return data
     
-    def plot_Aslice(self, value, gradient=None, log=False, res=None, center=None, axis=[0,1], box=None, group=None, vmin=None, vmax=None, dvalue=None, dgradient=None, colorbar=True, cblabel=None, contour=False, newlabels=False, newfig=True, axes=None, **params):
+    def plot_Aslice(self, value, gradient=None, log=False, res=None, center=None, axis=[0,1], box=None, group=None, vmin=None, vmax=None, dvalue=None, dgradient=None, colorbar=True, cblabel=None, contour=False, contouralpha=1.0, newlabels=False, newfig=True, axes=None, **params):
         result = self.get_Aslice(value=value, gradient=gradient, res=res, center=center, axis=axis, box=box, group=group)
         
         dresult = None
         if dvalue != None:
             dresult = self.get_Aslice(value=dvalue, gradient=dgradient, res=res, center=center, axis=axis, box=box, group=group)
             
-        myplot = self._plot_Slice(result,log=log, vmin=vmin, vmax=vmax, dresult=dresult, colorbar=colorbar, cblabel=cblabel, contour=contour, newlabels=newlabels, newfig=newfig, axes=axes, **params)
+        myplot = self._plot_Slice(result,log=log, vmin=vmin, vmax=vmax, dresult=dresult, colorbar=colorbar, cblabel=cblabel, contour=contour, contouralpha=contouralpha, newlabels=newlabels, newfig=newfig, axes=axes, **params)
 
         return myplot
 
@@ -774,7 +774,7 @@ class Simulation(Snapshot):
         return myplot
         
         
-    def _plot_Slice(self, result, log=False, vmin=None, vmax=None, dresult=None, colorbar=True, cblabel=None, contour=False, newlabels=False, newfig=True, axes=None, **params):          
+    def _plot_Slice(self, result, log=False, vmin=None, vmax=None, dresult=None, colorbar=True, cblabel=None, contour=False, newlabels=False, newfig=True, axes=None, contouralpha=1.0, **params):          
         slice = result['grid']
         x = result['x']
         y = result['y']
@@ -815,7 +815,7 @@ class Simulation(Snapshot):
             x2 = result['x2']
             y2 = result['y2']
             contours = result['contours']
-            axes.contour(x2, y2, contours.T, levels=[0.99], colors="black")
+            axes.contour(x2, y2, contours.T, levels=[0.99], colors="black",alpha=contouralpha)
         
         axes.axis( "image" )
         
