@@ -110,7 +110,7 @@ class LHaloTree:
         Redshift.append( self.header.Redshifts[self.SnapNum[i_sub]] )
         Property.append( self.getHaloProperty(function, i_sub, RunOutputDir=RunOutputDir, parttype=parttype, fields=fields, haloFields=haloFields, verbose=verbose) )
     
-        while i_next > 0:
+        while i_next_in_tree > 0:
             i_in_tree = i_next_in_tree
             i_next_in_tree = self.FirstProgenitor[i_in_tree]
             i_sub = self.SubhaloNumber[i_in_tree]
