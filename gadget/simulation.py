@@ -1,11 +1,12 @@
 import numpy as np
+import warnings
 
 try:
     import matplotlib.pyplot as p
     from matplotlib import collections  as mc
     import matplotlib
 except:
-    print("Could not load matplotlib, plotting functions will not work")
+    warnings.warn("Could not load matplotlib, plotting functions will not work")
 
 from gadget.loader import Snapshot
 from gadget.units import Quantity
@@ -13,8 +14,7 @@ from gadget.units import Quantity
 try:
     import gadget.calcGrid as calcGrid
 except:
-    print("Could not load calcGrid, plotting function will not work")
-
+    warnings.warn("Could not load calcGrid, plotting function will not work")
 
 class Simulation(Snapshot):
     """ Loades a snapshot with additional analysis and plotting routines available
