@@ -10,14 +10,10 @@ d1 = {}
 for k,v in a:
     d1[k] = v
 
-
-
 for k,v in b:
-    print "'"+v.strip()+"': '" + d1[k].strip().lower() + "',"
-    
-    
+    print("'"+v.strip()+"': '" + d1[k].strip().lower() + "',")
 
 e = re.findall('init_field\(.*"(.{4})".*"(.*)"',t)
 
 for k,v in e:
-    print "'"+v.strip()+"': '" + k.strip().lower() + "',"
+    print("'"+v.strip()+"': '" + k.strip().lower() + "',")

@@ -1,10 +1,11 @@
 import numpy as np
+import warnings
 
 try:
     import matplotlib.pyplot as p
     import matplotlib
 except:
-    print("Could not load matplotlib, plotting function will not work")
+    warnings.warn("Could not load matplotlib, plotting function will not work")
 
 from gadget.loader import Snapshot
 from gadget.simulation import Simulation
@@ -12,7 +13,7 @@ from gadget.simulation import Simulation
 try:
     import gadget.calcGrid as calcGrid
 except:
-    print("Could not load calcGrid, plotting function will not work")
+    warnings.warn("Could not load calcGrid, plotting function will not work")
 
 class DGSimulation(Simulation):
 
@@ -153,7 +154,7 @@ class DGSimulation(Simulation):
         cell_y=self.pos[cell_index][1]
         cell_z=self.pos[cell_index][2]
         cell_dl=np.max(self._domain)/(2.**self.amrlevel[cell_index])
-        
+
         posdata = group.pos
         valdata = self._validate_value(value, posdata.shape[0], group)
 
@@ -179,7 +180,7 @@ class DGSimulation(Simulation):
         c[2] = center[3 - axis0 - axis1]
 
 
-        domainlen = np.max(self._domain)        
+        domainlen = np.max(self._domain)
         domainc = np.zeros(3)
         domainc[0] = np.max(self._domain)/2
         domainc[1] = np.max(self._domain)/2.
@@ -217,38 +218,38 @@ class DGSimulation(Simulation):
         myplot = self._plot_Slice(result,log=log, vmin=vmin, vmax=vmax, dresult=dresult, colorbar=colorbar, cblabel=cblabel, contour=contour, newlabels=newlabels, newfig=newfig, axes=axes, **params)
 
         return myplot
-    
+
     def get_DGgrid( self, value, res=1024, center=None, box=None, group=None):
         if self.numdims != 3:
             raise Exception( "not supported" )
-        
+
         if group is None:
             group = self.part0
-            
+
         center = self._validate_vector(center, self.center)
         box = self._validate_vector(box, self.box)
 
         c = center
-        
-        domainlen = np.max(self._domain)        
+
+        domainlen = np.max(self._domain)
         domainc = np.zeros(3)
         domainc[0] = np.max(self._domain)/2
         domainc[1] = np.max(self._domain)/2.
         domainc[2] = np.max(self._domain)/2.
-        
+
         posdata = group.pos.astype('float64')
         amrlevel = group.amrlevel.astype('int32')
         dgdims = self.numdims.astype('int32')
         degree_k = self.Degree_K.astype('int32')
         valdata = self._validate_value(value, posdata.shape[0], group).astype('float64')
-        
+
         data = calcGrid.calcDGSlice( posdata, valdata, amrlevel, dgdims, degree_k, res, res, box[0], box[1], c[0], c[1], c[2], domainc[0], domainc[1], domainc[2], domainlen, 0, 1,boxz=box[2], grid3D=True)
-                
+
         if type(value) == str:
             data['name'] = value
         else:
             data['name'] = ""
-        
+
         return data
 
     def plot_DGline(self, value="dgw0", res=1024, res_per_cell=100, ylim=None, box=None, center=None, group=None, shift=0, axis=0, newfig=True, axes=None,colorful=False,colors=[None],**params):
@@ -262,7 +263,7 @@ class DGSimulation(Simulation):
 
         center = self._validate_vector(center, self.center)
         box = self._validate_vector(box, self.BoxSize,len=2)
-  
+
         myplot=None
 
         if(colors[0]!=None):
@@ -283,7 +284,7 @@ class DGSimulation(Simulation):
     def plot_DGline_dir(self, value="dgw0", res=4096, group=None, ylim=None, newfig=True, start=[0.5,0.5,0.5], end=[1,0.5,0.5], shift=0, axes=None, colorful=False,colors=[None],**params):
         if group is None:
             group = self.part0
-            
+
         if newfig and axes==None:
             fig = p.figure()
             axes = p.gca()
@@ -322,7 +323,7 @@ class DGSimulation(Simulation):
         cell_dl=np.max(self._domain)/(2.**self.amrlevel[cell_index])
 
         cells_crossed=0
-        
+
         posdata = group.pos
         valdata = self._validate_value(value, posdata.shape[0], group)
 
@@ -331,13 +332,13 @@ class DGSimulation(Simulation):
               if(not(xvals[j]<=cell_x+0.5*cell_dl and xvals[j]>=cell_x-0.5*cell_dl and yvals[j]<=cell_y+0.5*cell_dl and yvals[j]>=cell_y-0.5*cell_dl and zvals[j]<=cell_z+0.5*cell_dl and zvals[j]>=cell_z-0.5*cell_dl)):
                   #cell crossed
                   if colors[0] != None:
-                      params['color']=colors[self._color_counter%np.shape(colors)[0]] 
+                      params['color']=colors[self._color_counter%np.shape(colors)[0]]
                       self._color_counter = self._color_counter+1
-  
+
                   myplot,=axes.plot(X[cmin:cmin+cnof]+shift,Y[cmin:cmin+cnof],**params)
                   cmin=cmin+cnof
                   cnof=0
-          
+
                   id=np.int(self.get_AMRline("id",center=[xvals[j],yvals[j],zvals[j]],box=[0,0,0],res=1,group=group)['grid'][0])
 
 
@@ -350,7 +351,7 @@ class DGSimulation(Simulation):
                   cell_y=self.pos[cell_index][1]
                   cell_z=self.pos[cell_index][2]
                   cell_dl=np.max(self._domain)/(2.**self.amrlevel[cell_index])
-                
+
                   cells_crossed=cells_crossed+1
 
               result=0
@@ -368,7 +369,7 @@ class DGSimulation(Simulation):
         print("cells crossed:", cells_crossed)
 
         if colors[0] != None:
-            params['color']=colors[self._color_counter%np.shape(colors)[0]] 
+            params['color']=colors[self._color_counter%np.shape(colors)[0]]
             self._color_counter = self._color_counter+1
 
         myplot,=axes.plot(X[cmin:cmin+cnof]+shift,Y[cmin:cmin+cnof],**params)
@@ -379,12 +380,12 @@ class DGSimulation(Simulation):
     def _plot_1dsolution(self, cell_index, value, axis, axes, center, res, group=None, shift=0, colorful=False, colors=[None], **params):
         if group is None:
             group = self.part0
-            
+
         cell_x=self.pos[cell_index][0]
         cell_y=self.pos[cell_index][1]
         cell_z=self.pos[cell_index][2]
         cell_dl=np.max(self._domain)/(2.**self.amrlevel[cell_index])
-        
+
         posdata = group.pos
         valdata = self._validate_value(value, posdata.shape[0], group)
 
@@ -452,7 +453,7 @@ class DGSimulation(Simulation):
 
 
         if colors[0] != None:
-            params['color']=colors[self._color_counter%np.shape(colors)[0]] 
+            params['color']=colors[self._color_counter%np.shape(colors)[0]]
             self._color_counter = self._color_counter+1
 
 
