@@ -57,8 +57,11 @@ class LHaloTree:
             setattr(self, item, np.array(file["%s/%s"%(Name,item)]) )
         file.close()
 
-    def getMainBranch(self,fields=False,verbose=False):
-        i_halo = 0
+    def getMainBranch(self, i_in_tree, fields=False, verbose=False):
+        i_halo = i_in_tree
+        ## trace back to last snapshot
+        while self.Descendant[i_halo] != -1:
+            i_halo = self.Descendant[i_halo]
         i_next = self.FirstProgenitor[i_halo]
         ## debug check
         if(self.SnapNum[i_halo] < self.header.LastSnapshotNr):
