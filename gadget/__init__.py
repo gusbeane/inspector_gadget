@@ -3,6 +3,7 @@ from gadget.cpu import load_cpu
 from gadget.simulation import Simulation
 from gadget.DGsimulation import DGSimulation
 from gadget.LHaloTree import LHaloTree
+from gadget.SubLinkTree import SubLinkTree
 
 import gadget.units as u
 import gadget.const as c

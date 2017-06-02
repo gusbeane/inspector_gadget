@@ -27,7 +27,7 @@ class header:
         self.Redshifts = np.array(d)
 
 class halo:
-    def __init__(self,tree,i_halo,fields=False,verbose=False):
+    def __init__(self, tree, i_halo, fields=False, verbose=False):
         if not fields:    ## if not specified, get all fields that are arrays
             fields = tree.__dict__
         self.fields = fields
@@ -40,7 +40,7 @@ class halo:
 
 
 class LHaloTree:
-    def __init__(self,filename,i_tree, fields=False, verbose=False):
+    def __init__(self, filename, i_tree, fields=False, verbose=False):
         file = h5py.File(filename,"r")
 
         self.header = header(file)
