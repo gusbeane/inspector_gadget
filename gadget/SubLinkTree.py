@@ -8,7 +8,7 @@ import gadget.units as units
 
 import h5py
 
-import LHaloTree
+import gadget.LHaloTree
 
 
 class SubLinkTree:
