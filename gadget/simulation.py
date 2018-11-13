@@ -168,12 +168,12 @@ class Simulation(Snapshot):
         dz = group.pos[:,2]-center[2]
 
         if periodic:
-            dx = np.where(dx > self._domain[0]/2, dx-self._domain[0]/2,dx)
-            dx = np.where(dx < -self._domain[0]/2, dx+self._domain[0]/2,dx)
-            dy = np.where(dy > self._domain[1]/2, dy-self._domain[1]/2,dy)
-            dy = np.where(dy < -self._domain[1]/2, dy+self._domain[1]/2,dy)
-            dz = np.where(dz > self._domain[2]/2, dz-self._domain[2]/2,dz)
-            dz = np.where(dz < -self._domain[2]/2, dz+self._domain[2]/2,dz)
+            dx = np.where(dx > self._domain[0]/2, dx-self._domain[0],dx)
+            dx = np.where(dx < -self._domain[0]/2, dx+self._domain[0],dx)
+            dy = np.where(dy > self._domain[1]/2, dy-self._domain[1],dy)
+            dy = np.where(dy < -self._domain[1]/2, dy+self._domain[1],dy)
+            dz = np.where(dz > self._domain[2]/2, dz-self._domain[2],dz)
+            dz = np.where(dz < -self._domain[2]/2, dz+self._domain[2],dz)
 
         radius = np.sqrt(dx**2+dy**2+dz**2)
 
