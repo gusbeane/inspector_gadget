@@ -432,7 +432,7 @@ class Unit(object):
     def __rmul__(self, other):
         return self.__mul__(other)
 
-    def __div__(self, other):
+    def __truediv__(self, other):
         if type(other) == Unit:
             dims = {}
             for d in _dimensions:
