@@ -71,6 +71,7 @@ class Quantity(np.ndarray):
             else:
                 out_arr.unit = None
         else:
+            if type(out_arr) == type(self):
                 out_arr.unit = None
 
         return np.ndarray.__array_wrap__(self, out_arr, context)
