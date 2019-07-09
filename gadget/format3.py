@@ -258,7 +258,7 @@ class Format3:
                                 elem=np.int32(shape[1])
                                 
                             pres = self.sn._learnPresent(name,gr=gr,shape=elem)
-                if filter != None:
+                if type(filter) != type(None):
                     if groupnames[gr] in self.file.keys():
                         ind = np.arange(self.sn.NumPart_ThisFile[gr])
                         for f in filter:

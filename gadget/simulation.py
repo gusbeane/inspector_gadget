@@ -34,6 +34,11 @@ class Simulation(Snapshot):
         self.box = np.zeros(3)
 
         if hasattr(self,'pos'):
+            if(self['pos'].shape[0] == 0):
+                print('Simulation: error: no elements loaded!')
+                print(self['pos'].shape)
+                exit(1)
+            
             if np.abs( self['pos'][:,2] ).max() == 0.:
                 self.twodim = True
                 self.threedim = False
