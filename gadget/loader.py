@@ -461,9 +461,12 @@ class Snapshot(Loader):
     :param filter: Only load a filtered subset of the snapshot, specified by the filter object.
     :param sortID: sort all loaded data in each group by particle id
     :param physical: where possible comoving units are converted to physical units and h factors are added
+    :param load_subfind: also load subfind catalog for this snapshot (will load entire subfind catalog)
     
     """
-    def __init__(self,filename, snapshot=None, filenum=None, format=None, fields=None, parttype=None, combineFiles=False, toDouble=False, onlyHeader=False, verbose=False, filter=None, sortID=False, physicalUnits=False, **param):     
+    def __init__(self,filename, snapshot=None, filenum=None, format=None, fields=None, parttype=None, combineFiles=False, toDouble=False, onlyHeader=False, 
+                 verbose=False, filter=None, sortID=False, physicalUnits=False, load_subfind=False, **param):     
+        
         super(Snapshot,self).__init__(filename, snapshot=snapshot, filenum=filenum, format=format, fields=fields, parttype=parttype, combineFiles=combineFiles, toDouble=toDouble, onlyHeader=onlyHeader, verbose=verbose, **param)
     
         self._filter = filter
@@ -503,6 +506,9 @@ class Snapshot(Loader):
         self._physicalUnits = physicalUnits
         if self._physicalUnits:
             self.to_physical()
+        
+        if load_subfind:
+            self.sub = Subfind(filename, snapshot=snapshot, filenum=filenum, format=format, combineFiles=True, verbose=verbose)
              
     def newFilter(self,filter):
         """Reloads the snapshot using a new filter

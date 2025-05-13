@@ -148,7 +148,8 @@ class Format3:
         
         if isinstance(self.sn, gadget.loader.Snapshot):
             self.sn.nparticlesall = np.longlong(self.sn.NumPart_Total)
-            self.sn.nparticlesall += np.longlong(self.sn.NumPart_Total_HighWord)<<32
+            if hasattr(self.sn, 'NumPart_Total_HighWord'):
+                self.sn.nparticlesall += np.longlong(self.sn.NumPart_Total_HighWord)<<32
 
             self.sn.npart = np.array(self.sn.NumPart_ThisFile).sum()
             self.sn.npartall = np.array(self.sn.nparticlesall).sum()
