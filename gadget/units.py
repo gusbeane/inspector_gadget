@@ -56,7 +56,8 @@ class Quantity(np.ndarray):
                 out_arr.unit = context[1][0].unit**context[1][1]
 
             else:
-                out_arr.unit = None
+                if isinstance(out_arr, Quantity):
+                    out_arr.unit = None
 
         #unary operations
         elif context is not None and len(context[1]) == 1:
@@ -69,7 +70,8 @@ class Quantity(np.ndarray):
             elif context[0] == np.negative:
                 out_arr.unit = context[1][0].unit
             else:
-                out_arr.unit = None
+                if isinstance(out_arr, Quantity):
+                    out_arr.unit = None
         else:
             if type(out_arr) == type(self):
                 out_arr.unit = None
